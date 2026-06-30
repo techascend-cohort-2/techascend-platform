@@ -28,7 +28,7 @@ export default function Nav() {
             </a>
           ))}
         </nav>
-        <a href="#apply" className={styles.signin}>
+        <a href="/dashboard" className={styles.signin}>
           Sign in
         </a>
         <a href="#apply" className={styles.apply}>
