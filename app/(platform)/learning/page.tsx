@@ -1,7 +1,27 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
 import Icon from "@/components/Icon";
+import { useToast } from "@/components/platform/Toast";
 import { apiFlow, lessonTabs, lessonPoints } from "@/lib/platformData";
 
+const resources = [
+  { label: "REST API cheat sheet (PDF)", meta: "1.2 MB" },
+  { label: "Postman starter collection", meta: "JSON" },
+  { label: "MDN: Using the Fetch API", meta: "External" },
+];
+const qa = [
+  { q: "What's the difference between PUT and PATCH?", a: "PUT replaces the whole resource; PATCH updates only the fields you send." },
+  { q: "How do I handle a 401 response?", a: "Refresh or re-request the token, then retry the call once." },
+];
+
 export default function LessonPage() {
+  const toast = useToast();
+  const [tab, setTab] = useState(0);
+  const [completed, setCompleted] = useState(false);
+  const [notes, setNotes] = useState("");
+
   return (
     <div className="pf-screen" style={{ maxWidth: 1240, margin: "0 auto" }}>
       <div className="pf-lesson-grid">
@@ -16,11 +36,18 @@ export default function LessonPage() {
                 Lesson 4.3 — Working with REST APIs
               </div>
             </div>
-            <button className="pf-btn-grad pf-mark-btn">
+            <button
+              className="pf-btn-grad pf-mark-btn"
+              style={completed ? { background: "var(--pos)" } : undefined}
+              onClick={() => {
+                setCompleted((c) => !c);
+                if (!completed) toast("Lesson marked complete ✓");
+              }}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6L9 17l-5-5" />
               </svg>
-              Mark complete
+              {completed ? "Completed" : "Mark complete"}
             </button>
           </div>
 
@@ -62,29 +89,87 @@ export default function LessonPage() {
             </div>
           </div>
 
-          {/* tabs + points */}
+          {/* tabs + content */}
           <div className="pf-card" style={{ overflow: "hidden" }}>
             <div className="pf-tabs">
               {lessonTabs.map((t, i) => (
-                <div key={t} className={`pf-tab ${i === 0 ? "pf-tab-active" : ""}`}>
+                <button key={t} className={`pf-tab ${i === tab ? "pf-tab-active" : ""}`} onClick={() => setTab(i)}>
                   {t}
-                </div>
+                </button>
               ))}
             </div>
             <div style={{ padding: 22 }}>
-              <div className="pf-h" style={{ marginBottom: 12 }}>In this lesson you&apos;ll learn</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {lessonPoints.map((p) => (
-                  <div key={p} className="pf-lp-row">
-                    <div className="pf-lp-check">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20 6L9 17l-5-5" />
-                      </svg>
-                    </div>
-                    <span>{p}</span>
+              {tab === 0 ? (
+                <>
+                  <div className="pf-h" style={{ marginBottom: 12 }}>In this lesson you&apos;ll learn</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {lessonPoints.map((p) => (
+                      <div key={p} className="pf-lp-row">
+                        <div className="pf-lp-check">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 6L9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span>{p}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </>
+              ) : null}
+
+              {tab === 1 ? (
+                <>
+                  <div className="pf-h" style={{ marginBottom: 12 }}>My notes</div>
+                  <textarea
+                    className="pf-notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Jot down anything you want to remember from this lesson…"
+                  />
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+                    <button className="pf-btn-grad" style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13 }} onClick={() => toast("Notes saved ✓")}>
+                      Save notes
+                    </button>
+                  </div>
+                </>
+              ) : null}
+
+              {tab === 2 ? (
+                <>
+                  <div className="pf-h" style={{ marginBottom: 12 }}>Resources</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {resources.map((r) => (
+                      <button key={r.label} className="pf-resource" onClick={() => toast(`Opening “${r.label}”…`)}>
+                        <div className="pf-lp-check" style={{ background: "#F1EAFC", color: "var(--brand1)" }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                            <path d="M14 2v6h6" />
+                          </svg>
+                        </div>
+                        <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>{r.label}</span>
+                        <span style={{ fontSize: 11.5, color: "var(--muted)" }}>{r.meta}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+
+              {tab === 3 ? (
+                <>
+                  <div className="pf-h" style={{ marginBottom: 12 }}>Questions &amp; answers</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    {qa.map((item) => (
+                      <div key={item.q}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 3 }}>{item.q}</div>
+                        <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>{item.a}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <Link href="/tutor" className="pf-btn-grad" style={{ display: "inline-block", marginTop: 16, padding: "10px 16px", borderRadius: 10, fontSize: 13 }}>
+                    Ask the AI Tutor →
+                  </Link>
+                </>
+              ) : null}
             </div>
           </div>
         </div>
@@ -107,8 +192,8 @@ export default function LessonPage() {
               <b>response</b>.
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
-              <span className="pf-chip-dark">Give me an example →</span>
-              <span className="pf-chip-dark">Explain in French</span>
+              <Link href="/tutor" className="pf-chip-dark">Give me an example →</Link>
+              <Link href="/tutor" className="pf-chip-dark">Explain in French</Link>
             </div>
           </div>
 
@@ -121,7 +206,7 @@ export default function LessonPage() {
                 <span className="pf-code-dot" style={{ background: "#28C840" }} />
                 <span className="pf-code-file">fetchUsers.js</span>
               </div>
-              <button className="pf-code-run">▶ Run</button>
+              <button className="pf-code-run" onClick={() => toast("Ran fetchUsers.js → 24 users ✓")}>▶ Run</button>
             </div>
             <pre>
 <span style={{ color: "#7C8BB8" }}>{"// Track A · live editor"}</span>{"\n"}
@@ -144,7 +229,7 @@ export default function LessonPage() {
             <div style={{ fontSize: 11.5, color: "var(--faint)", fontWeight: 700, letterSpacing: 0.3, marginBottom: 8 }}>
               UP NEXT
             </div>
-            <div className="pf-upnext">
+            <div className="pf-upnext" onClick={() => toast("Loading lesson 4.4…")}>
               <div className="pf-upnext-n">4.4</div>
               <div style={{ fontSize: 13, fontWeight: 600 }}>Authentication &amp; API keys</div>
             </div>

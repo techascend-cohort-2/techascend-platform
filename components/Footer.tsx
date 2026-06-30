@@ -20,8 +20,13 @@ export default function Footer() {
             <div className={styles.colHead}>{c.head}</div>
             <div className={styles.links}>
               {c.links.map((lnk) => (
-                <a key={lnk} href="#top" className={styles.link}>
-                  {lnk}
+                <a
+                  key={lnk.label}
+                  href={lnk.href}
+                  className={styles.link}
+                  {...(lnk.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                >
+                  {lnk.label}
                 </a>
               ))}
             </div>

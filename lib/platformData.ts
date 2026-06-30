@@ -25,15 +25,35 @@ export const ICON = {
   star: "M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6 7 18.2l1.9-5.8L4 8.8h6.1z",
 };
 
-// ---- per-screen header titles ----
-export const TITLES: Record<ScreenKey, [string, string]> = {
-  dashboard: ["Dashboard", "Your learning & income at a glance"],
-  lesson: ["My Learning", "Module 4 · API & System Integration"],
-  tutor: ["AI Tutor", "Context-aware help for every lesson"],
-  project: ["Projects", "Submit work & get instant AI evaluation"],
-  earn: ["Earn Hub", "Turn your skills into real income"],
-  admin: ["Admin · Douala Hub", "Cohorts, analytics & partner overview"],
-  partner: ["Partner Portal", "Talent, hiring & impact reporting"],
+// ---- per-screen header titles + route metadata ----
+export type RouteMeta = {
+  persona: Persona;
+  title: string;
+  sub: string;
+  soon?: boolean;
+  feature?: string;
+};
+
+export const ROUTES: Record<string, RouteMeta> = {
+  "/dashboard": { persona: "student", title: "Dashboard", sub: "Your learning & income at a glance" },
+  "/learning": { persona: "student", title: "My Learning", sub: "Module 4 · API & System Integration" },
+  "/tutor": { persona: "student", title: "AI Tutor", sub: "Context-aware help for every lesson" },
+  "/projects": { persona: "student", title: "Projects", sub: "Submit work & get instant AI evaluation" },
+  "/earn": { persona: "student", title: "Earn Hub", sub: "Turn your skills into real income" },
+  "/admin": { persona: "admin", title: "Admin · Douala Hub", sub: "Cohorts, analytics & partner overview" },
+  "/partner": { persona: "partner", title: "Partner Portal", sub: "Talent, hiring & impact reporting" },
+
+  // modules still being built — real, navigable "coming soon" screens
+  "/community": { persona: "student", title: "Community", sub: "Peer learning, mentorship & challenges", soon: true, feature: "Community" },
+  "/opportunities": { persona: "student", title: "Opportunities", sub: "Jobs, internships & freelance gigs", soon: true, feature: "Opportunities" },
+  "/badges": { persona: "student", title: "Badges & Certificates", sub: "Your verified, shareable credentials", soon: true, feature: "Badges & Certificates" },
+  "/cohorts": { persona: "admin", title: "Cohorts", sub: "Create and manage every cohort", soon: true, feature: "Cohort management" },
+  "/students": { persona: "admin", title: "Students", sub: "All learners, progress & outreach", soon: true, feature: "Student management" },
+  "/partners": { persona: "admin", title: "Partners", sub: "Sponsors, hiring & tech partners", soon: true, feature: "Partner management" },
+  "/revenue": { persona: "admin", title: "Revenue", sub: "Income, payouts & projections", soon: true, feature: "Revenue analytics" },
+  "/talent-pool": { persona: "partner", title: "Talent Pool", sub: "Browse AI-native, vetted talent", soon: true, feature: "Talent Pool" },
+  "/hiring-pipeline": { persona: "partner", title: "Hiring Pipeline", sub: "Track candidates end-to-end", soon: true, feature: "Hiring Pipeline" },
+  "/impact": { persona: "partner", title: "Impact & ROI", sub: "Verified outcomes & ESG reporting", soon: true, feature: "Impact & ROI" },
 };
 
 // ---- per-persona signed-in user ----
@@ -47,35 +67,34 @@ export const PERSONA_INFO: Record<Persona, { name: string; role: string; initial
 export type NavItem = {
   label: string;
   icon: string;
-  screen: ScreenKey | "soon";
-  href: string | null;
-  built: boolean;
+  href: string;
   badge?: string;
+  soon?: boolean;
 };
 
 export const NAV: Record<Persona, NavItem[]> = {
   student: [
-    { label: "Dashboard", icon: ICON.home, screen: "dashboard", href: "/dashboard", built: true },
-    { label: "My Learning", icon: ICON.book, screen: "lesson", href: "/learning", built: true },
-    { label: "AI Tutor", icon: ICON.chat, screen: "tutor", href: "/tutor", built: true, badge: "New" },
-    { label: "Projects", icon: ICON.grid, screen: "project", href: "/projects", built: true },
-    { label: "Community", icon: ICON.users, screen: "soon", href: null, built: false },
-    { label: "Opportunities", icon: ICON.bag, screen: "soon", href: null, built: false },
-    { label: "Earn Hub", icon: ICON.coin, screen: "earn", href: "/earn", built: true },
-    { label: "Badges & Certs", icon: ICON.award, screen: "soon", href: null, built: false },
+    { label: "Dashboard", icon: ICON.home, href: "/dashboard" },
+    { label: "My Learning", icon: ICON.book, href: "/learning" },
+    { label: "AI Tutor", icon: ICON.chat, href: "/tutor", badge: "New" },
+    { label: "Projects", icon: ICON.grid, href: "/projects" },
+    { label: "Community", icon: ICON.users, href: "/community", soon: true },
+    { label: "Opportunities", icon: ICON.bag, href: "/opportunities", soon: true },
+    { label: "Earn Hub", icon: ICON.coin, href: "/earn" },
+    { label: "Badges & Certs", icon: ICON.award, href: "/badges", soon: true },
   ],
   admin: [
-    { label: "Overview", icon: ICON.chart, screen: "admin", href: "/admin", built: true },
-    { label: "Cohorts", icon: ICON.book, screen: "soon", href: null, built: false },
-    { label: "Students", icon: ICON.users, screen: "soon", href: null, built: false },
-    { label: "Partners", icon: ICON.bag, screen: "soon", href: null, built: false },
-    { label: "Revenue", icon: ICON.coin, screen: "soon", href: null, built: false },
+    { label: "Overview", icon: ICON.chart, href: "/admin" },
+    { label: "Cohorts", icon: ICON.book, href: "/cohorts", soon: true },
+    { label: "Students", icon: ICON.users, href: "/students", soon: true },
+    { label: "Partners", icon: ICON.bag, href: "/partners", soon: true },
+    { label: "Revenue", icon: ICON.coin, href: "/revenue", soon: true },
   ],
   partner: [
-    { label: "Overview", icon: ICON.chart, screen: "partner", href: "/partner", built: true },
-    { label: "Talent Pool", icon: ICON.users, screen: "soon", href: null, built: false },
-    { label: "Hiring Pipeline", icon: ICON.bag, screen: "soon", href: null, built: false },
-    { label: "Impact & ROI", icon: ICON.award, screen: "soon", href: null, built: false },
+    { label: "Overview", icon: ICON.chart, href: "/partner" },
+    { label: "Talent Pool", icon: ICON.users, href: "/talent-pool", soon: true },
+    { label: "Hiring Pipeline", icon: ICON.bag, href: "/hiring-pipeline", soon: true },
+    { label: "Impact & ROI", icon: ICON.award, href: "/impact", soon: true },
   ],
 };
 
@@ -84,6 +103,26 @@ export const PERSONA_HOME: Record<Persona, string> = {
   admin: "/admin",
   partner: "/partner",
 };
+
+// ---- header notifications ----
+export type Notification = { title: string; time: string; href: string };
+export const notifications: Notification[] = [
+  { title: "Your project scored 87/100 — ready for mentor review", time: "2h ago", href: "/projects" },
+  { title: "New AI-matched gig: WhatsApp support bot · 120,000 F", time: "5h ago", href: "/earn" },
+  { title: "Payout cleared: 45,000 F via Mobile Money", time: "1d ago", href: "/earn" },
+  { title: "Live session “API design” starts Saturday 3:00 PM", time: "2d ago", href: "/learning" },
+];
+
+// quick-jump search targets (built screens only)
+export const SEARCH_TARGETS: { label: string; sub: string; href: string }[] = [
+  { label: "Dashboard", sub: "Student · overview", href: "/dashboard" },
+  { label: "My Learning", sub: "Lesson 4.3 · REST APIs", href: "/learning" },
+  { label: "AI Tutor", sub: "Context-aware chat", href: "/tutor" },
+  { label: "Projects", sub: "Submit & AI evaluation", href: "/projects" },
+  { label: "Earn Hub", sub: "Gigs, payouts & balance", href: "/earn" },
+  { label: "Admin Overview", sub: "Cohorts & analytics", href: "/admin" },
+  { label: "Partner Portal", sub: "Talent & hiring", href: "/partner" },
+];
 
 // ============ STUDENT DASHBOARD ============
 export const dashStats = [

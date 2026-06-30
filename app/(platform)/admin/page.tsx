@@ -1,3 +1,6 @@
+"use client";
+
+import { useToast } from "@/components/platform/Toast";
 import {
   adminKpis,
   enrollBars,
@@ -14,6 +17,8 @@ const badgeClass: Record<string, string> = {
 };
 
 export default function AdminPage() {
+  const toast = useToast();
+
   return (
     <div className="pf-screen pf-w1240">
       <div className="pf-kpis">
@@ -61,7 +66,9 @@ export default function AdminPage() {
           <div className="pf-card" style={{ overflow: "hidden" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px" }}>
               <div className="pf-h">Cohort management</div>
-              <button className="pf-link" style={{ fontSize: 12 }}>+ New cohort</button>
+              <button className="pf-link" style={{ fontSize: 12 }} onClick={() => toast("Opening new cohort wizard…")}>
+                + New cohort
+              </button>
             </div>
             <div className="pf-table-head">
               <span>COHORT</span>
@@ -71,7 +78,11 @@ export default function AdminPage() {
               <span>STATUS</span>
             </div>
             {cohorts.map((c) => (
-              <div key={c.name} className="pf-table-row">
+              <div
+                key={c.name}
+                className="pf-table-row pf-clickrow"
+                onClick={() => toast(`Opening ${c.name}`)}
+              >
                 <span style={{ fontWeight: 700 }}>{c.name}</span>
                 <span style={{ color: "var(--muted)" }}>{c.track}</span>
                 <span style={{ color: "var(--muted)" }}>{c.learners}</span>
@@ -103,16 +114,16 @@ export default function AdminPage() {
             <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>
               AI flags learners needing outreach.
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {riskList.map((r) => (
-                <div key={r.name} style={{ display: "flex", alignItems: "center", gap: 11 }}>
+                <button key={r.name} className="pf-list-btn" onClick={() => toast(`Outreach sent to ${r.name} 📩`)}>
                   <div className="pf-risk-av" style={{ background: r.avBg }}>{r.initials}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
                     <div style={{ fontSize: 13, fontWeight: 700 }}>{r.name}</div>
                     <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{r.reason}</div>
                   </div>
                   <span className={`pf-badge-sm ${badgeClass[r.tone]}`}>{r.risk}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -120,16 +131,16 @@ export default function AdminPage() {
           {/* partner overview */}
           <div className="pf-card pf-pad">
             <div className="pf-h" style={{ marginBottom: 14 }}>Partner overview</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {partnerMini.map((p) => (
-                <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 11 }}>
+                <button key={p.name} className="pf-list-btn" onClick={() => toast(`Opening ${p.name}`)}>
                   <div className="pf-pmini-abbr">{p.abbr}</div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, textAlign: "left" }}>
                     <div style={{ fontSize: 13, fontWeight: 700 }}>{p.name}</div>
                     <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{p.type}</div>
                   </div>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "var(--pos)" }}>{p.value}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>

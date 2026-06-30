@@ -31,7 +31,7 @@ export default function Nav() {
         <a href="/dashboard" className={styles.signin}>
           Sign in
         </a>
-        <a href="#apply" className={styles.apply}>
+        <a href="/apply" className={styles.apply}>
           Apply now
         </a>
         <button
@@ -62,7 +62,7 @@ export default function Nav() {
             {l.label}
           </a>
         ))}
-        <a href="#apply" className={styles.mobileApply} onClick={() => setOpen(false)}>
+        <a href="/apply" className={styles.mobileApply} onClick={() => setOpen(false)}>
           Apply now
         </a>
       </div>

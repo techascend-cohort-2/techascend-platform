@@ -17,7 +17,7 @@ export default function Promise() {
             and a small share of the income you generate — never by charging women who
             can&apos;t yet afford it.
           </p>
-          <a href="#apply" className={styles.cta}>
+          <a href="/apply" className={styles.cta}>
             Start your application
           </a>
         </div>

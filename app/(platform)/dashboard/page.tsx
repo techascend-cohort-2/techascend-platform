@@ -66,7 +66,7 @@ export default function DashboardPage() {
           <div className="pf-card pf-pad">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
               <div className="pf-h">Continue learning</div>
-              <span className="pf-link">View curriculum →</span>
+              <Link href="/learning" className="pf-link">View curriculum →</Link>
             </div>
             <div style={{ display: "flex", gap: 16 }}>
               <div className="pf-cl-thumb">
@@ -115,7 +115,7 @@ export default function DashboardPage() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {incomeTasks.map((t) => (
-                <div key={t.title} className="pf-task-row">
+                <Link key={t.title} href="/earn" className="pf-task-row">
                   <div className="pf-task-glyph" style={{ background: t.tintBg, color: t.tint }}>
                     {t.glyph}
                   </div>
@@ -127,7 +127,7 @@ export default function DashboardPage() {
                     <div style={{ fontSize: 13.5, fontWeight: 800, color: "var(--pos)" }}>{t.pay}</div>
                     <div style={{ fontSize: 11, color: "var(--faint)" }}>{t.match} match</div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>

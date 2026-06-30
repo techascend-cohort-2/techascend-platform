@@ -24,7 +24,7 @@ export default function Hero() {
             freelancing, jobs, and ventures.
           </p>
           <div className={styles.ctas}>
-            <a href="#apply" className={styles.ctaPrimary}>
+            <a href="/apply" className={styles.ctaPrimary}>
               Apply to the next cohort →
             </a>
             <a href="#partners" className={styles.ctaGhost}>

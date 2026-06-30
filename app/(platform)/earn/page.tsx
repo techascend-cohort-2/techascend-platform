@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+import { useToast } from "@/components/platform/Toast";
 import { earnKpis, gigs, smeGigs, earnTrend, payouts } from "@/lib/platformData";
 
 const badgeClass: Record<string, string> = {
@@ -6,6 +10,15 @@ const badgeClass: Record<string, string> = {
 };
 
 export default function EarnPage() {
+  const toast = useToast();
+  const [applied, setApplied] = useState<string[]>([]);
+
+  function apply(title: string) {
+    if (applied.includes(title)) return;
+    setApplied((a) => [...a, title]);
+    toast(`Applied to “${title}” ✓`);
+  }
+
   return (
     <div className="pf-screen pf-w1240">
       <div className="pf-kpis">
@@ -35,25 +48,34 @@ export default function EarnPage() {
               one tap.
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
-              {gigs.map((g) => (
-                <div key={g.title} className="pf-gig-row">
-                  <div className="pf-gig-glyph" style={{ background: g.tintBg, color: g.tint }}>{g.glyph}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 700 }}>{g.title}</div>
-                    <div style={{ fontSize: 12, color: "var(--muted)", margin: "1px 0 6px" }}>{g.type}</div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {g.skills.map((sk) => (
-                        <span key={sk} className="pf-skill">{sk}</span>
-                      ))}
+              {gigs.map((g) => {
+                const isApplied = applied.includes(g.title);
+                return (
+                  <div key={g.title} className="pf-gig-row">
+                    <div className="pf-gig-glyph" style={{ background: g.tintBg, color: g.tint }}>{g.glyph}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700 }}>{g.title}</div>
+                      <div style={{ fontSize: 12, color: "var(--muted)", margin: "1px 0 6px" }}>{g.type}</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {g.skills.map((sk) => (
+                          <span key={sk} className="pf-skill">{sk}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "var(--pos)" }}>{g.pay}</div>
+                      <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 8 }}>{g.match} match</div>
+                      <button
+                        className="pf-apply"
+                        style={isApplied ? { background: "var(--posbg)", color: "var(--pos)" } : undefined}
+                        onClick={() => apply(g.title)}
+                      >
+                        {isApplied ? "Applied ✓" : "Apply"}
+                      </button>
                     </div>
                   </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: "var(--pos)" }}>{g.pay}</div>
-                    <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 8 }}>{g.match} match</div>
-                    <button className="pf-apply">Apply</button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -78,9 +100,9 @@ export default function EarnPage() {
                   <div style={{ fontSize: 12.5, color: "var(--ink)", marginBottom: 10 }}>{s.need}</div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontSize: 13, fontWeight: 800, color: "var(--pos)" }}>{s.pay}</span>
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--brand1)", cursor: "pointer" }}>
+                    <button className="pf-link" style={{ fontSize: 11.5 }} onClick={() => toast(`Opening brief: ${s.name}`)}>
                       View brief →
-                    </span>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -131,7 +153,11 @@ export default function EarnPage() {
             <div style={{ fontFamily: "var(--font-sora)", fontWeight: 800, fontSize: 30, margin: "4px 0 14px" }}>
               195,000 F
             </div>
-            <button className="pf-btn-white" style={{ padding: "12px 16px", borderRadius: 11, fontSize: 13, width: "100%" }}>
+            <button
+              className="pf-btn-white"
+              style={{ padding: "12px 16px", borderRadius: 11, fontSize: 13, width: "100%" }}
+              onClick={() => toast("Withdrawal of 195,000 F requested via Mobile Money 📲")}
+            >
               Withdraw via Mobile Money
             </button>
           </div>

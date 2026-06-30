@@ -1,0 +1,183 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import styles from "./Apply.module.css";
+
+type Role = "learner" | "partner";
+
+const cities = ["Douala", "Yaoundé", "Buea", "Other / outside Cameroon"];
+const tracks = ["Track A — AI Software Engineering", "Track B — AI Product & Automation", "Not sure yet"];
+const partnerTypes = ["Funding / sponsorship", "Hiring partner", "Technology partner", "Academic partner", "Government / NGO"];
+
+const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export default function ApplyForm() {
+  const params = useSearchParams();
+  const initialRole: Role = params.get("role") === "partner" ? "partner" : "learner";
+
+  const [role, setRole] = useState<Role>(initialRole);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [done, setDone] = useState(false);
+
+  function set(name: string, v: string) {
+    setValues((s) => ({ ...s, [name]: v }));
+    if (errors[name]) setErrors((e) => ({ ...e, [name]: "" }));
+  }
+
+  const fields =
+    role === "learner"
+      ? ["name", "email", "city", "track", "motivation"]
+      : ["org", "name", "email", "ptype", "message"];
+
+  function validate() {
+    const e: Record<string, string> = {};
+    for (const f of fields) {
+      if (!values[f]?.trim()) e[f] = "This field is required";
+    }
+    if (values.email && !emailRe.test(values.email)) e.email = "Enter a valid email address";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function onSubmit(ev: React.FormEvent) {
+    ev.preventDefault();
+    if (validate()) setDone(true);
+  }
+
+  function switchRole(r: Role) {
+    setRole(r);
+    setErrors({});
+    setDone(false);
+  }
+
+  if (done) {
+    return (
+      <div className={styles.success}>
+        <div className={styles.successIcon}>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </div>
+        <h1 className={styles.successTitle}>
+          {role === "learner" ? "Application received" : "Thanks — we'll be in touch"}
+        </h1>
+        <p className={styles.successText}>
+          {role === "learner" ? (
+            <>
+              Thanks {values.name?.split(" ")[0] || "there"}! Your application for{" "}
+              <b>Cohort 01</b> is in. We&apos;ll email <b>{values.email}</b> with next
+              steps within a few days.
+            </>
+          ) : (
+            <>
+              Thanks {values.name?.split(" ")[0] || "there"}! Our partnerships team will
+              reach out to <b>{values.org}</b> at <b>{values.email}</b> shortly.
+            </>
+          )}
+        </p>
+        <Link href="/" className={styles.successBtn}>
+          Back to home
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className={styles.toggle}>
+        <button className={`${styles.toggleBtn} ${role === "learner" ? styles.toggleActive : ""}`} onClick={() => switchRole("learner")}>
+          I want to learn &amp; earn
+        </button>
+        <button className={`${styles.toggleBtn} ${role === "partner" ? styles.toggleActive : ""}`} onClick={() => switchRole("partner")}>
+          I want to partner
+        </button>
+      </div>
+
+      <h1 className={styles.title}>
+        {role === "learner" ? "Apply to TechAscend" : "Partner with TechAscend"}
+      </h1>
+      <p className={styles.sub}>
+        {role === "learner"
+          ? "For women 18–35 in Cameroon ready to build with AI and generate real income. It takes about 3 minutes."
+          : "Sponsor a cohort, hire AI-native talent, or supply tools and infrastructure. Tell us how you'd like to work together."}
+      </p>
+
+      <form className={styles.card} onSubmit={onSubmit} noValidate>
+        {role === "partner" ? (
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="org">Organisation</label>
+            <input id="org" className={`${styles.input} ${errors.org ? styles.invalid : ""}`} value={values.org || ""} onChange={(e) => set("org", e.target.value)} placeholder="e.g. MTN Foundation" />
+            {errors.org ? <div className={styles.error}>{errors.org}</div> : null}
+          </div>
+        ) : null}
+
+        <div className={styles.row}>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="name">{role === "learner" ? "Full name" : "Contact name"}</label>
+            <input id="name" className={`${styles.input} ${errors.name ? styles.invalid : ""}`} value={values.name || ""} onChange={(e) => set("name", e.target.value)} placeholder="Your name" />
+            {errors.name ? <div className={styles.error}>{errors.name}</div> : null}
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="email">Email</label>
+            <input id="email" type="email" className={`${styles.input} ${errors.email ? styles.invalid : ""}`} value={values.email || ""} onChange={(e) => set("email", e.target.value)} placeholder="you@example.com" />
+            {errors.email ? <div className={styles.error}>{errors.email}</div> : null}
+          </div>
+        </div>
+
+        {role === "learner" ? (
+          <div className={styles.row}>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="city">City</label>
+              <select id="city" className={`${styles.select} ${errors.city ? styles.invalid : ""}`} value={values.city || ""} onChange={(e) => set("city", e.target.value)}>
+                <option value="">Select…</option>
+                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              {errors.city ? <div className={styles.error}>{errors.city}</div> : null}
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="track">Preferred track</label>
+              <select id="track" className={`${styles.select} ${errors.track ? styles.invalid : ""}`} value={values.track || ""} onChange={(e) => set("track", e.target.value)}>
+                <option value="">Select…</option>
+                {tracks.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+              {errors.track ? <div className={styles.error}>{errors.track}</div> : null}
+            </div>
+          </div>
+        ) : (
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="ptype">Partnership type</label>
+            <select id="ptype" className={`${styles.select} ${errors.ptype ? styles.invalid : ""}`} value={values.ptype || ""} onChange={(e) => set("ptype", e.target.value)}>
+              <option value="">Select…</option>
+              {partnerTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            {errors.ptype ? <div className={styles.error}>{errors.ptype}</div> : null}
+          </div>
+        )}
+
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="msg">
+            {role === "learner" ? "Why do you want to join?" : "How would you like to work with us?"}
+          </label>
+          <textarea
+            id="msg"
+            className={`${styles.textarea} ${errors[role === "learner" ? "motivation" : "message"] ? styles.invalid : ""}`}
+            value={values[role === "learner" ? "motivation" : "message"] || ""}
+            onChange={(e) => set(role === "learner" ? "motivation" : "message", e.target.value)}
+            placeholder={role === "learner" ? "Tell us about a problem you'd love to solve with technology…" : "Goals, budget, timeline, or anything else…"}
+          />
+          {errors[role === "learner" ? "motivation" : "message"] ? (
+            <div className={styles.error}>{errors[role === "learner" ? "motivation" : "message"]}</div>
+          ) : null}
+        </div>
+
+        <button type="submit" className={styles.submit}>
+          {role === "learner" ? "Submit application" : "Send partnership enquiry"}
+        </button>
+        <div className={styles.note}>Free to apply · We never share your details.</div>
+      </form>
+    </>
+  );
+}

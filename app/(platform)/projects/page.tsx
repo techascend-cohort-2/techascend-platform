@@ -1,6 +1,33 @@
+"use client";
+
+import { useState, useRef } from "react";
+import Link from "next/link";
+import { useToast } from "@/components/platform/Toast";
 import { projectSteps, deliverables, rubric } from "@/lib/platformData";
 
 export default function ProjectPage() {
+  const toast = useToast();
+  const [step, setStep] = useState(1); // 0 Details · 1 Upload · 2 Preview · 3 Submit
+  const [extra, setExtra] = useState<string[]>([]);
+  const [submitted, setSubmitted] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const names = Array.from(e.target.files ?? []).map((f) => f.name);
+    if (names.length) {
+      setExtra((x) => [...x, ...names]);
+      toast(`${names.length} file${names.length > 1 ? "s" : ""} added`);
+    }
+  }
+
+  function submit() {
+    setSubmitted(true);
+    setStep(3);
+    toast("Project submitted for review ✓");
+  }
+
+  const activeStep = submitted ? 3 : step;
+
   return (
     <div className="pf-screen pf-w1180">
       {/* header + stepper */}
@@ -14,61 +41,100 @@ export default function ProjectPage() {
           </div>
         </div>
         <div className="pf-stepper">
-          {projectSteps.map((s, i) => (
-            <div key={s.n} className="pf-step">
-              <div className={`pf-step-dot ${s.active ? "pf-step-dot-active" : ""}`}>{s.n}</div>
-              <span className={`pf-step-text ${s.active ? "pf-step-text-active" : ""}`}>{s.label}</span>
-              {i < projectSteps.length - 1 ? <div className="pf-step-line" /> : null}
-            </div>
-          ))}
+          {projectSteps.map((s, i) => {
+            const on = i <= activeStep;
+            return (
+              <div key={s.n} className="pf-step">
+                <div className={`pf-step-dot ${on ? "pf-step-dot-active" : ""}`}>{s.n}</div>
+                <span className={`pf-step-text ${on ? "pf-step-text-active" : ""}`}>{s.label}</span>
+                {i < projectSteps.length - 1 ? <div className="pf-step-line" /> : null}
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div className="pf-proj-grid">
-        {/* upload */}
-        <div className="pf-card" style={{ padding: 22 }}>
-          <div style={{ fontFamily: "var(--font-sora)", fontWeight: 700, fontSize: 16 }}>Upload deliverables</div>
-          <div style={{ fontSize: 12.5, color: "var(--muted)", margin: "3px 0 18px" }}>
-            Submit the required files. The AI evaluator reviews each as you upload.
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
-            {deliverables.map((d) => (
-              <div key={d.title} className="pf-deliv-row">
-                <div className="pf-deliv-ext" style={{ background: d.tintBg, color: d.tint }}>
-                  {d.ext}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700 }}>{d.title}</div>
-                  <div style={{ fontSize: 12, color: "var(--muted)" }}>{d.file}</div>
-                </div>
-                <div className="pf-deliv-check">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 6L9 17l-5-5" />
-                  </svg>
-                </div>
-              </div>
-            ))}
-            <div className="pf-dropzone">
-              <div className="pf-dropzone-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-              </div>
-              <div style={{ fontSize: 13.5, fontWeight: 700 }}>Upload additional files</div>
-              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
-                Drag &amp; drop or click to browse · max 50MB
-              </div>
+        {/* upload / success */}
+        {submitted ? (
+          <div className="pf-card" style={{ padding: 40, textAlign: "center" }}>
+            <div className="pf-soon-icon" style={{ background: "var(--posbg)", color: "var(--pos)" }}>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </div>
+            <h2 className="pf-soon-title" style={{ fontSize: 22 }}>Submitted for review</h2>
+            <p className="pf-soon-text">
+              Your capstone is in the queue. Your mentor will review it within 48 hours —
+              we&apos;ll notify you the moment feedback lands.
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+              <Link href="/dashboard" className="pf-btn-grad" style={{ padding: "12px 20px", borderRadius: 12, fontSize: 13.5 }}>
+                Back to dashboard
+              </Link>
+              <button className="pf-btn-soft" style={{ padding: "12px 20px", borderRadius: 12, fontSize: 13.5 }} onClick={() => { setSubmitted(false); setStep(1); }}>
+                Edit submission
+              </button>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-            <button className="pf-btn-soft" style={{ flex: 1, padding: 12, borderRadius: 11, fontSize: 13 }}>
-              Back
-            </button>
-            <button className="pf-btn-grad" style={{ flex: 2, padding: 12, borderRadius: 11, fontSize: 13 }}>
-              Submit for final review →
-            </button>
+        ) : (
+          <div className="pf-card" style={{ padding: 22 }}>
+            <div style={{ fontFamily: "var(--font-sora)", fontWeight: 700, fontSize: 16 }}>Upload deliverables</div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)", margin: "3px 0 18px" }}>
+              Submit the required files. The AI evaluator reviews each as you upload.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+              {deliverables.map((d) => (
+                <div key={d.title} className="pf-deliv-row">
+                  <div className="pf-deliv-ext" style={{ background: d.tintBg, color: d.tint }}>{d.ext}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700 }}>{d.title}</div>
+                    <div style={{ fontSize: 12, color: "var(--muted)" }}>{d.file}</div>
+                  </div>
+                  <div className="pf-deliv-check">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  </div>
+                </div>
+              ))}
+              {extra.map((name, i) => (
+                <div key={`${name}-${i}`} className="pf-deliv-row">
+                  <div className="pf-deliv-ext" style={{ background: "#E6F0FC", color: "#2D6FD9" }}>NEW</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700 }}>Additional file</div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+                  </div>
+                  <div className="pf-deliv-check">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  </div>
+                </div>
+              ))}
+              <button type="button" className="pf-dropzone" onClick={() => fileInput.current?.click()}>
+                <div className="pf-dropzone-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </div>
+                <div style={{ fontSize: 13.5, fontWeight: 700 }}>Upload additional files</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+                  Drag &amp; drop or click to browse · max 50MB
+                </div>
+              </button>
+              <input ref={fileInput} type="file" multiple hidden onChange={onFiles} />
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <Link href="/dashboard" className="pf-btn-soft" style={{ flex: 1, padding: 12, borderRadius: 11, fontSize: 13, textAlign: "center" }}>
+                Back
+              </Link>
+              <button className="pf-btn-grad" style={{ flex: 2, padding: 12, borderRadius: 11, fontSize: 13 }} onClick={submit}>
+                Submit for final review →
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* evaluation column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

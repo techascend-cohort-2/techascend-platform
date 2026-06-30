@@ -10,7 +10,7 @@ export default function FinalCta() {
             For women 18–35 in Cameroon who are ready to build with AI and generate
             real income.
           </p>
-          <a href="#apply" className={styles.ctaPrimary}>
+          <a href="/apply" className={styles.ctaPrimary}>
             Apply to Cohort 01 →
           </a>
         </div>
@@ -20,7 +20,7 @@ export default function FinalCta() {
             For funders, employers, telecoms, universities and development
             organisations.
           </p>
-          <a href="#apply" className={styles.ctaLight}>
+          <a href="/apply?role=partner" className={styles.ctaLight}>
             Talk to our team →
           </a>
         </div>

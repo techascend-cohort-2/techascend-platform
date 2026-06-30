@@ -805,8 +805,52 @@
   font-weight: 600;
   color: var(--muted);
   cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
 }
-.pf-tab-active { background: #f1eafc; color: var(--brand1); font-weight: 700; }
+.pf-tab:hover {
+  color: var(--ink);
+}
+.pf-tab-active,
+.pf-tab-active:hover { background: #f1eafc; color: var(--brand1); font-weight: 700; }
+.pf-notes {
+  width: 100%;
+  min-height: 150px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg);
+  outline: none;
+}
+.pf-notes:focus {
+  border-color: #ddd0f3;
+  background: #fff;
+}
+.pf-resource {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.pf-resource:hover {
+  border-color: #ddd0f3;
+  background: #fcfaff;
+}
 .pf-lp-row { display: flex; align-items: center; gap: 11px; font-size: 13.5px; }
 .pf-lp-check {
   width: 21px;
@@ -969,12 +1013,19 @@
   justify-content: center;
 }
 .pf-dropzone {
+  width: 100%;
   border: 2px dashed #d5c9f0;
   border-radius: 12px;
   padding: 24px;
   text-align: center;
   background: #fcfaff;
   cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.pf-dropzone:hover {
+  border-color: var(--brand1);
+  background: #f7f1ff;
 }
 .pf-dropzone-icon {
   width: 42px;
@@ -1491,4 +1542,221 @@
   .pf-pipe { grid-template-columns: 1fr; }
   .pf-tutor-grid { grid-template-columns: 1fr; }
   .pf-tutor-side { display: none; }
+}
+
+/* ---------- header search + notifications ---------- */
+.pf-search-wrap {
+  position: relative;
+  z-index: 40;
+}
+.pf-bell-wrap {
+  position: relative;
+  z-index: 40;
+}
+.pf-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+}
+.pf-search-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 300px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px -20px rgba(80, 40, 150, 0.35);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pf-result {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 9px 11px;
+  border-radius: 9px;
+  font-family: inherit;
+}
+.pf-result:hover {
+  background: var(--bg);
+}
+.pf-result-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.pf-result-sub {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.pf-result-empty {
+  padding: 14px 11px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.pf-bell-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px -20px rgba(80, 40, 150, 0.35);
+  overflow: hidden;
+}
+.pf-bell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.pf-bell-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  padding: 12px 14px;
+  font-family: inherit;
+}
+.pf-bell-item:last-child {
+  border-bottom: none;
+}
+.pf-bell-item:hover {
+  background: var(--bg);
+}
+
+/* ---------- nav "soon" badge ---------- */
+.pf-nav-soonbadge {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--sb-muted);
+  background: var(--sb-active);
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+.pf-nav-active .pf-nav-soonbadge {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ---------- toasts ---------- */
+.pf-toasts {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+.pf-toast {
+  background: #1b1530;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 11px 16px;
+  border-radius: 11px;
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  animation: pf-fadeUp 0.2s ease;
+}
+
+/* ---------- coming-soon screen ---------- */
+.pf-soon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+.pf-soon-card {
+  max-width: 520px;
+  text-align: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 40px 36px;
+  box-shadow: 0 18px 44px -28px rgba(80, 40, 150, 0.3);
+}
+.pf-soon-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: #f1eafc;
+  color: var(--brand1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 18px;
+}
+.pf-soon-tag {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--brand1);
+  margin-bottom: 10px;
+}
+.pf-soon-title {
+  font-family: var(--font-sora);
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: -0.5px;
+  margin: 0 0 12px;
+}
+.pf-soon-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0 0 24px;
+}
+.pf-soon-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* clickable table rows + list buttons (admin) */
+.pf-clickrow {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pf-clickrow:hover {
+  background: var(--bg);
+}
+.pf-list-btn {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 7px;
+  margin: 0 -7px;
+  border-radius: 10px;
+  transition: background 0.15s;
+}
+.pf-list-btn:hover {
+  background: var(--bg);
 }

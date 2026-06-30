@@ -225,9 +225,33 @@ export const partners: Partner[] = [
   },
 ];
 
-export type FooterCol = { head: string; links: string[] };
+export type FooterLink = { label: string; href: string; external?: boolean };
+export type FooterCol = { head: string; links: FooterLink[] };
 export const footerCols: FooterCol[] = [
-  { head: "PROGRAM", links: ["The Model", "Tracks", "Journey", "Apply"] },
-  { head: "PARTNERS", links: ["Sponsor a cohort", "Hire talent", "Impact reports"] },
-  { head: "CONNECT", links: ["LinkedIn", "Instagram", "WhatsApp", "Contact"] },
+  {
+    head: "PROGRAM",
+    links: [
+      { label: "The Model", href: "/#model" },
+      { label: "Tracks", href: "/#tracks" },
+      { label: "Journey", href: "/#journey" },
+      { label: "Apply", href: "/apply" },
+    ],
+  },
+  {
+    head: "PARTNERS",
+    links: [
+      { label: "Sponsor a cohort", href: "/apply?role=partner" },
+      { label: "Hire talent", href: "/apply?role=partner" },
+      { label: "Impact reports", href: "/#impact" },
+    ],
+  },
+  {
+    head: "CONNECT",
+    links: [
+      { label: "LinkedIn", href: "https://www.linkedin.com", external: true },
+      { label: "Instagram", href: "https://www.instagram.com", external: true },
+      { label: "WhatsApp", href: "https://wa.me/237600000000", external: true },
+      { label: "Contact", href: "mailto:hello@techascend.africa" },
+    ],
+  },
 ];

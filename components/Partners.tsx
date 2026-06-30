@@ -15,7 +15,7 @@ export default function Partners() {
               infrastructure. You get a pipeline, ESG impact, and a report that proves
               it.
             </p>
-            <a href="#apply" className={styles.cta}>
+            <a href="/apply?role=partner" className={styles.cta}>
               Become a partner
             </a>
           </div>

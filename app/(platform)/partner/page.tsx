@@ -1,6 +1,20 @@
+"use client";
+
+import { useState } from "react";
+import { useToast } from "@/components/platform/Toast";
 import { pipeline, talent, impactMetrics } from "@/lib/platformData";
 
 export default function PartnerPage() {
+  const toast = useToast();
+  const [shortlisted, setShortlisted] = useState<string[]>([]);
+
+  function shortlist(name: string) {
+    setShortlisted((s) =>
+      s.includes(name) ? s.filter((n) => n !== name) : [...s, name],
+    );
+    if (!shortlisted.includes(name)) toast(`${name} added to your shortlist ✓`);
+  }
+
   return (
     <div className="pf-screen pf-w1240">
       {/* sponsorship hero */}
@@ -42,15 +56,15 @@ export default function PartnerPage() {
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {col.people.map((p) => (
-                      <div key={p.name} className="pf-pipe-person">
+                      <button key={p.name} className="pf-pipe-person" onClick={() => toast(`Opening ${p.name}'s profile`)}>
                         <div className="pf-pipe-av" style={{ background: p.avBg }}>{p.initials}</div>
-                        <div style={{ minWidth: 0 }}>
+                        <div style={{ minWidth: 0, textAlign: "left" }}>
                           <div style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {p.name}
                           </div>
                           <div style={{ fontSize: 10.5, color: "var(--muted)" }}>{p.role}</div>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -62,31 +76,40 @@ export default function PartnerPage() {
           <div className="pf-card pf-pad">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
               <div className="pf-h">Talent pool</div>
-              <span className="pf-link">View all 50 →</span>
+              <button className="pf-link" onClick={() => toast("Loading all 50 candidates…")}>View all 50 →</button>
             </div>
             <div className="pf-talent-grid">
-              {talent.map((t) => (
-                <div key={t.name} className="pf-talent">
-                  <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 10 }}>
-                    <div className="pf-talent-av" style={{ background: t.avBg }}>{t.initials}</div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 700 }}>{t.name}</div>
-                      <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{t.role}</div>
+              {talent.map((t) => {
+                const isShort = shortlisted.includes(t.name);
+                return (
+                  <div key={t.name} className="pf-talent">
+                    <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 10 }}>
+                      <div className="pf-talent-av" style={{ background: t.avBg }}>{t.initials}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700 }}>{t.name}</div>
+                        <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{t.role}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                      {t.skills.map((sk) => (
+                        <span key={sk} className="pf-skill">{sk}</span>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
+                        ⭐ {t.score} · {t.projects} projects
+                      </span>
+                      <button
+                        className="pf-shortlist"
+                        style={isShort ? { background: "var(--posbg)", color: "var(--pos)" } : undefined}
+                        onClick={() => shortlist(t.name)}
+                      >
+                        {isShort ? "Shortlisted ✓" : "Shortlist"}
+                      </button>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                    {t.skills.map((sk) => (
-                      <span key={sk} className="pf-skill">{sk}</span>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
-                      ⭐ {t.score} · {t.projects} projects
-                    </span>
-                    <button className="pf-shortlist">Shortlist</button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -120,7 +143,11 @@ export default function PartnerPage() {
               Auto-generated with verified outcomes — women trained, income generated,
               SMEs digitized.
             </div>
-            <button className="pf-btn-white" style={{ padding: "11px 16px", borderRadius: 11, fontSize: 13, width: "100%" }}>
+            <button
+              className="pf-btn-white"
+              style={{ padding: "11px 16px", borderRadius: 11, fontSize: 13, width: "100%" }}
+              onClick={() => toast("Preparing Q2 2026 impact report (PDF)…")}
+            >
               Download report (PDF)
             </button>
           </div>
