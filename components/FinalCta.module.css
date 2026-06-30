@@ -1,0 +1,65 @@
+.section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 28px 96px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.card {
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 36px;
+  background: var(--card);
+}
+.cardDark {
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 36px;
+  background: var(--ink-dark);
+  color: #fff;
+}
+.title {
+  font-family: var(--font-sora);
+  font-weight: 800;
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+.body {
+  font-size: 14.5px;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0 0 22px;
+}
+.bodyDark {
+  font-size: 14.5px;
+  color: #bbb0d8;
+  line-height: 1.55;
+  margin: 0 0 22px;
+}
+.ctaPrimary {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand1), var(--brand2));
+  padding: 14px 24px;
+  border-radius: 12px;
+  display: inline-block;
+}
+.ctaLight {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink);
+  background: #fff;
+  padding: 14px 24px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

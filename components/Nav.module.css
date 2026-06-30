@@ -1,0 +1,130 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 28px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--brand1), var(--brand2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sora);
+  font-weight: 800;
+  color: #fff;
+  font-size: 17px;
+}
+
+.brandName {
+  font-family: var(--font-sora);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.3px;
+}
+
+.nav {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+}
+
+.navLink {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+.navLink:hover {
+  color: var(--brand1);
+}
+
+.signin {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 10px 14px;
+}
+
+.apply {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand1), var(--brand2));
+  padding: 11px 18px;
+  border-radius: 11px;
+  box-shadow: 0 10px 24px -12px var(--brand2);
+}
+
+.menuBtn {
+  display: none;
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.mobileMenu {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 28px 20px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+}
+.mobileMenu a {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 10px 0;
+}
+.mobileApply {
+  margin-top: 8px;
+  text-align: center;
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--brand1), var(--brand2));
+  padding: 13px 18px !important;
+  border-radius: 11px;
+}
+
+@media (max-width: 860px) {
+  .nav,
+  .signin,
+  .apply {
+    display: none;
+  }
+  .menuBtn {
+    display: flex;
+  }
+  .mobileMenu.open {
+    display: flex;
+  }
+}

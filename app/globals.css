@@ -1,0 +1,77 @@
+:root {
+  --bg: #f6f4fb;
+  --card: #ffffff;
+  --ink: #1b1530;
+  --muted: #6b6480;
+  --faint: #9a93ad;
+  --line: #ece6f8;
+  --brand1: #7c3aed;
+  --brand2: #c026d3;
+  --radius: 18px;
+  --pos: #1f9d6b;
+  --posbg: #e6f6ef;
+  --ink-dark: #160e2e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  background: var(--card);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: rgba(124, 58, 237, 0.18);
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-sora), var(--font-jakarta), sans-serif;
+}
+
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Shared section helpers */
+.shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: 28px;
+  padding-right: 28px;
+}
+
+.eyebrow {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand1);
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}

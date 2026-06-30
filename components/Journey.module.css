@@ -1,0 +1,82 @@
+.section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 84px 28px;
+}
+.head {
+  text-align: center;
+  max-width: 620px;
+  margin: 0 auto 48px;
+}
+.title {
+  font-family: var(--font-sora);
+  font-weight: 800;
+  font-size: 34px;
+  letter-spacing: -0.7px;
+  margin: 0 0 10px;
+}
+.lede {
+  font-size: 16px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.track {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  position: relative;
+}
+.stage {
+  flex: 1;
+  position: relative;
+  padding: 0 6px;
+}
+.bar {
+  height: 4px;
+  border-radius: 4px;
+  margin-bottom: 18px;
+}
+.stageNum {
+  font-family: var(--font-sora);
+  font-weight: 800;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.stageTitle {
+  font-family: var(--font-sora);
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 5px;
+}
+.dur {
+  font-size: 12.5px;
+  color: var(--faint);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.body {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 880px) {
+  .track {
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+  .stage {
+    flex: 1 1 40%;
+    min-width: 160px;
+    padding: 0;
+  }
+}
+@media (max-width: 560px) {
+  .stage {
+    flex: 1 1 100%;
+  }
+  .title {
+    font-size: 28px;
+  }
+}
