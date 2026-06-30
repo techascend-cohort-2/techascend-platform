@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Icon from "@/components/Icon";
@@ -48,16 +49,35 @@ export default function PlatformLayout({
   const user = PERSONA_INFO[persona];
   const nav = NAV[persona];
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  // close the mobile drawer whenever the route changes (nav link / persona pill)
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   return (
     <div className="platform">
       <div className="pf-app">
-        <aside className="pf-aside">
+        {menuOpen ? (
+          <div className="pf-backdrop" onClick={() => setMenuOpen(false)} aria-hidden />
+        ) : null}
+        <aside className={`pf-aside ${menuOpen ? "pf-aside-open" : ""}`}>
           <div className="pf-brand">
             <div className="pf-logo">TA</div>
             <div>
               <div className="pf-brand-name">TechAscend</div>
               <div className="pf-brand-sub">AI-Native Ecosystem</div>
             </div>
+            <button
+              className="pf-drawer-close"
+              onClick={() => setMenuOpen(false)}
+              aria-label="Close menu"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           </div>
 
           <div className="pf-pills-wrap">
@@ -114,6 +134,18 @@ export default function PlatformLayout({
 
         <main className="pf-main">
           <header className="pf-header">
+            <button
+              className="pf-menu-btn"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open menu"
+              aria-expanded={menuOpen}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
             <div style={{ minWidth: 0 }}>
               <div className="pf-title">{title}</div>
               <div className="pf-sub">{sub}</div>
