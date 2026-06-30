@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F4FB; --card:#FFFFFF; --ink:#1B1530; --muted:#6B6480; --faint:#9A93AD;
+  --line:#ECE6F8; --brand1:#7C3AED; --brand2:#C026D3; --radius:16px; --radius-sm:10px;
+  --pos:#1F9D6B; --posbg:#E6F6EF; --warn:#C97A0E; --warnbg:#FCF1DE; --danger:#D6336C; --dangerbg:#FCE7F0;
+  --sb-bg:#17122E; --sb-ink:#EFEAFB; --sb-muted:#9C93C0; --sb-active:#241B47; --sb-line:rgba(255,255,255,.07);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+::selection{background:rgba(124,58,237,.18)}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{background:#DAD2EC;border-radius:8px;border:3px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:#C3B7E6;background-clip:content-box}
+@keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<div style="display:flex;height:100vh;width:100%;overflow:hidden;background:var(--bg)">
+
+  <aside style="width:256px;flex-shrink:0;background:var(--sb-bg);color:var(--sb-ink);display:flex;flex-direction:column;border-right:1px solid var(--sb-line)">
+    <div style="padding:22px 20px 16px;display:flex;align-items:center;gap:11px">
+      <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--brand1),var(--brand2));display:flex;align-items:center;justify-content:center;font-family:'Sora';font-weight:800;color:#fff;font-size:17px;box-shadow:0 6px 16px -6px var(--brand2)">TA</div>
+      <div>
+        <div style="font-family:'Sora';font-weight:800;font-size:16px;letter-spacing:-.2px;line-height:1">TechAscend</div>
+        <div style="font-size:10.5px;color:var(--sb-muted);letter-spacing:.4px;margin-top:3px;text-transform:uppercase">AI-Native Ecosystem</div>
+      </div>
+    </div>
+
+    <div style="padding:4px 14px 14px">
+      <div style="display:flex;gap:4px;background:var(--sb-active);padding:4px;border-radius:11px">
+        <sc-for list="{{ personaPills }}" as="p" hint-placeholder-count="3">
+          <button onClick="{{ p.onClick }}" style="{{ p.style }}">{{ p.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <nav style="flex:1;overflow-y:auto;padding:6px 12px 12px;display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="8">
+        <div onClick="{{ item.onClick }}" style="{{ item.style }}" style-hover="{{ item.hover }}">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:{{ item.iconOpacity }};flex-shrink:0"><path d="{{ item.iconPath }}"></path></svg>
+          <span style="flex:1">{{ item.label }}</span>
+          <sc-if value="{{ item.badge }}" hint-placeholder-val="">
+            <span style="font-size:10px;font-weight:700;background:linear-gradient(135deg,var(--brand1),var(--brand2));color:#fff;padding:2px 7px;border-radius:20px">{{ item.badge }}</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </nav>
+
+    <div style="padding:14px;border-top:1px solid var(--sb-line)">
+      <div style="display:flex;align-items:center;gap:11px;padding:8px;border-radius:12px;background:var(--sb-active)">
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#F0A,#7C3AED);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0">{{ topInitials }}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ topName }}</div>
+          <div style="font-size:11px;color:var(--sb-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ topRole }}</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden">
+    <header style="height:66px;flex-shrink:0;background:rgba(255,255,255,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:18px;padding:0 28px;z-index:5">
+      <div style="min-width:0">
+        <div style="font-family:'Sora';font-weight:700;font-size:18px;letter-spacing:-.3px;line-height:1.1">{{ pageTitle }}</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:2px">{{ pageSub }}</div>
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:8px 12px;width:248px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A93AD" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+        <input placeholder="Search lessons, projects, people" style="border:none;background:none;outline:none;font-family:inherit;font-size:13px;color:var(--ink);width:100%"/>
+      </div>
+      <button style="width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative" style-hover="width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:#FBF8FF;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5A5470" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 01-3.4 0"></path></svg>
+        <span style="position:absolute;top:9px;right:10px;width:7px;height:7px;border-radius:50%;background:var(--brand2);border:2px solid var(--card)"></span>
+      </button>
+    </header>
+
+    <div style="flex:1;overflow-y:auto;padding:28px">
+
+      <!-- ============ STUDENT DASHBOARD ============ -->
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="Student Dashboard" style="max-width:1180px;margin:0 auto">
+        <div style="display:flex;gap:18px;margin-bottom:18px;flex-wrap:wrap">
+          <div style="flex:1;min-width:380px;border-radius:var(--radius);background:linear-gradient(120deg,var(--brand1),var(--brand2));color:#fff;padding:26px 28px;position:relative;overflow:hidden;box-shadow:0 18px 40px -20px var(--brand2)">
+            <div style="position:absolute;right:-40px;top:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.10)"></div>
+            <div style="position:absolute;right:60px;bottom:-60px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.08)"></div>
+            <div style="position:relative">
+              <div style="font-size:13px;opacity:.85;font-weight:600;letter-spacing:.3px">WELCOME BACK</div>
+              <div style="font-family:'Sora';font-weight:800;font-size:28px;margin:6px 0 4px;letter-spacing:-.5px">Amina, you're on a roll.</div>
+              <div style="font-size:14px;opacity:.9;max-width:380px;line-height:1.5">You're 66% through <b>Module 4 — API & System Integration</b>. Finish 2 lessons to unlock your next income task.</div>
+              <div style="display:flex;gap:10px;margin-top:18px">
+                <button onClick="{{ goLesson }}" style="background:#fff;color:var(--brand1);border:none;font-family:inherit;font-weight:700;font-size:13.5px;padding:11px 18px;border-radius:11px;cursor:pointer">Continue learning</button>
+                <button onClick="{{ goTutor }}" style="background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.35);font-family:inherit;font-weight:600;font-size:13.5px;padding:11px 18px;border-radius:11px;cursor:pointer">Ask AI Tutor</button>
+              </div>
+            </div>
+          </div>
+          <div style="width:230px;border-radius:var(--radius);background:var(--card);border:1px solid var(--line);padding:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+            <div style="width:128px;height:128px;border-radius:50%;background:conic-gradient(var(--brand2) 0 72%,#EFE9F8 72% 100%);display:flex;align-items:center;justify-content:center">
+              <div style="width:98px;height:98px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <div style="font-family:'Sora';font-weight:800;font-size:30px;line-height:1">72%</div>
+                <div style="font-size:11px;color:var(--muted);font-weight:600">Track complete</div>
+              </div>
+            </div>
+            <div style="font-size:12.5px;color:var(--muted);margin-top:14px;text-align:center">AI Software Engineering<br><b style="color:var(--ink)">Week 17 of 24</b></div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px">
+          <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:0 8px 24px -18px rgba(80,40,150,.2)">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="width:34px;height:34px;border-radius:10px;background:{{ s.tintBg }};color:{{ s.tint }};display:flex;align-items:center;justify-content:center">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ s.iconPath }}"></path></svg>
+                </div>
+                <span style="font-size:11px;font-weight:700;color:{{ s.deltaColor }}">{{ s.delta }}</span>
+              </div>
+              <div style="font-family:'Sora';font-weight:800;font-size:24px;margin-top:12px;letter-spacing:-.5px">{{ s.value }}</div>
+              <div style="font-size:12.5px;color:var(--muted)">{{ s.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                <div style="font-family:'Sora';font-weight:700;font-size:15px">Continue learning</div>
+                <span style="font-size:12px;color:var(--brand1);font-weight:700;cursor:pointer">View curriculum →</span>
+              </div>
+              <div style="display:flex;gap:16px">
+                <div style="width:150px;height:104px;border-radius:12px;flex-shrink:0;background:repeating-linear-gradient(135deg,#2A1E4A,#2A1E4A 9px,#33245A 9px,#33245A 18px);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+                  <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="var(--brand1)"><path d="M8 5v14l11-7z"></path></svg></div>
+                  <span style="position:absolute;bottom:7px;right:8px;font-size:10px;font-family:'JetBrains Mono';color:#fff;background:rgba(0,0,0,.5);padding:2px 6px;border-radius:6px">14:20</span>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:11.5px;color:var(--brand1);font-weight:700;letter-spacing:.3px">MODULE 4 · LESSON 4.3</div>
+                  <div style="font-family:'Sora';font-weight:700;font-size:16px;margin:4px 0 2px">Working with REST APIs</div>
+                  <div style="font-size:12.5px;color:var(--muted);line-height:1.45">Request/response cycle, HTTP methods, status codes, and testing endpoints with AI assistance.</div>
+                  <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
+                    <div style="flex:1;height:7px;border-radius:6px;background:#EFE9F8;overflow:hidden"><div style="width:66%;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--brand1),var(--brand2))"></div></div>
+                    <span style="font-size:11.5px;font-weight:700;color:var(--muted)">66%</span>
+                    <button onClick="{{ goLesson }}" style="background:linear-gradient(135deg,var(--brand1),var(--brand2));color:#fff;border:none;font-family:inherit;font-weight:700;font-size:12.5px;padding:8px 14px;border-radius:9px;cursor:pointer">Resume</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                <div style="font-family:'Sora';font-weight:700;font-size:15px">Income tasks</div>
+                <span style="font-size:11.5px;color:var(--muted)">Earn while you learn</span>
+              </div>
+              <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px">AI-matched paid opportunities based on the skills you've shipped.</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ incomeTasks }}" as="t" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:13px;padding:13px;border:1px solid var(--line);border-radius:12px" style-hover="display:flex;align-items:center;gap:13px;padding:13px;border:1px solid #DDD0F3;border-radius:12px;background:#FCFAFF">
+                    <div style="width:40px;height:40px;border-radius:11px;background:{{ t.tintBg }};color:{{ t.tint }};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:15px">{{ t.glyph }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:13.5px;font-weight:700">{{ t.title }}</div>
+                      <div style="font-size:12px;color:var(--muted)">{{ t.meta }}</div>
+                    </div>
+                    <div style="text-align:right">
+                      <div style="font-size:13.5px;font-weight:800;color:var(--pos)">{{ t.pay }}</div>
+                      <div style="font-size:11px;color:var(--faint)">{{ t.match }} match</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="font-family:'Sora';font-weight:700;font-size:15px;margin-bottom:14px">Upcoming milestones</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <sc-for list="{{ milestones }}" as="m" hint-placeholder-count="4">
+                  <div style="display:flex;gap:13px;padding:4px 0">
+                    <div style="display:flex;flex-direction:column;align-items:center">
+                      <div style="width:13px;height:13px;border-radius:50%;background:{{ m.dotBg }};border:3px solid {{ m.dotBorder }};margin-top:3px"></div>
+                      <div style="width:2px;flex:1;background:var(--line);margin:3px 0;min-height:14px"></div>
+                    </div>
+                    <div style="padding-bottom:14px">
+                      <div style="font-size:13.5px;font-weight:700">{{ m.title }}</div>
+                      <div style="font-size:12px;color:var(--muted)">{{ m.sub }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="font-family:'Sora';font-weight:700;font-size:15px;margin-bottom:14px">Your portfolio</div>
+              <div style="display:flex;gap:10px;margin-bottom:14px">
+                <div style="flex:1;text-align:center;padding:12px 8px;border-radius:12px;background:var(--bg)"><div style="font-family:'Sora';font-weight:800;font-size:20px">7</div><div style="font-size:11px;color:var(--muted)">Projects shipped</div></div>
+                <div style="flex:1;text-align:center;padding:12px 8px;border-radius:12px;background:var(--bg)"><div style="font-family:'Sora';font-weight:800;font-size:20px">240k</div><div style="font-size:11px;color:var(--muted)">FCFA earned</div></div>
+              </div>
+              <button onClick="{{ goProject }}" style="width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:700;font-size:13px;padding:11px;border-radius:11px;cursor:pointer" style-hover="width:100%;background:#FBF8FF;border:1px solid #DDD0F3;color:var(--brand1);font-family:inherit;font-weight:700;font-size:13px;padding:11px;border-radius:11px;cursor:pointer">Submit a new project →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ LESSON PAGE ============ -->
+      <sc-if value="{{ isLesson }}" hint-placeholder-val="">
+      <div data-screen-label="Lesson Page" style="max-width:1240px;margin:0 auto">
+        <div style="display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div>
+                <div style="font-size:12px;color:var(--brand1);font-weight:700;letter-spacing:.3px">MODULE 4 · API & SYSTEM INTEGRATION</div>
+                <div style="font-family:'Sora';font-weight:800;font-size:22px;letter-spacing:-.4px;margin-top:3px">Lesson 4.3 — Working with REST APIs</div>
+              </div>
+              <button style="background:linear-gradient(135deg,var(--brand1),var(--brand2));color:#fff;border:none;font-family:inherit;font-weight:700;font-size:13px;padding:11px 16px;border-radius:11px;cursor:pointer;display:flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Mark complete</button>
+            </div>
+
+            <div style="border-radius:var(--radius);background:#15102B;padding:34px;position:relative;overflow:hidden;border:1px solid var(--line)">
+              <div style="text-align:center;color:#fff;font-family:'Sora';font-weight:800;font-size:24px;margin-bottom:28px">What is an <span style="color:#C9A8FF">API</span>?</div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+                <sc-for list="{{ apiFlow }}" as="n" hint-placeholder-count="3">
+                  <div style="text-align:center">
+                    <div style="width:84px;height:84px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);display:flex;align-items:center;justify-content:center;color:#C9A8FF">
+                      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.iconPath }}"></path></svg>
+                    </div>
+                    <div style="color:#fff;font-size:13px;font-weight:600;margin-top:9px">{{ n.label }}</div>
+                  </div>
+                  <sc-if value="{{ n.arrow }}" hint-placeholder-val="">
+                    <div style="display:flex;flex-direction:column;align-items:center;color:#7C6BA8;padding:0 4px 22px">
+                      <span style="font-size:10px;font-family:'JetBrains Mono';margin-bottom:3px">{{ n.arrowLabel }}</span>
+                      <svg width="44" height="12" viewBox="0 0 44 12" fill="none" stroke="#9C8AD0" stroke-width="1.6" stroke-linecap="round"><path d="M2 6h38M34 2l6 4-6 4"></path></svg>
+                    </div>
+                  </sc-if>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:13px;margin-top:30px;padding-top:18px;border-top:1px solid rgba(255,255,255,.09)">
+                <div style="width:34px;height:34px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="#15102B"><path d="M8 5v14l11-7z"></path></svg></div>
+                <span style="color:#9C8AD0;font-size:11.5px;font-family:'JetBrains Mono'">4:20 / 12:00</span>
+                <div style="flex:1;height:5px;border-radius:4px;background:rgba(255,255,255,.14)"><div style="width:36%;height:100%;border-radius:4px;background:var(--brand2)"></div></div>
+              </div>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="display:flex;gap:4px;padding:6px;border-bottom:1px solid var(--line)">
+                <sc-for list="{{ lessonTabs }}" as="t" hint-placeholder-count="4">
+                  <div style="{{ t.style }}">{{ t.label }}</div>
+                </sc-for>
+              </div>
+              <div style="padding:22px">
+                <div style="font-family:'Sora';font-weight:700;font-size:15px;margin-bottom:12px">In this lesson you'll learn</div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <sc-for list="{{ lessonPoints }}" as="p" hint-placeholder-count="5">
+                    <div style="display:flex;align-items:center;gap:11px;font-size:13.5px">
+                      <div style="width:21px;height:21px;border-radius:7px;background:var(--posbg);color:var(--pos);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></div>
+                      <span>{{ p }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px;position:sticky;top:0">
+            <div style="background:linear-gradient(150deg,#221647,#1A1138);border-radius:var(--radius);padding:18px;color:#fff;border:1px solid var(--line)">
+              <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+                <div style="width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,var(--brand1),var(--brand2));display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6 7 18.2l1.9-5.8L4 8.8h6.1z"></path></svg></div>
+                <div style="font-family:'Sora';font-weight:700;font-size:14px">AI explains it simply</div>
+              </div>
+              <div style="font-size:13px;line-height:1.6;color:#D9D2F0">Think of an API like a <b style="color:#C9A8FF">waiter at a restaurant</b>. You (the client) don't go into the kitchen (the server). You give your order to the waiter, who carries it to the kitchen and brings back your food — the <b style="color:#C9A8FF">response</b>.</div>
+              <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+                <span style="font-size:11.5px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);padding:6px 11px;border-radius:20px;cursor:pointer">Give me an example →</span>
+                <span style="font-size:11.5px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);padding:6px 11px;border-radius:20px;cursor:pointer">Explain in French</span>
+              </div>
+            </div>
+
+            <div style="background:#0E1322;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line)">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#161C30;border-bottom:1px solid rgba(255,255,255,.06)">
+                <div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:50%;background:#FF5F57"></span><span style="width:10px;height:10px;border-radius:50%;background:#FEBC2E"></span><span style="width:10px;height:10px;border-radius:50%;background:#28C840"></span><span style="font-size:11.5px;color:#8893BE;font-family:'JetBrains Mono';margin-left:6px">fetchUsers.js</span></div>
+                <button style="background:var(--pos);color:#fff;border:none;font-size:11px;font-weight:700;font-family:inherit;padding:5px 11px;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:5px">▶ Run</button>
+              </div>
+              <pre style="margin:0;padding:16px;font-family:'JetBrains Mono';font-size:12px;line-height:1.7;color:#C8D3F5;overflow-x:auto"><span style="color:#7C8BB8">// Track A · live editor</span>
+<span style="color:#C792EA">const</span> res <span style="color:#89DDFF">=</span> <span style="color:#C792EA">await</span> <span style="color:#82AAFF">fetch</span>(
+  <span style="color:#C3E88D">'/api/users'</span>
+)<span style="color:#89DDFF">;</span>
+<span style="color:#C792EA">const</span> data <span style="color:#89DDFF">=</span> <span style="color:#C792EA">await</span> res<span style="color:#89DDFF">.</span><span style="color:#82AAFF">json</span>()<span style="color:#89DDFF">;</span>
+console<span style="color:#89DDFF">.</span><span style="color:#82AAFF">log</span>(data<span style="color:#89DDFF">.</span>length)<span style="color:#89DDFF">;</span></pre>
+              <div style="padding:11px 16px;background:#0A0E1A;border-top:1px solid rgba(255,255,255,.06);font-family:'JetBrains Mono';font-size:11.5px;color:#5EE6A8">→ 24 users fetched ✓</div>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Sora';font-weight:700;font-size:14px">Lesson progress</div><span style="font-size:12px;font-weight:700;color:var(--brand1)">4 / 6</span></div>
+              <div style="height:7px;border-radius:6px;background:#EFE9F8;overflow:hidden;margin-bottom:14px"><div style="width:66%;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--brand1),var(--brand2))"></div></div>
+              <div style="font-size:11.5px;color:var(--faint);font-weight:700;letter-spacing:.3px;margin-bottom:8px">UP NEXT</div>
+              <div style="display:flex;align-items:center;gap:11px;padding:11px;border-radius:11px;background:var(--bg);cursor:pointer">
+                <div style="width:30px;height:30px;border-radius:8px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--muted)">4.4</div>
+                <div style="font-size:13px;font-weight:600">Authentication & API keys</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ PROJECT + AI EVALUATION ============ -->
+      <sc-if value="{{ isProject }}" hint-placeholder-val="">
+      <div data-screen-label="Project Submission" style="max-width:1180px;margin:0 auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <div>
+            <div style="font-family:'Sora';font-weight:800;font-size:22px;letter-spacing:-.4px">Submit Project</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:2px">AI Customer Support Agent · Module 4 capstone</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <sc-for list="{{ steps }}" as="st" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;{{ st.dot }}">{{ st.n }}</div>
+                <span style="font-size:12.5px;font-weight:600;{{ st.text }}">{{ st.label }}</span>
+                <sc-if value="{{ st.line }}" hint-placeholder-val="">
+                  <div style="width:22px;height:2px;background:var(--line);margin:0 4px"></div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 380px;gap:18px;align-items:start">
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+            <div style="font-family:'Sora';font-weight:700;font-size:16px">Upload deliverables</div>
+            <div style="font-size:12.5px;color:var(--muted);margin:3px 0 18px">Submit the required files. The AI evaluator reviews each as you upload.</div>
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <sc-for list="{{ deliverables }}" as="d" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:13px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#FBFAFE">
+                  <div style="width:38px;height:38px;border-radius:10px;background:{{ d.tintBg }};color:{{ d.tint }};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;font-family:'JetBrains Mono';flex-shrink:0">{{ d.ext }}</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:13.5px;font-weight:700">{{ d.title }}</div>
+                    <div style="font-size:12px;color:var(--muted)">{{ d.file }}</div>
+                  </div>
+                  <div style="width:24px;height:24px;border-radius:50%;background:var(--posbg);color:var(--pos);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></div>
+                </div>
+              </sc-for>
+              <div style="border:2px dashed #D5C9F0;border-radius:12px;padding:24px;text-align:center;background:#FCFAFF;cursor:pointer">
+                <div style="width:42px;height:42px;border-radius:12px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;color:var(--brand1)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></div>
+                <div style="font-size:13.5px;font-weight:700">Upload additional files</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:2px">Drag & drop or click to browse · max 50MB</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:20px">
+              <button style="flex:1;background:var(--bg);border:1px solid var(--line);color:var(--ink);font-family:inherit;font-weight:700;font-size:13px;padding:12px;border-radius:11px;cursor:pointer">Back</button>
+              <button style="flex:2;background:linear-gradient(135deg,var(--brand1),var(--brand2));border:none;color:#fff;font-family:inherit;font-weight:700;font-size:13px;padding:12px;border-radius:11px;cursor:pointer">Submit for final review →</button>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div style="background:linear-gradient(155deg,var(--brand1),#8B1FB0);border-radius:var(--radius);padding:22px;color:#fff;box-shadow:0 16px 36px -20px var(--brand2)">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6 7 18.2l1.9-5.8L4 8.8h6.1z"></path></svg><span style="font-size:13px;font-weight:700;letter-spacing:.3px;opacity:.92">AI EVALUATION</span></div>
+              <div style="display:flex;align-items:flex-end;gap:6px"><div style="font-family:'Sora';font-weight:800;font-size:46px;line-height:.9">87</div><div style="font-size:16px;opacity:.7;margin-bottom:6px">/ 100</div></div>
+              <div style="font-size:13px;opacity:.9;margin-top:4px">Strong submission — ready for mentor review.</div>
+              <div style="display:flex;flex-direction:column;gap:11px;margin-top:18px">
+                <sc-for list="{{ rubric }}" as="r" hint-placeholder-count="4">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="opacity:.9">{{ r.label }}</span><span style="font-weight:700">{{ r.score }}</span></div>
+                    <div style="height:6px;border-radius:5px;background:rgba(255,255,255,.2);overflow:hidden"><div style="width:{{ r.pct }};height:100%;border-radius:5px;background:#fff"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">
+                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#F0A,#7C3AED);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff">MN</div>
+                <div><div style="font-size:13px;font-weight:700">Mentor feedback</div><div style="font-size:11.5px;color:var(--muted)">Mary Ndi · Senior Engineer</div></div>
+              </div>
+              <div style="font-size:13px;line-height:1.55;color:var(--ink)">Excellent prompt handling and clean error states. Add retry logic for failed API calls and you're at production quality. 👏</div>
+            </div>
+
+            <div style="background:var(--posbg);border:1px solid #BBE6D2;border-radius:var(--radius);padding:18px">
+              <div style="font-size:12px;font-weight:700;color:var(--pos);letter-spacing:.3px;margin-bottom:7px">💡 MONETIZATION SUGGESTION</div>
+              <div style="font-size:13px;line-height:1.55;color:#14543A">This agent solves a real SME pain point. Package it as a <b>WhatsApp support bot</b> and offer it to 3 local shops at 35,000 FCFA/month each.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ AI TUTOR ============ -->
+      <sc-if value="{{ isTutor }}" hint-placeholder-val="">
+      <div data-screen-label="AI Tutor" style="max-width:1180px;margin:0 auto;height:calc(100vh - 122px)">
+        <div style="display:grid;grid-template-columns:230px 1fr;gap:18px;height:100%">
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+            <button style="background:linear-gradient(135deg,var(--brand1),var(--brand2));color:#fff;border:none;font-family:inherit;font-weight:700;font-size:13px;padding:11px;border-radius:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:16px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>New chat</button>
+            <div style="font-size:11px;font-weight:700;color:var(--faint);letter-spacing:.3px;margin-bottom:8px">RECENT</div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <sc-for list="{{ chatHistory }}" as="c" hint-placeholder-count="5">
+                <div style="{{ c.style }}">{{ c.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+            <div style="padding:15px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px">
+              <div style="width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--brand1),var(--brand2));display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6 7 18.2l1.9-5.8L4 8.8h6.1z"></path></svg></div>
+              <div style="flex:1"><div style="font-family:'Sora';font-weight:700;font-size:15px">TechAscend AI Tutor</div><div style="font-size:11.5px;color:var(--pos);font-weight:600;display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:var(--pos)"></span>Context: Lesson 4.3 · REST APIs</div></div>
+            </div>
+
+            <div style="flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:16px">
+              <sc-for list="{{ messages }}" as="m" hint-placeholder-count="3">
+                <div style="{{ m.row }}">
+                  <sc-if value="{{ m.isBot }}" hint-placeholder-val="{{ true }}">
+                    <div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand1),var(--brand2));flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6 7 18.2l1.9-5.8L4 8.8h6.1z"></path></svg></div>
+                  </sc-if>
+                  <div style="{{ m.bubble }}">{{ m.text }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="padding:14px 18px;border-top:1px solid var(--line)">
+              <div style="display:flex;gap:7px;margin-bottom:11px;flex-wrap:wrap">
+                <sc-for list="{{ chips }}" as="ch" hint-placeholder-count="3">
+                  <span onClick="{{ ch.onClick }}" style="font-size:12px;background:var(--bg);border:1px solid var(--line);color:var(--muted);padding:7px 12px;border-radius:20px;cursor:pointer" style-hover="font-size:12px;background:#FBF8FF;border:1px solid #DDD0F3;color:var(--brand1);padding:7px 12px;border-radius:20px;cursor:pointer">{{ ch.label }}</span>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:13px;padding:8px 8px 8px 16px">
+                <input value="{{ chatInput }}" onInput="{{ onChatInput }}" onKeyDown="{{ onChatKey }}" placeholder="Ask anything about this lesson…" style="flex:1;border:none;background:none;outline:none;font-family:inherit;font-size:13.5px;color:var(--ink)"/>
+                <button onClick="{{ sendChat }}" style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--brand1),var(--brand2));border:none;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ ADMIN DASHBOARD ============ -->
+      <sc-if value="{{ isAdmin }}" hint-placeholder-val="">
+      <div data-screen-label="Admin Dashboard" style="max-width:1240px;margin:0 auto">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px">
+          <sc-for list="{{ adminKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 8px 24px -18px rgba(80,40,150,.2)">
+              <div style="font-size:12.5px;color:var(--muted);font-weight:600">{{ k.label }}</div>
+              <div style="font-family:'Sora';font-weight:800;font-size:27px;margin:8px 0 4px;letter-spacing:-.5px">{{ k.value }}</div>
+              <div style="font-size:12px;font-weight:700;color:{{ k.color }}">{{ k.delta }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px"><div style="font-family:'Sora';font-weight:700;font-size:15px">Enrollment & completion</div><span style="font-size:11.5px;color:var(--muted)">Last 6 cohorts</span></div>
+              <div style="display:flex;align-items:flex-end;gap:18px;height:160px;padding-left:4px">
+                <sc-for list="{{ enrollBars }}" as="b" hint-placeholder-count="6">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end">
+                    <div style="width:100%;max-width:38px;display:flex;flex-direction:column;justify-content:flex-end;gap:3px;height:100%">
+                      <div style="height:{{ b.h2 }};border-radius:6px 6px 0 0;background:#E7DCFA"></div>
+                      <div style="height:{{ b.h1 }};border-radius:6px 6px 0 0;background:linear-gradient(180deg,var(--brand1),var(--brand2))"></div>
+                    </div>
+                    <span style="font-size:11px;color:var(--muted);font-weight:600">{{ b.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:18px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+                <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)"><span style="width:11px;height:11px;border-radius:3px;background:linear-gradient(180deg,var(--brand1),var(--brand2))"></span>Completed</div>
+                <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)"><span style="width:11px;height:11px;border-radius:3px;background:#E7DCFA"></span>Enrolled</div>
+              </div>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px"><div style="font-family:'Sora';font-weight:700;font-size:15px">Cohort management</div><button style="font-size:12px;font-weight:700;color:var(--brand1);background:none;border:none;cursor:pointer">+ New cohort</button></div>
+              <div style="display:grid;grid-template-columns:2fr 1.4fr 1fr 1.3fr 1fr;padding:10px 20px;background:var(--bg);font-size:11px;font-weight:700;color:var(--faint);letter-spacing:.3px"><span>COHORT</span><span>TRACK</span><span>LEARNERS</span><span>PROGRESS</span><span>STATUS</span></div>
+              <sc-for list="{{ cohorts }}" as="c" hint-placeholder-count="4">
+                <div style="display:grid;grid-template-columns:2fr 1.4fr 1fr 1.3fr 1fr;align-items:center;padding:14px 20px;border-top:1px solid var(--line);font-size:13px">
+                  <span style="font-weight:700">{{ c.name }}</span>
+                  <span style="color:var(--muted)">{{ c.track }}</span>
+                  <span style="color:var(--muted)">{{ c.learners }}</span>
+                  <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;border-radius:5px;background:#EFE9F8;max-width:70px"><div style="width:{{ c.pct }};height:100%;border-radius:5px;background:linear-gradient(90deg,var(--brand1),var(--brand2))"></div></div><span style="font-size:11.5px;color:var(--muted);font-weight:600">{{ c.pct }}</span></div>
+                  <span style="{{ c.badge }}">{{ c.status }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><div style="width:26px;height:26px;border-radius:8px;background:var(--dangerbg);color:var(--danger);display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"></path></svg></div><div style="font-family:'Sora';font-weight:700;font-size:15px">Dropout risk</div></div>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:14px">AI flags learners needing outreach.</div>
+              <div style="display:flex;flex-direction:column;gap:11px">
+                <sc-for list="{{ riskList }}" as="r" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <div style="width:34px;height:34px;border-radius:50%;background:{{ r.avBg }};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;flex-shrink:0">{{ r.initials }}</div>
+                    <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">{{ r.name }}</div><div style="font-size:11.5px;color:var(--muted)">{{ r.reason }}</div></div>
+                    <span style="{{ r.badge }}">{{ r.risk }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="font-family:'Sora';font-weight:700;font-size:15px;margin-bottom:14px">Partner overview</div>
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <sc-for list="{{ partnerMini }}" as="p" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <div style="width:34px;height:34px;border-radius:9px;background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:'Sora';font-weight:800;font-size:12px;color:var(--brand1);flex-shrink:0">{{ p.abbr }}</div>
+                    <div style="flex:1"><div style="font-size:13px;font-weight:700">{{ p.name }}</div><div style="font-size:11.5px;color:var(--muted)">{{ p.type }}</div></div>
+                    <span style="font-size:12px;font-weight:700;color:var(--pos)">{{ p.value }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ PARTNER DASHBOARD ============ -->
+      <sc-if value="{{ isPartner }}" hint-placeholder-val="">
+      <div data-screen-label="Partner Dashboard" style="max-width:1240px;margin:0 auto">
+        <div style="border-radius:var(--radius);background:linear-gradient(120deg,#1A1138,#3A1A55);color:#fff;padding:24px 26px;margin-bottom:18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+          <div style="flex:1;min-width:280px">
+            <div style="font-size:12px;opacity:.8;font-weight:600;letter-spacing:.3px">SPONSORSHIP DASHBOARD</div>
+            <div style="font-family:'Sora';font-weight:800;font-size:24px;margin:5px 0 3px">MTN Foundation · Women AI Builders Cohort</div>
+            <div style="font-size:13px;opacity:.85">Sponsoring 50 learners · Douala Hub · 2026 H1</div>
+          </div>
+          <div style="display:flex;gap:26px">
+            <div><div style="font-family:'Sora';font-weight:800;font-size:26px">3.4×</div><div style="font-size:11.5px;opacity:.75">Social ROI</div></div>
+            <div><div style="font-family:'Sora';font-weight:800;font-size:26px">82%</div><div style="font-size:11.5px;opacity:.75">Completion</div></div>
+            <div><div style="font-family:'Sora';font-weight:800;font-size:26px">31</div><div style="font-size:11.5px;opacity:.75">Now earning</div></div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="font-family:'Sora';font-weight:700;font-size:15px;margin-bottom:16px">Hiring pipeline</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+                <sc-for list="{{ pipeline }}" as="col" hint-placeholder-count="3">
+                  <div style="background:var(--bg);border-radius:12px;padding:12px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px"><span style="font-size:12px;font-weight:700">{{ col.stage }}</span><span style="font-size:11px;font-weight:700;color:var(--muted);background:var(--card);padding:2px 8px;border-radius:20px">{{ col.count }}</span></div>
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                      <sc-for list="{{ col.people }}" as="p" hint-placeholder-count="2">
+                        <div style="background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;align-items:center;gap:9px">
+                          <div style="width:28px;height:28px;border-radius:50%;background:{{ p.avBg }};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#fff;flex-shrink:0">{{ p.initials }}</div>
+                          <div style="min-width:0"><div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</div><div style="font-size:10.5px;color:var(--muted)">{{ p.role }}</div></div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="font-family:'Sora';font-weight:700;font-size:15px">Talent pool</div><span style="font-size:12px;font-weight:700;color:var(--brand1);cursor:pointer">View all 50 →</span></div>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+                <sc-for list="{{ talent }}" as="t" hint-placeholder-count="4">
+                  <div style="border:1px solid var(--line);border-radius:12px;padding:14px" style-hover="border:1px solid #DDD0F3;border-radius:12px;padding:14px;background:#FCFAFF">
+                    <div style="display:flex;align-items:center;gap:11px;margin-bottom:10px">
+                      <div style="width:40px;height:40px;border-radius:50%;background:{{ t.avBg }};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0">{{ t.initials }}</div>
+                      <div style="min-width:0"><div style="font-size:13.5px;font-weight:700">{{ t.name }}</div><div style="font-size:11.5px;color:var(--muted)">{{ t.role }}</div></div>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+                      <sc-for list="{{ t.skills }}" as="sk" hint-placeholder-count="2">
+                        <span style="font-size:10.5px;font-weight:600;background:var(--bg);color:var(--muted);padding:3px 9px;border-radius:20px">{{ sk }}</span>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between">
+                      <span style="font-size:11.5px;color:var(--muted)">⭐ {{ t.score }} · {{ t.projects }} projects</span>
+                      <button style="font-size:11.5px;font-weight:700;color:var(--brand1);background:#F4EDFC;border:none;padding:5px 11px;border-radius:8px;cursor:pointer">Shortlist</button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="font-family:'Sora';font-weight:700;font-size:15px;margin-bottom:14px">Impact metrics</div>
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <sc-for list="{{ impact }}" as="i" hint-placeholder-count="4">
+                  <div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;color:var(--muted)">{{ i.label }}</span><span style="font-size:13px;font-weight:800;font-family:'Sora'">{{ i.value }}</span></div>
+                    <div style="height:7px;border-radius:6px;background:#EFE9F8;overflow:hidden"><div style="width:{{ i.pct }};height:100%;border-radius:6px;background:linear-gradient(90deg,var(--brand1),var(--brand2))"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:linear-gradient(155deg,var(--brand1),#8B1FB0);border-radius:var(--radius);padding:22px;color:#fff;box-shadow:0 16px 36px -20px var(--brand2)">
+              <div style="font-size:12px;opacity:.85;font-weight:600;letter-spacing:.3px">CSR / ESG REPORT</div>
+              <div style="font-family:'Sora';font-weight:800;font-size:18px;margin:6px 0 10px">Q2 2026 impact report is ready</div>
+              <div style="font-size:13px;opacity:.9;line-height:1.5;margin-bottom:16px">Auto-generated with verified outcomes — women trained, income generated, SMEs digitized.</div>
+              <button style="background:#fff;color:var(--brand1);border:none;font-family:inherit;font-weight:700;font-size:13px;padding:11px 16px;border-radius:11px;cursor:pointer;width:100%">Download report (PDF)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ EARN HUB ============ -->
+      <sc-if value="{{ isEarn }}" hint-placeholder-val="">
+      <div data-screen-label="Earn Hub" style="max-width:1240px;margin:0 auto">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px">
+          <sc-for list="{{ earnKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 8px 24px -18px rgba(80,40,150,.2)">
+              <div style="font-size:12.5px;color:var(--muted);font-weight:600">{{ k.label }}</div>
+              <div style="font-family:'Sora';font-weight:800;font-size:26px;margin:8px 0 4px;letter-spacing:-.5px">{{ k.value }}</div>
+              <div style="font-size:12px;font-weight:700;color:{{ k.color }}">{{ k.delta }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="display:flex;align-items:center;gap:9px;margin-bottom:4px">
+                <div style="width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--brand1),var(--brand2));display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6 7 18.2l1.9-5.8L4 8.8h6.1z"></path></svg></div>
+                <div style="font-family:'Sora';font-weight:700;font-size:15px">AI-matched for your skills</div>
+              </div>
+              <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Paid work matched to the projects you've actually shipped — apply in one tap.</div>
+              <div style="display:flex;flex-direction:column;gap:11px">
+                <sc-for list="{{ gigs }}" as="g" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:13px;padding:14px;border:1px solid var(--line);border-radius:12px" style-hover="display:flex;align-items:center;gap:13px;padding:14px;border:1px solid #DDD0F3;border-radius:12px;background:#FCFAFF">
+                    <div style="width:42px;height:42px;border-radius:11px;background:{{ g.tintBg }};color:{{ g.tint }};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:14px">{{ g.glyph }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:13.5px;font-weight:700">{{ g.title }}</div>
+                      <div style="font-size:12px;color:var(--muted);margin:1px 0 6px">{{ g.type }}</div>
+                      <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <sc-for list="{{ g.skills }}" as="sk" hint-placeholder-count="2">
+                          <span style="font-size:10.5px;font-weight:600;background:var(--bg);color:var(--muted);padding:2px 8px;border-radius:20px">{{ sk }}</span>
+                        </sc-for>
+                      </div>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0">
+                      <div style="font-size:14px;font-weight:800;color:var(--pos)">{{ g.pay }}</div>
+                      <div style="font-size:11px;color:var(--faint);margin-bottom:8px">{{ g.match }} match</div>
+                      <button style="font-size:11.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--brand1),var(--brand2));border:none;padding:6px 13px;border-radius:8px;cursor:pointer">Apply</button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="font-family:'Sora';font-weight:700;font-size:15px">Local business gigs</div><span style="font-size:11.5px;color:var(--muted)">SMEs near you</span></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <sc-for list="{{ smeGigs }}" as="s" hint-placeholder-count="2">
+                  <div style="border:1px solid var(--line);border-radius:12px;padding:14px">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                      <div style="width:36px;height:36px;border-radius:10px;background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:'Sora';font-weight:800;font-size:12px;color:var(--brand1);flex-shrink:0">{{ s.abbr }}</div>
+                      <div style="min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div><div style="font-size:11px;color:var(--muted)">📍 {{ s.loc }}</div></div>
+                    </div>
+                    <div style="font-size:12.5px;color:var(--ink);margin-bottom:10px">{{ s.need }}</div>
+                    <div style="display:flex;align-items:center;justify-content:space-between">
+                      <span style="font-size:13px;font-weight:800;color:var(--pos)">{{ s.pay }}</span>
+                      <span style="font-size:11.5px;font-weight:700;color:var(--brand1);cursor:pointer">View brief →</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px"><div style="font-family:'Sora';font-weight:700;font-size:15px">Earnings tracker</div><span style="font-size:11.5px;color:var(--muted)">6 months · FCFA</span></div>
+              <div style="display:flex;align-items:flex-end;gap:12px;height:130px">
+                <sc-for list="{{ earnTrend }}" as="b" hint-placeholder-count="6">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end">
+                    <span style="font-size:10px;color:var(--muted);font-weight:700">{{ b.amt }}</span>
+                    <div style="width:100%;max-width:32px;height:{{ b.h }};border-radius:6px 6px 0 0;background:linear-gradient(180deg,var(--brand1),var(--brand2))"></div>
+                    <span style="font-size:10.5px;color:var(--faint);font-weight:600">{{ b.m }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 10px 30px -18px rgba(80,40,150,.18)">
+              <div style="font-family:'Sora';font-weight:700;font-size:15px;margin-bottom:14px">Payout history</div>
+              <div style="display:flex;flex-direction:column;gap:13px">
+                <sc-for list="{{ payouts }}" as="p" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">{{ p.title }}</div><div style="font-size:11.5px;color:var(--muted)">{{ p.date }}</div></div>
+                    <div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:800;color:var(--ink)">{{ p.amount }}</div><span style="{{ p.badge }}">{{ p.status }}</span></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:linear-gradient(155deg,var(--brand1),#8B1FB0);border-radius:var(--radius);padding:22px;color:#fff;box-shadow:0 16px 36px -20px var(--brand2)">
+              <div style="font-size:12px;opacity:.85;font-weight:600;letter-spacing:.3px">AVAILABLE BALANCE</div>
+              <div style="font-family:'Sora';font-weight:800;font-size:30px;margin:4px 0 14px">195,000 F</div>
+              <button style="background:#fff;color:var(--brand1);border:none;font-family:inherit;font-weight:700;font-size:13px;padding:12px 16px;border-radius:11px;cursor:pointer;width:100%">Withdraw via Mobile Money</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+
+    <button onClick="{{ goTutor }}" style="position:fixed;right:28px;bottom:28px;z-index:30;display:flex;align-items:center;gap:9px;background:linear-gradient(135deg,var(--brand1),var(--brand2));color:#fff;border:none;font-family:inherit;font-weight:700;font-size:13.5px;padding:13px 18px;border-radius:30px;cursor:pointer;box-shadow:0 14px 34px -10px var(--brand2)" style-hover="position:fixed;right:28px;bottom:28px;z-index:30;display:flex;align-items:center;gap:9px;background:linear-gradient(135deg,var(--brand1),var(--brand2));color:#fff;border:none;font-family:inherit;font-weight:700;font-size:13.5px;padding:13px 20px;border-radius:30px;cursor:pointer;box-shadow:0 18px 40px -8px var(--brand2)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6 7 18.2l1.9-5.8L4 8.8h6.1z"></path></svg>
+      Ask AI
+    </button>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:940},&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:[&quot;#7C3AED&quot;,&quot;#C026D3&quot;],&quot;tsType&quot;:&quot;string[]&quot;,&quot;options&quot;:[[&quot;#7C3AED&quot;,&quot;#C026D3&quot;],[&quot;#6D28D9&quot;,&quot;#DB2777&quot;],[&quot;#4F46E5&quot;,&quot;#7C3AED&quot;],[&quot;#0EA5A4&quot;,&quot;#7C3AED&quot;]],&quot;section&quot;:&quot;Theme&quot;},&quot;sidebarTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Deep violet&quot;,&quot;options&quot;:[&quot;Deep violet&quot;,&quot;Midnight&quot;,&quot;Light&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;},&quot;cornerStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Rounded&quot;,&quot;options&quot;:[&quot;Rounded&quot;,&quot;Sharp&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;}}">
+class Component extends DCLogic {
+  state = {
+    screen: 'dashboard',
+    persona: 'student',
+    chatInput: '',
+    messages: [
+      { role: 'bot', text: "Hi Amina! 👋 I'm your AI Tutor. I can see you're on Lesson 4.3 — REST APIs. What would you like help with?" },
+      { role: 'user', text: 'Can you explain what an API endpoint actually is, in simple terms?' },
+      { role: 'bot', text: "Of course! An endpoint is just a specific URL where an API listens for requests — like a phone number for one service. For example, GET /api/users returns a list of users. Each endpoint does one job.\n\nNext action: try fetching /api/users in your editor and log the result." }
+    ]
+  };
+
+  componentDidMount() { this.applyTheme(); }
+  componentDidUpdate() { this.applyTheme(); }
+
+  applyTheme() {
+    const r = document.documentElement.style;
+    const acc = this.props.accentColor;
+    const b1 = Array.isArray(acc) ? acc[0] : (acc || '#7C3AED');
+    const b2 = Array.isArray(acc) ? (acc[1] || b1) : '#C026D3';
+    r.setProperty('--brand1', b1);
+    r.setProperty('--brand2', b2);
+    const corner = this.props.cornerStyle || 'Rounded';
+    r.setProperty('--radius', corner === 'Sharp' ? '6px' : '16px');
+    r.setProperty('--radius-sm', corner === 'Sharp' ? '4px' : '10px');
+    const side = this.props.sidebarTheme || 'Deep violet';
+    const map = {
+      'Deep violet': ['#17122E', '#EFEAFB', '#9C93C0', '#241B47', 'rgba(255,255,255,.07)'],
+      'Midnight': ['#0E1326', '#E8EEFF', '#8893BE', '#1A2440', 'rgba(255,255,255,.07)'],
+      'Light': ['#FBF9FF', '#1B1530', '#6B6480', '#F1ECFB', '#ECE6F8']
+    };
+    const s = map[side] || map['Deep violet'];
+    r.setProperty('--sb-bg', s[0]); r.setProperty('--sb-ink', s[1]);
+    r.setProperty('--sb-muted', s[2]); r.setProperty('--sb-active', s[3]); r.setProperty('--sb-line', s[4]);
+  }
+
+  go(screen) { this.setState({ screen }); }
+  setPersona(p) {
+    const def = p === 'admin' ? 'admin' : p === 'partner' ? 'partner' : 'dashboard';
+    this.setState({ persona: p, screen: def });
+  }
+
+  onChatInput(e) { this.setState({ chatInput: e.target.value }); }
+  onChatKey(e) { if (e.key === 'Enter') this.sendChat(); }
+  sendChat(preset) {
+    const text = typeof preset === 'string' ? preset : this.state.chatInput.trim();
+    if (!text) return;
+    const reply = "Great question! Let me break that down step by step with a quick example, then I'll suggest your next action. 💡";
+    this.setState({
+      messages: [...this.state.messages, { role: 'user', text }, { role: 'bot', text: reply }],
+      chatInput: ''
+    });
+  }
+
+  navData() {
+    const I = {
+      home: 'M3 9.5L12 3l9 6.5M5 8.5V20a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V8.5',
+      book: 'M4 5a2 2 0 012-2h6v16H6a2 2 0 00-2 2V5zM20 5a2 2 0 00-2-2h-6v16h6a2 2 0 012 2V5z',
+      chat: 'M21 11.5a8.38 8.38 0 01-9 8.38 9 9 0 01-4-.9L3 21l1.9-4.5A8.38 8.38 0 0121 11.5z',
+      grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+      users: 'M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M11 7a4 4 0 100 8 4 4 0 000-8zM21 21v-2a4 4 0 00-3-3.87',
+      bag: 'M6 7V5a2 2 0 012-2h8a2 2 0 012 2v2M3 7h18v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z',
+      coin: 'M12 2v20M16 6.5c-1-1.2-2.5-1.5-4-1.5-2.2 0-4 1-4 3s1.8 2.5 4 3 4 1 4 3-1.8 3-4 3c-1.5 0-3-.3-4-1.5',
+      award: 'M12 15a6 6 0 100-12 6 6 0 000 12zM8.2 13.5L7 22l5-3 5 3-1.2-8.5',
+      chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2'
+    };
+    const lists = {
+      student: [
+        { label: 'Dashboard', icon: I.home, screen: 'dashboard', built: true },
+        { label: 'My Learning', icon: I.book, screen: 'lesson', built: true },
+        { label: 'AI Tutor', icon: I.chat, screen: 'tutor', built: true, badge: 'New' },
+        { label: 'Projects', icon: I.grid, screen: 'project', built: true },
+        { label: 'Community', icon: I.users, screen: 'soon', built: false },
+        { label: 'Opportunities', icon: I.bag, screen: 'soon', built: false },
+        { label: 'Earn Hub', icon: I.coin, screen: 'earn', built: true },
+        { label: 'Badges & Certs', icon: I.award, screen: 'soon', built: false }
+      ],
+      admin: [
+        { label: 'Overview', icon: I.chart, screen: 'admin', built: true },
+        { label: 'Cohorts', icon: I.book, screen: 'soon', built: false },
+        { label: 'Students', icon: I.users, screen: 'soon', built: false },
+        { label: 'Partners', icon: I.bag, screen: 'soon', built: false },
+        { label: 'Revenue', icon: I.coin, screen: 'soon', built: false }
+      ],
+      partner: [
+        { label: 'Overview', icon: I.chart, screen: 'partner', built: true },
+        { label: 'Talent Pool', icon: I.users, screen: 'soon', built: false },
+        { label: 'Hiring Pipeline', icon: I.bag, screen: 'soon', built: false },
+        { label: 'Impact & ROI', icon: I.award, screen: 'soon', built: false }
+      ]
+    };
+    return (lists[this.state.persona] || lists.student).map(it => {
+      const active = it.built && it.screen === this.state.screen;
+      const base = 'display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:11px;font-size:13.5px;font-weight:600;';
+      let style, hover, iconOpacity;
+      if (active) {
+        style = base + 'background:linear-gradient(135deg,var(--brand1),var(--brand2));color:#fff;cursor:pointer;box-shadow:0 8px 18px -10px var(--brand2)';
+        hover = style; iconOpacity = '1';
+      } else if (it.built) {
+        style = base + 'color:var(--sb-muted);cursor:pointer;background:transparent';
+        hover = base + 'color:var(--sb-ink);cursor:pointer;background:var(--sb-active)';
+        iconOpacity = '.85';
+      } else {
+        style = base + 'color:var(--sb-muted);opacity:.5;cursor:default;background:transparent';
+        hover = style; iconOpacity = '.6';
+      }
+      return {
+        label: it.label, iconPath: it.icon, style, hover, iconOpacity,
+        badge: it.badge || '',
+        onClick: it.built ? () => this.go(it.screen) : null
+      };
+    });
+  }
+
+  renderVals() {
+    const { screen, persona } = this.state;
+    const pillBase = 'flex:1;border:none;font-family:inherit;font-weight:700;font-size:12px;padding:8px 6px;border-radius:8px;cursor:pointer;transition:all .15s;';
+    const personaPills = [
+      { key: 'student', label: 'Student' },
+      { key: 'admin', label: 'Admin' },
+      { key: 'partner', label: 'Partner' }
+    ].map(p => ({
+      label: p.label,
+      onClick: () => this.setPersona(p.key),
+      style: persona === p.key
+        ? pillBase + 'background:#fff;color:var(--sb-bg)'
+        : pillBase + 'background:transparent;color:var(--sb-muted)'
+    }));
+
+    const titles = {
+      dashboard: ['Dashboard', 'Your learning & income at a glance'],
+      lesson: ['My Learning', 'Module 4 · API & System Integration'],
+      tutor: ['AI Tutor', 'Context-aware help for every lesson'],
+      project: ['Projects', 'Submit work & get instant AI evaluation'],
+      admin: ['Admin · Douala Hub', 'Cohorts, analytics & partner overview'],
+      partner: ['Partner Portal', 'Talent, hiring & impact reporting'],
+      earn: ['Earn Hub', 'Turn your skills into real income'],
+      soon: ['Coming soon', 'This module is part of the full build']
+    };
+    const t = titles[screen] || titles.dashboard;
+    const persInfo = {
+      student: ['Amina Njoya', 'AI Software Eng · Track A', 'AN'],
+      admin: ['Grace Mbeki', 'Program Director', 'GM'],
+      partner: ['MTN Foundation', 'Sponsorship Partner', 'MF']
+    }[persona];
+
+    // chat messages styling
+    const messages = this.state.messages.map(m => {
+      const isBot = m.role === 'bot';
+      return {
+        isBot,
+        text: m.text,
+        row: isBot
+          ? 'display:flex;gap:11px;align-items:flex-start;max-width:82%'
+          : 'display:flex;gap:11px;align-items:flex-start;max-width:78%;align-self:flex-end',
+        bubble: isBot
+          ? 'background:var(--bg);border:1px solid var(--line);border-radius:4px 14px 14px 14px;padding:13px 15px;font-size:13.5px;line-height:1.55;white-space:pre-wrap'
+          : 'background:linear-gradient(135deg,var(--brand1),var(--brand2));color:#fff;border-radius:14px 4px 14px 14px;padding:13px 15px;font-size:13.5px;line-height:1.55'
+      };
+    });
+
+    return {
+      screen, persona,
+      isDashboard: screen === 'dashboard', isLesson: screen === 'lesson',
+      isTutor: screen === 'tutor', isProject: screen === 'project',
+      isAdmin: screen === 'admin', isPartner: screen === 'partner', isEarn: screen === 'earn',
+      pageTitle: t[0], pageSub: t[1],
+      topName: persInfo[0], topRole: persInfo[1], topInitials: persInfo[2],
+      personaPills, navItems: this.navData(),
+      goLesson: () => this.go('lesson'), goProject: () => this.go('project'),
+      goTutor: () => this.go('tutor'), goDashboard: () => this.go('dashboard'),
+      goEarn: () => this.go('earn'),
+
+      stats: [
+        { label: 'Overall progress', value: '72%', delta: '+8%', deltaColor: 'var(--pos)', tint: '#7C3AED', tintBg: '#F1EAFC', iconPath: 'M22 12A10 10 0 1112 2v10z' },
+        { label: 'Day streak', value: '12', delta: '🔥', deltaColor: 'var(--warn)', tint: '#C97A0E', tintBg: '#FCF1DE', iconPath: 'M12 2s5 4 5 9a5 5 0 01-10 0c0-2 1-3 1-3s0 2 2 2 2-4 2-8z' },
+        { label: 'Badges earned', value: '18', delta: '+3', deltaColor: 'var(--pos)', tint: '#D6336C', tintBg: '#FCE7F0', iconPath: 'M12 15a6 6 0 100-12 6 6 0 000 12zM8 13l-1 8 5-3 5 3-1-8' },
+        { label: 'Projects shipped', value: '7', delta: '+1', deltaColor: 'var(--pos)', tint: '#1F9D6B', tintBg: '#E6F6EF', iconPath: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' }
+      ],
+      incomeTasks: [
+        { title: 'Build a landing page for a local bakery', meta: 'Freelance · Track A skills', pay: '45,000 F', match: '96%', glyph: 'W', tint: '#7C3AED', tintBg: '#F1EAFC' },
+        { title: 'Automate invoices for an SME', meta: 'TechAscend Studio · n8n', pay: '80,000 F', match: '91%', glyph: 'A', tint: '#1F9D6B', tintBg: '#E6F6EF' },
+        { title: 'AI chatbot for a clinic', meta: 'Partner brief · OpenAI API', pay: '120,000 F', match: '88%', glyph: 'AI', tint: '#D6336C', tintBg: '#FCE7F0' }
+      ],
+      milestones: [
+        { title: 'Finish Module 4', sub: '2 lessons left', dotBg: 'var(--brand1)', dotBorder: '#E7DCFA' },
+        { title: 'Submit capstone project', sub: 'AI Customer Support Agent', dotBg: '#fff', dotBorder: 'var(--line)' },
+        { title: 'Live session: API design', sub: 'Sat · 3:00 PM · with Mary N.', dotBg: '#fff', dotBorder: 'var(--line)' },
+        { title: 'Earn "API Integrator" badge', sub: 'Unlocks new income tasks', dotBg: '#fff', dotBorder: 'var(--line)' }
+      ],
+
+      apiFlow: [
+        { label: 'Client', iconPath: 'M3 4h18v12H3zM8 20h8M12 16v4', arrow: true, arrowLabel: 'request' },
+        { label: 'API', iconPath: 'M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6 7 18.2l1.9-5.8L4 8.8h6.1z', arrow: true, arrowLabel: 'query' },
+        { label: 'Server', iconPath: 'M20 6.4c0 1.9-3.6 3.6-8 3.6S4 8.3 4 6.4 7.6 2.8 12 2.8s8 1.7 8 3.6zM4 6.4v11.2C4 19.5 7.6 21 12 21s8-1.5 8-3.4V6.4', arrow: false, arrowLabel: '' }
+      ],
+      lessonTabs: ['Overview', 'Notes', 'Resources', 'Q&A'].map((l, i) => ({
+        label: l,
+        style: i === 0
+          ? 'padding:9px 16px;border-radius:9px;font-size:13px;font-weight:700;background:#F1EAFC;color:var(--brand1);cursor:pointer'
+          : 'padding:9px 16px;border-radius:9px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer'
+      })),
+      lessonPoints: [
+        'What an API is and why it matters',
+        'How REST APIs work end-to-end',
+        'HTTP methods: GET, POST, PUT, DELETE',
+        'Reading and handling status codes',
+        'Testing endpoints with AI assistance'
+      ],
+
+      steps: [
+        { n: '1', label: 'Details', done: true, last: false },
+        { n: '2', label: 'Upload', done: false, last: false },
+        { n: '3', label: 'Preview', done: false, last: false },
+        { n: '4', label: 'Submit', done: false, last: true }
+      ].map((s, i, arr) => ({
+        n: s.n, label: s.label, line: i < arr.length - 1,
+        dot: i <= 1 ? 'background:linear-gradient(135deg,var(--brand1),var(--brand2));color:#fff' : 'background:var(--bg);color:var(--faint);border:1px solid var(--line)',
+        text: i <= 1 ? 'color:var(--ink)' : 'color:var(--faint)'
+      })),
+      deliverables: [
+        { title: 'Project Documentation', file: 'support-agent-doc.pdf', ext: 'PDF', tint: '#D6336C', tintBg: '#FCE7F0' },
+        { title: 'Source Code', file: 'support-agent-code.zip', ext: 'ZIP', tint: '#7C3AED', tintBg: '#F1EAFC' },
+        { title: 'Demo Video', file: 'demo-walkthrough.mp4', ext: 'MP4', tint: '#1F9D6B', tintBg: '#E6F6EF' }
+      ],
+      rubric: [
+        { label: 'Functionality', score: '92', pct: '92%' },
+        { label: 'Code quality', score: '85', pct: '85%' },
+        { label: 'Documentation', score: '80', pct: '80%' },
+        { label: 'Monetization potential', score: '90', pct: '90%' }
+      ],
+
+      chatHistory: [
+        'Explain JWT authentication', 'Help with API integration', 'Review my project feedback',
+        'How do I find freelance clients?', 'Resume review'
+      ].map((label, i) => ({
+        label,
+        style: i === 0
+          ? 'padding:10px 12px;border-radius:9px;font-size:12.5px;font-weight:600;background:#F1EAFC;color:var(--brand1);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'
+          : 'padding:10px 12px;border-radius:9px;font-size:12.5px;color:var(--muted);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'
+      })),
+      messages,
+      chatInput: this.state.chatInput,
+      onChatInput: (e) => this.onChatInput(e),
+      onChatKey: (e) => this.onChatKey(e),
+      sendChat: () => this.sendChat(),
+      chips: [
+        { label: 'Give me an example', onClick: () => this.sendChat('Give me an example') },
+        { label: 'Explain in French', onClick: () => this.sendChat('Explain this in French') },
+        { label: 'Debug my code', onClick: () => this.sendChat('Help me debug my code') }
+      ],
+
+      adminKpis: [
+        { label: 'Active learners', value: '248', delta: '+22 this cohort', color: 'var(--pos)' },
+        { label: 'Completion rate', value: '82%', delta: '+5% vs last', color: 'var(--pos)' },
+        { label: 'At-risk (AI flag)', value: '14', delta: 'Needs outreach', color: 'var(--danger)' },
+        { label: 'Revenue (Q2)', value: '18.4M F', delta: '+31%', color: 'var(--pos)' }
+      ],
+      enrollBars: [
+        { label: 'C1', h1: '52%', h2: '20%' }, { label: 'C2', h1: '60%', h2: '18%' },
+        { label: 'C3', h1: '58%', h2: '24%' }, { label: 'C4', h1: '70%', h2: '15%' },
+        { label: 'C5', h1: '76%', h2: '14%' }, { label: 'C6', h1: '82%', h2: '12%' }
+      ],
+      cohorts: [
+        { name: 'Douala · Track A', track: 'AI Software Eng', learners: '50', pct: '82%', status: 'Active', badge: 'font-size:11px;font-weight:700;color:var(--pos);background:var(--posbg);padding:4px 10px;border-radius:20px;justify-self:start' },
+        { name: 'Yaoundé · Track B', track: 'AI Automation', learners: '42', pct: '64%', status: 'Active', badge: 'font-size:11px;font-weight:700;color:var(--pos);background:var(--posbg);padding:4px 10px;border-radius:20px;justify-self:start' },
+        { name: 'Buea · Explorer', track: 'Foundations', learners: '60', pct: '38%', status: 'Onboarding', badge: 'font-size:11px;font-weight:700;color:var(--warn);background:var(--warnbg);padding:4px 10px;border-radius:20px;justify-self:start' },
+        { name: 'Douala · Studio', track: 'Venture', learners: '12', pct: '95%', status: 'Demo day', badge: 'font-size:11px;font-weight:700;color:var(--brand1);background:#F1EAFC;padding:4px 10px;border-radius:20px;justify-self:start' }
+      ],
+      riskList: [
+        { name: 'Fatima B.', reason: 'No activity in 9 days', initials: 'FB', avBg: 'linear-gradient(135deg,#D6336C,#7C3AED)', risk: 'High', badge: 'font-size:11px;font-weight:700;color:var(--danger);background:var(--dangerbg);padding:3px 9px;border-radius:20px' },
+        { name: 'Linda K.', reason: 'Missed 2 submissions', initials: 'LK', avBg: 'linear-gradient(135deg,#C97A0E,#D6336C)', risk: 'Med', badge: 'font-size:11px;font-weight:700;color:var(--warn);background:var(--warnbg);padding:3px 9px;border-radius:20px' },
+        { name: 'Sandra M.', reason: 'Progress slowing', initials: 'SM', avBg: 'linear-gradient(135deg,#7C3AED,#1F9D6B)', risk: 'Med', badge: 'font-size:11px;font-weight:700;color:var(--warn);background:var(--warnbg);padding:3px 9px;border-radius:20px' }
+      ],
+      partnerMini: [
+        { abbr: 'MTN', name: 'MTN Foundation', type: 'Funding · 50 seats', value: '8.5M F' },
+        { abbr: 'OR', name: 'Orange Digital', type: 'Tech · Infra + credits', value: 'Active' },
+        { abbr: 'UN', name: 'UNDP Cameroon', type: 'Funding · Grant', value: '6.2M F' }
+      ],
+
+      pipeline: [
+        { stage: 'Applied', count: '18', people: [
+          { name: 'Amina Njoya', role: 'Frontend Eng', initials: 'AN', avBg: 'linear-gradient(135deg,#F0A,#7C3AED)' },
+          { name: 'Joy Etang', role: 'Automation', initials: 'JE', avBg: 'linear-gradient(135deg,#7C3AED,#4F46E5)' }
+        ]},
+        { stage: 'Interview', count: '7', people: [
+          { name: 'Marie Doh', role: 'Full-stack', initials: 'MD', avBg: 'linear-gradient(135deg,#D6336C,#C97A0E)' },
+          { name: 'Grace Mba', role: 'Data analyst', initials: 'GM', avBg: 'linear-gradient(135deg,#1F9D6B,#7C3AED)' }
+        ]},
+        { stage: 'Hired', count: '4', people: [
+          { name: 'Fatima N.', role: 'AI Engineer', initials: 'FN', avBg: 'linear-gradient(135deg,#7C3AED,#D6336C)' }
+        ]}
+      ],
+      talent: [
+        { name: 'Amina Njoya', role: 'AI Software Engineer', initials: 'AN', avBg: 'linear-gradient(135deg,#F0A,#7C3AED)', skills: ['React', 'Node', 'OpenAI'], score: '4.9', projects: '7' },
+        { name: 'Marie Doh', role: 'Automation Engineer', initials: 'MD', avBg: 'linear-gradient(135deg,#D6336C,#C97A0E)', skills: ['n8n', 'APIs', 'Stripe'], score: '4.8', projects: '5' },
+        { name: 'Grace Mba', role: 'AI Data Analyst', initials: 'GM', avBg: 'linear-gradient(135deg,#1F9D6B,#7C3AED)', skills: ['SQL', 'Python', 'BI'], score: '4.7', projects: '6' },
+        { name: 'Joy Etang', role: 'Product Builder', initials: 'JE', avBg: 'linear-gradient(135deg,#7C3AED,#4F46E5)', skills: ['Bubble', 'UX', 'AI'], score: '4.6', projects: '4' }
+      ],
+      impact: [
+        { label: 'Women trained', value: '50', pct: '100%' },
+        { label: 'Now earning income', value: '31', pct: '62%' },
+        { label: 'SMEs digitized', value: '12', pct: '48%' },
+        { label: 'Avg income uplift', value: '3.4×', pct: '85%' }
+      ],
+
+      earnKpis: [
+        { label: 'Total earned', value: '240,000 F', delta: '+18% this month', color: 'var(--pos)' },
+        { label: 'This month', value: '85,000 F', delta: '3 gigs completed', color: 'var(--muted)' },
+        { label: 'Pending payout', value: '45,000 F', delta: 'Clears in 2 days', color: 'var(--warn)' },
+        { label: 'Income readiness', value: '78/100', delta: 'AI assessed', color: 'var(--brand1)' }
+      ],
+      earnTrend: [
+        { m: 'Jan', h: '28%', amt: '24k' }, { m: 'Feb', h: '44%', amt: '38k' },
+        { m: 'Mar', h: '38%', amt: '32k' }, { m: 'Apr', h: '62%', amt: '54k' },
+        { m: 'May', h: '78%', amt: '68k' }, { m: 'Jun', h: '100%', amt: '85k' }
+      ],
+      gigs: [
+        { title: 'Landing page for a bakery', type: 'Freelance · React', pay: '45,000 F', match: '96%', glyph: 'B', tint: '#7C3AED', tintBg: '#F1EAFC', skills: ['React', 'Tailwind'] },
+        { title: 'Invoice automation for an SME', type: 'Studio gig · n8n', pay: '80,000 F', match: '91%', glyph: 'A', tint: '#1F9D6B', tintBg: '#E6F6EF', skills: ['n8n', 'APIs'] },
+        { title: 'WhatsApp AI support bot', type: 'Partner brief · OpenAI', pay: '120,000 F', match: '88%', glyph: 'AI', tint: '#D6336C', tintBg: '#FCE7F0', skills: ['OpenAI', 'Node'] }
+      ],
+      smeGigs: [
+        { name: 'Mama Grace Bakery', need: 'Online ordering page', pay: '35,000 F', loc: 'Douala', abbr: 'MG' },
+        { name: 'Buea Health Clinic', need: 'Appointment chatbot', pay: '60,000 F', loc: 'Buea', abbr: 'BH' }
+      ],
+      payouts: [
+        { title: 'Bakery landing page', date: 'Jun 24 · Mobile Money', amount: '+45,000 F', status: 'Paid', badge: 'font-size:11px;font-weight:700;color:var(--pos);background:var(--posbg);padding:3px 9px;border-radius:20px' },
+        { title: 'CRM automation setup', date: 'Jun 18 · Mobile Money', amount: '+80,000 F', status: 'Paid', badge: 'font-size:11px;font-weight:700;color:var(--pos);background:var(--posbg);padding:3px 9px;border-radius:20px' },
+        { title: 'AI support bot pilot', date: 'Jun 30 · In escrow', amount: '+45,000 F', status: 'Pending', badge: 'font-size:11px;font-weight:700;color:var(--warn);background:var(--warnbg);padding:3px 9px;border-radius:20px' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
