@@ -1,8 +1,20 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import Icon from "@/components/Icon";
-import { dashStats, incomeTasks, milestones } from "@/lib/platformData";
+import { getCurrentUser, getStudentDashboard } from "@/lib/queries";
+import { TRACK_LABELS } from "@/lib/constants";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const { stats, incomeTasks, milestones, currentModule, portfolio } =
+    await getStudentDashboard(user.id);
+
+  const firstName = user.name.split(" ")[0];
+  const trackLabel = user.track ? TRACK_LABELS[user.track] ?? "Your track" : "Your track";
+  const moduleTitle = currentModule?.title ?? "your current module";
+
   return (
     <div className="pf-screen pf-w1180">
       {/* welcome + ring */}
@@ -12,9 +24,9 @@ export default function DashboardPage() {
           <div className="pf-welcome-b2" />
           <div style={{ position: "relative" }}>
             <div className="pf-welcome-eyebrow">WELCOME BACK</div>
-            <div className="pf-welcome-title">Amina, you&apos;re on a roll.</div>
+            <div className="pf-welcome-title">{firstName}, you&apos;re on a roll.</div>
             <div className="pf-welcome-text">
-              You&apos;re 66% through <b>Module 4 — API &amp; System Integration</b>.
+              You&apos;re {user.progressPercentage}% through <b>{moduleTitle}</b>.
               Finish 2 lessons to unlock your next income task.
             </div>
             <div className="pf-welcome-actions">
@@ -31,21 +43,21 @@ export default function DashboardPage() {
         <div className="pf-ring-card">
           <div className="pf-ring">
             <div className="pf-ring-inner">
-              <div className="pf-ring-pct">72%</div>
+              <div className="pf-ring-pct">{user.progressPercentage}%</div>
               <div className="pf-ring-lbl">Track complete</div>
             </div>
           </div>
           <div className="pf-ring-cap">
-            AI Software Engineering
+            {trackLabel}
             <br />
-            <b style={{ color: "var(--ink)" }}>Week 17 of 24</b>
+            <b style={{ color: "var(--ink)" }}>{user.cohort?.name ?? "Cohort 01"}</b>
           </div>
         </div>
       </div>
 
       {/* stats */}
       <div className="pf-stats">
-        {dashStats.map((s) => (
+        {stats.map((s) => (
           <div key={s.label} className="pf-card-2 pf-stat">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div className="pf-stat-icon" style={{ background: s.tintBg, color: s.tint }}>
@@ -79,7 +91,7 @@ export default function DashboardPage() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 11.5, color: "var(--brand1)", fontWeight: 700, letterSpacing: 0.3 }}>
-                  MODULE 4 · LESSON 4.3
+                  {(currentModule ? `MODULE ${currentModule.orderIndex}` : "MODULE 4")} · LESSON 4.3
                 </div>
                 <div style={{ fontFamily: "var(--font-sora)", fontWeight: 700, fontSize: 16, margin: "4px 0 2px" }}>
                   Working with REST APIs
@@ -89,9 +101,11 @@ export default function DashboardPage() {
                 </div>
                 <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
                   <div className="pf-progress">
-                    <div style={{ width: "66%" }} />
+                    <div style={{ width: `${user.progressPercentage}%` }} />
                   </div>
-                  <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--muted)" }}>66%</span>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--muted)" }}>
+                    {user.progressPercentage}%
+                  </span>
                   <Link
                     href="/learning"
                     className="pf-btn-grad"
@@ -115,7 +129,7 @@ export default function DashboardPage() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {incomeTasks.map((t) => (
-                <Link key={t.title} href="/earn" className="pf-task-row">
+                <Link key={t.id} href="/earn" className="pf-task-row">
                   <div className="pf-task-glyph" style={{ background: t.tintBg, color: t.tint }}>
                     {t.glyph}
                   </div>
@@ -129,6 +143,9 @@ export default function DashboardPage() {
                   </div>
                 </Link>
               ))}
+              {incomeTasks.length === 0 ? (
+                <div style={{ fontSize: 12.5, color: "var(--muted)" }}>No matched tasks yet — keep shipping!</div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -158,11 +175,11 @@ export default function DashboardPage() {
             <div className="pf-h" style={{ marginBottom: 14 }}>Your portfolio</div>
             <div className="pf-pf-stats">
               <div className="pf-pf-stat">
-                <div className="pf-pf-stat-v">7</div>
+                <div className="pf-pf-stat-v">{portfolio.projectsShipped}</div>
                 <div className="pf-pf-stat-l">Projects shipped</div>
               </div>
               <div className="pf-pf-stat">
-                <div className="pf-pf-stat-v">240k</div>
+                <div className="pf-pf-stat-v">{portfolio.earnedShort}</div>
                 <div className="pf-pf-stat-l">FCFA earned</div>
               </div>
             </div>

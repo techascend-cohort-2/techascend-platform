@@ -1,0 +1,312 @@
+// TechAscend platform data model.
+//
+// Local/dev runs on SQLite out of the box (zero config).
+// For production (e.g. Vercel + Supabase/Neon) switch the provider to
+// "postgresql" and point DATABASE_URL at your Postgres connection string.
+// The models below use only portable types (String/Int/Float/Boolean/DateTime/Json)
+// so the switch is a one-line change with no schema rewrite.
+//
+// Note: string fields like `role`, `track`, `type`, `status` are enum-like.
+// Allowed values are documented inline and enforced in lib/constants.ts + zod
+// schemas (SQLite doesn't support native Prisma enums).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------------
+// Auth.js (NextAuth) models + application user profile
+// ------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+
+  // role: "student" | "admin" | "partner"
+  role String @default("student")
+
+  // profile / program fields (from spec §2 USERS)
+  title              String? // display role label, e.g. "AI Software Eng · Track A"
+  initials           String?
+  avatarBg           String?
+  gender             String?
+  country            String? @default("Cameroon")
+  track              String? // "A" | "B"
+  skillLevel         String? @default("beginner")
+  progressPercentage Int     @default(0)
+  incomeStatus       String? @default("not_started") // not_started | earning | placed
+  githubUrl          String?
+  portfolioUrl       String?
+  score              Float? // vetted talent rating
+  incomeReadiness    Int     @default(0)
+  streak             Int     @default(0)
+  skills             Json? // string[] of skill tags (talent pool)
+  projectsShipped    Int     @default(0)
+
+  cohortId String?
+  cohort   Cohort? @relation(fields: [cohortId], references: [id])
+
+  partnerId String?
+  partner   Partner? @relation(fields: [partnerId], references: [id])
+
+  accounts     Account[]
+  sessions     Session[]
+  submissions  Submission[]
+  tutorLogs    AiTutorLog[]
+  payouts      Payout[]
+  gigMatches   GigMatch[]
+  userBadges   UserBadge[]
+  pipelineCards PipelineCard[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ------------------------------------------------------------------
+// Learning system (spec §2)
+// ------------------------------------------------------------------
+
+model Cohort {
+  id        String    @id @default(cuid())
+  name      String
+  track     String // "A" | "B" | "Foundations" | "Venture"
+  trackName String? // human label, e.g. "AI Software Eng"
+  status    String    @default("Active") // Active | Onboarding | Demo day | Completed
+  tone      String? // pos | warn | brand (dashboard chip colour)
+  hub       String? // city / hub location
+  startDate DateTime?
+  endDate   DateTime?
+  users     User[]
+
+  createdAt DateTime @default(now())
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  track       String // "A" | "B"
+  title       String
+  description String?
+  orderIndex  Int      @default(0)
+  lessons     Lesson[]
+  projects    Project[]
+}
+
+model Lesson {
+  id         String  @id @default(cuid())
+  moduleId   String
+  module     Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title      String
+  // type: "video" | "ai" | "quiz" | "task"
+  type       String  @default("ai")
+  content    String? // lesson body (markdown)
+  aiPrompt   String? // extra context injected into the AI tutor for this lesson
+  orderIndex Int     @default(0)
+  duration   String?
+
+  tutorLogs AiTutorLog[]
+}
+
+model Project {
+  id                    String       @id @default(cuid())
+  moduleId              String?
+  module                Module?      @relation(fields: [moduleId], references: [id])
+  title                 String
+  description           String?
+  deliverables          Json? // array of { title, ext }
+  monetizationPotential String?
+  submissions           Submission[]
+}
+
+model Submission {
+  id             String  @id @default(cuid())
+  userId         String
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId      String
+  project        Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submissionLink String?
+  notes          String?
+  aiScore        Int?
+  mentorScore    Int?
+  rubric         Json? // [{ label, score }]
+  aiFeedback     String?
+  monetizationSuggestion String?
+  // status: "draft" | "submitted" | "ai_reviewed" | "mentor_reviewed"
+  status         String  @default("submitted")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AiTutorLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String?
+  lesson    Lesson?  @relation(fields: [lessonId], references: [id])
+  prompt    String
+  response  String
+  createdAt DateTime @default(now())
+}
+
+// ------------------------------------------------------------------
+// Partners, hiring & impact (spec §5)
+// ------------------------------------------------------------------
+
+model Partner {
+  id           String  @id @default(cuid())
+  name         String
+  abbr         String?
+  // type: "funding" | "hiring" | "tech" | "academic" | "govt"
+  type         String
+  contribution String?
+  benefit      String?
+  contactInfo  String?
+  value        String? // e.g. "8.5M F" or "Active"
+  seats        Int?
+  users        User[] // partner-portal users tied to this org
+
+  createdAt DateTime @default(now())
+}
+
+model PipelineCard {
+  id       String @id @default(cuid())
+  // stage: "Applied" | "Interview" | "Hired"
+  stage    String
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id])
+  name     String
+  role     String
+  initials String?
+  avBg     String?
+  orderIndex Int   @default(0)
+}
+
+// ------------------------------------------------------------------
+// Earn hub: gigs, matches, payouts
+// ------------------------------------------------------------------
+
+model Gig {
+  id        String     @id @default(cuid())
+  title     String
+  type      String? // "Freelance · React", "Partner brief · OpenAI", etc.
+  pay       String
+  skills    Json? // string[]
+  glyph     String?
+  tint      String?
+  tintBg    String?
+  // source: "freelance" | "studio" | "partner" | "sme"
+  source    String     @default("freelance")
+  need      String? // for SME gigs
+  location  String?
+  matches   GigMatch[]
+  createdAt DateTime   @default(now())
+}
+
+model GigMatch {
+  id       String @id @default(cuid())
+  gigId    String
+  gig      Gig    @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matchPct Int    @default(0)
+  status   String @default("suggested") // suggested | applied | won | completed
+
+  @@unique([gigId, userId])
+}
+
+model Payout {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  method    String? // "Mobile Money", "In escrow"
+  amount    Int // in local currency units (F)
+  status    String   @default("Pending") // Paid | Pending
+  createdAt DateTime @default(now())
+}
+
+// ------------------------------------------------------------------
+// Badges / credentials
+// ------------------------------------------------------------------
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String?
+  iconPath    String?
+  userBadges  UserBadge[]
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId  String
+  badge    Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  earnedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+}
+
+// ------------------------------------------------------------------
+// Landing-page applications (Apply form)
+// ------------------------------------------------------------------
+
+model Application {
+  id         String   @id @default(cuid())
+  // role: "learner" | "partner"
+  role       String
+  name       String
+  email      String
+  phone      String?
+  track      String? // "A" | "B" for learners
+  org        String? // for partners
+  motivation String?
+  fields     Json? // full raw form payload
+  status     String   @default("new") // new | reviewing | accepted | rejected
+  createdAt  DateTime @default(now())
+}

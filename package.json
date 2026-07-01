@@ -1,22 +1,39 @@
 {
-  "name": "techascend-landing",
+  "name": "techascend-platform",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reset": "prisma db push --force-reset && npm run db:seed",
+    "db:studio": "prisma studio"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.68.0",
+    "@auth/prisma-adapter": "2.10.0",
+    "@prisma/client": "6.16.2",
+    "bcryptjs": "3.0.2",
     "next": "15.1.6",
+    "next-auth": "5.0.0-beta.29",
     "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "react-dom": "19.0.0",
+    "zod": "3.25.76"
   },
   "devDependencies": {
+    "@types/bcryptjs": "2.4.6",
     "@types/node": "22.10.7",
     "@types/react": "19.0.7",
     "@types/react-dom": "19.0.3",
+    "prisma": "6.16.2",
+    "tsx": "4.19.2",
     "typescript": "5.7.3"
   }
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { submitApplicationAction } from "@/lib/actions/applications";
 import styles from "./Apply.module.css";
 
 type Role = "learner" | "partner";
@@ -21,6 +22,8 @@ export default function ApplyForm() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState("");
 
   function set(name: string, v: string) {
     setValues((s) => ({ ...s, [name]: v }));
@@ -42,9 +45,37 @@ export default function ApplyForm() {
     return Object.keys(e).length === 0;
   }
 
-  function onSubmit(ev: React.FormEvent) {
+  async function onSubmit(ev: React.FormEvent) {
     ev.preventDefault();
-    if (validate()) setDone(true);
+    setServerError("");
+    if (!validate()) return;
+
+    setSubmitting(true);
+    const fd = new FormData();
+    fd.set("role", role);
+    fd.set("name", values.name ?? "");
+    fd.set("email", values.email ?? "");
+    if (values.org) fd.set("org", values.org);
+    // Map "Track A — …" to the "A"/"B" code the backend expects.
+    const trackCode = values.track?.match(/Track\s+([AB])/i)?.[1]?.toUpperCase();
+    if (trackCode) fd.set("track", trackCode);
+    fd.set("motivation", (role === "learner" ? values.motivation : values.message) ?? "");
+    // Preserve every raw field for admin review.
+    for (const [k, v] of Object.entries(values)) fd.set(k, v);
+    fd.set("role", role);
+
+    try {
+      const res = await submitApplicationAction({}, fd);
+      if (res.error) {
+        setServerError(res.error);
+      } else {
+        setDone(true);
+      }
+    } catch {
+      setServerError("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function switchRole(r: Role) {
@@ -173,8 +204,13 @@ export default function ApplyForm() {
           ) : null}
         </div>
 
-        <button type="submit" className={styles.submit}>
-          {role === "learner" ? "Submit application" : "Send partnership enquiry"}
+        {serverError ? <div className={styles.error} style={{ marginBottom: 10 }}>{serverError}</div> : null}
+        <button type="submit" className={styles.submit} disabled={submitting}>
+          {submitting
+            ? "Submitting…"
+            : role === "learner"
+              ? "Submit application"
+              : "Send partnership enquiry"}
         </button>
         <div className={styles.note}>Free to apply · We never share your details.</div>
       </form>
