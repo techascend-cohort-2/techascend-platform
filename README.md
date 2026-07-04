@@ -58,6 +58,39 @@ Students are **not** pre-seeded (no fake data): they sign up at `/signup` (becom
 applicants) and are accepted in **Applications**; or staff accept a landing-page
 application and generate an account with a one-time temporary password.
 
+## Importing existing students (bulk)
+
+You already have a roster, so students don't have to sign up one by one. Two ways,
+both create **student** accounts with a shared default password and set
+`mustChangePassword` so each person is prompted to set her own on first login.
+Accounts that already exist are skipped (never overwritten).
+
+**CSV format** (header row optional — see `students-template.csv`):
+
+```csv
+name,email,track,city,phone
+Amina Njoya,amina@example.com,A,Douala,+237600000001
+Marie Doh,marie@example.com,B,Yaoundé,
+```
+
+- `name`, `email` — required (email must be unique)
+- `track` — `A` or `B` (defaults to `A`)
+- `city`, `phone` — optional
+
+**Option 1 — Admin UI:** sign in as admin → **Members** → *Import from CSV*.
+Paste rows or upload a `.csv`, set the default password and cohort, and import.
+You get a summary of created / skipped / invalid rows.
+
+**Option 2 — Command line** (good for a big spreadsheet export):
+
+```bash
+npm run import:students -- ./students-template.csv "TechAscend2026!" "Cohort 02"
+#                            ^ csv file             ^ default password  ^ cohort (optional; matches by name)
+```
+
+> Keep real rosters out of git — CSVs at the repo root are gitignored (only
+> `students-template.csv` is tracked).
+
 ## AI
 
 Claude powers the tutor (spec system prompt + per-lesson context injection, streaming)

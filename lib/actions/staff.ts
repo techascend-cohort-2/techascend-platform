@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { isStaff, initialsOf, avatarBgFor } from "@/lib/constants";
 import { userAdminSchema, partnerOrgSchema, cohortSchema, ledgerSchema, lessonEditSchema } from "@/lib/validation";
 import { notify, recomputeUserProgress } from "@/lib/progress";
+import { parseStudentsCsv, importStudents } from "@/lib/students-import";
 
 export type ActionState = { ok?: boolean; error?: string; tempPassword?: string };
 
@@ -120,6 +121,38 @@ export async function updateUserAction(_prev: ActionState, formData: FormData): 
   });
   revalidatePath("/students");
   return { ok: true };
+}
+
+export type ImportState = {
+  ok?: boolean;
+  error?: string;
+  summary?: { created: number; skipped: string[]; errors: string[] };
+};
+
+export async function importStudentsAction(_prev: ImportState, formData: FormData): Promise<ImportState> {
+  await requireStaff(true); // admin only
+  const csv = String(formData.get("csv") ?? "").trim();
+  const defaultPassword = String(formData.get("defaultPassword") ?? "").trim();
+  const cohortId = String(formData.get("cohortId") ?? "").trim() || null;
+
+  if (!csv) return { error: "Paste at least one row of CSV." };
+  if (defaultPassword.length < 8) return { error: "Default password must be at least 8 characters." };
+
+  const { rows, errors: parseErrors } = parseStudentsCsv(csv);
+  if (rows.length === 0) {
+    return { error: parseErrors[0] ?? "No valid rows found. Expected: name,email,track,city,phone" };
+  }
+
+  const res = await importStudents(prisma, rows, { defaultPassword, cohortId });
+  revalidatePath("/students");
+  return {
+    ok: true,
+    summary: {
+      created: res.created,
+      skipped: res.skipped,
+      errors: [...parseErrors, ...res.errors],
+    },
+  };
 }
 
 export async function resetPasswordAction(userId: string): Promise<ActionState> {

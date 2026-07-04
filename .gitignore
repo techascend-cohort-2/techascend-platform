@@ -26,6 +26,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# student roster CSVs may contain personal data — keep real rosters out of git
+# (the example template is allowed)
+/*.csv
+!students-template.csv
+
 # prisma / database
 /prisma/dev.db
 /prisma/dev.db-journal
