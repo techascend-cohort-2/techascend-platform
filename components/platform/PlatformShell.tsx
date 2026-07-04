@@ -9,11 +9,12 @@ import {
   NAV,
   ROUTES,
   ICON,
-  notifications,
   SEARCH_TARGETS,
+  PERSONA_HOME,
   type Persona,
 } from "@/lib/platformData";
 import { logoutAction } from "@/lib/actions/auth";
+import { markNotificationsReadAction } from "@/lib/actions/program";
 
 export type ShellUser = {
   name: string;
@@ -22,24 +23,61 @@ export type ShellUser = {
   persona: Persona;
 };
 
+export type ShellNotification = {
+  id: string;
+  title: string;
+  body: string | null;
+  href: string | null;
+  readAt: string | null;
+  createdAt: string;
+};
+
+function timeAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
 export default function PlatformShell({
   user,
+  notifications,
+  unreadCount,
   children,
 }: {
   user: ShellUser;
+  notifications: ShellNotification[];
+  unreadCount: number;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const meta = ROUTES[pathname] ?? ROUTES["/dashboard"];
+  const meta =
+    ROUTES[pathname] ??
+    (pathname.startsWith("/learning/")
+      ? { title: "Lesson", sub: "My Learning" }
+      : ROUTES[PERSONA_HOME[user.persona]] ?? { title: "TechAscend", sub: "" });
   const persona = user.persona;
   const nav = NAV[persona];
+  const searchTargets = SEARCH_TARGETS.filter((t) => t.roles.includes(persona));
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
-  const [bellRead, setBellRead] = useState(false);
+  const [bellRead, setBellRead] = useState(unreadCount === 0);
+
+  function openBell() {
+    const next = !bellOpen;
+    setBellOpen(next);
+    if (next && !bellRead) {
+      setBellRead(true);
+      void markNotificationsReadAction();
+    }
+  }
 
   useEffect(() => {
     setMenuOpen(false);
@@ -51,10 +89,10 @@ export default function PlatformShell({
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return SEARCH_TARGETS.filter(
+    return searchTargets.filter(
       (t) => t.label.toLowerCase().includes(q) || t.sub.toLowerCase().includes(q),
     );
-  }, [query]);
+  }, [query, searchTargets]);
 
   function goto(href: string) {
     setQuery("");
@@ -99,12 +137,11 @@ export default function PlatformShell({
                   <Link
                     key={item.label}
                     href={item.href}
-                    className={`pf-nav-item ${active ? "pf-nav-active" : ""} ${item.soon ? "pf-nav-soon" : ""}`}
+                    className={`pf-nav-item ${active ? "pf-nav-active" : ""}`}
                   >
                     <Icon path={item.icon} size={19} strokeWidth={1.7} />
                     <span style={{ flex: 1 }}>{item.label}</span>
                     {item.badge ? <span className="pf-nav-badge">{item.badge}</span> : null}
-                    {item.soon ? <span className="pf-nav-soonbadge">Soon</span> : null}
                   </Link>
                 );
               })}
@@ -183,10 +220,7 @@ export default function PlatformShell({
                 <button
                   className="pf-iconbtn"
                   aria-label="Notifications"
-                  onClick={() => {
-                    setBellOpen((v) => !v);
-                    setBellRead(true);
-                  }}
+                  onClick={openBell}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5A5470" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -198,16 +232,22 @@ export default function PlatformShell({
                   <div className="pf-bell-menu">
                     <div className="pf-bell-head">
                       <span style={{ fontWeight: 700, fontSize: 13 }}>Notifications</span>
-                      <button className="pf-link" onClick={() => setBellRead(true)} style={{ fontSize: 11.5 }}>
-                        Mark all read
-                      </button>
                     </div>
-                    {notifications.map((n) => (
-                      <button key={n.title} className="pf-bell-item" onClick={() => goto(n.href)}>
-                        <span style={{ fontSize: 12.5, fontWeight: 600, lineHeight: 1.4 }}>{n.title}</span>
-                        <span style={{ fontSize: 11, color: "var(--muted)" }}>{n.time}</span>
-                      </button>
-                    ))}
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: "14px 16px", fontSize: 12.5, color: "var(--muted)" }}>
+                        Nothing yet — you&apos;ll see badges, reviews and program updates here.
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <button key={n.id} className="pf-bell-item" onClick={() => goto(n.href ?? pathname)}>
+                          <span style={{ fontSize: 12.5, fontWeight: n.readAt ? 500 : 700, lineHeight: 1.4 }}>{n.title}</span>
+                          {n.body ? (
+                            <span style={{ fontSize: 11.5, color: "var(--muted)", lineHeight: 1.4 }}>{n.body}</span>
+                          ) : null}
+                          <span style={{ fontSize: 11, color: "var(--muted)" }}>{timeAgo(n.createdAt)}</span>
+                        </button>
+                      ))
+                    )}
                   </div>
                 ) : null}
               </div>
@@ -226,7 +266,7 @@ export default function PlatformShell({
 
             <div className="pf-scroll">{children}</div>
 
-            {pathname !== "/tutor" ? (
+            {persona === "student" && pathname !== "/tutor" ? (
               <Link href="/tutor" className="pf-ask">
                 <Icon path={ICON.star} size={18} strokeWidth={2} />
                 Ask AI

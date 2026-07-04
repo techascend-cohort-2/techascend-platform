@@ -5,21 +5,8 @@ import Link from "next/link";
 import { loginAction, type FormState } from "@/lib/actions/auth";
 import styles from "./auth.module.css";
 
-const DEMOS = [
-  { label: "Student", email: "amina@techascend.africa" },
-  { label: "Admin", email: "admin@techascend.africa" },
-  { label: "Partner", email: "partner@techascend.africa" },
-];
-
 export default function LoginForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(loginAction, {});
-
-  function fillDemo(email: string) {
-    const form = document.getElementById("login-form") as HTMLFormElement | null;
-    if (!form) return;
-    (form.elements.namedItem("email") as HTMLInputElement).value = email;
-    (form.elements.namedItem("password") as HTMLInputElement).value = "password";
-  }
 
   return (
     <div className={styles.card}>
@@ -49,17 +36,6 @@ export default function LoginForm() {
           {pending ? "Signing in…" : "Sign in"}
         </button>
       </form>
-
-      <div className={styles.demo}>
-        <div className={styles.demoHead}>QUICK DEMO LOGIN (password: password)</div>
-        <div className={styles.demoRow}>
-          {DEMOS.map((d) => (
-            <button key={d.email} type="button" className={styles.demoBtn} onClick={() => fillDemo(d.email)}>
-              {d.label}
-            </button>
-          ))}
-        </div>
-      </div>
 
       <p className={styles.foot}>
         New here? <Link className={styles.link} href="/signup">Create an account</Link>

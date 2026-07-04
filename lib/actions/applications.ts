@@ -27,14 +27,30 @@ export async function submitApplicationAction(
     return { error: parsed.error.issues[0]?.message ?? "Please check the form and try again." };
   }
 
-  await prisma.application.create({
-    data: {
+  const email = parsed.data.email.toLowerCase();
+  const existing = await prisma.application.findUnique({ where: { email } });
+  if (existing && existing.status !== "rejected") {
+    return { ok: true }; // already applied — treat as success, no duplicates
+  }
+
+  await prisma.application.upsert({
+    where: { email },
+    create: {
       role: parsed.data.role,
       name: parsed.data.name,
-      email: parsed.data.email,
+      email,
       phone: parsed.data.phone ?? null,
+      city: parsed.data.city ?? null,
       track: parsed.data.track ?? null,
       org: parsed.data.org ?? null,
+      motivation: parsed.data.motivation ?? null,
+      fields: parsed.data.fields ?? {},
+      status: "new",
+    },
+    update: {
+      role: parsed.data.role,
+      name: parsed.data.name,
+      status: "new",
       motivation: parsed.data.motivation ?? null,
       fields: parsed.data.fields ?? {},
     },

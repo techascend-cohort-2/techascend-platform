@@ -1,14 +1,11 @@
-// TechAscend platform data model.
+// TechAscend platform data model — v2 (live program platform).
 //
-// Local/dev runs on SQLite out of the box (zero config).
-// For production (e.g. Vercel + Supabase/Neon) switch the provider to
-// "postgresql" and point DATABASE_URL at your Postgres connection string.
-// The models below use only portable types (String/Int/Float/Boolean/DateTime/Json)
-// so the switch is a one-line change with no schema rewrite.
+// Local/dev runs on SQLite out of the box. For production switch the provider
+// to "postgresql" and point DATABASE_URL at Postgres. Only portable types are
+// used, so the switch is a one-line change.
 //
-// Note: string fields like `role`, `track`, `type`, `status` are enum-like.
-// Allowed values are documented inline and enforced in lib/constants.ts + zod
-// schemas (SQLite doesn't support native Prisma enums).
+// Enum-like string fields document allowed values inline; they are enforced by
+// lib/constants.ts + zod schemas (SQLite has no native Prisma enums).
 
 generator client {
   provider = "prisma-client-js"
@@ -20,7 +17,7 @@ datasource db {
 }
 
 // ------------------------------------------------------------------
-// Auth.js (NextAuth) models + application user profile
+// Auth.js models + application user profile
 // ------------------------------------------------------------------
 
 model User {
@@ -31,41 +28,62 @@ model User {
   image         String?
   passwordHash  String?
 
-  // role: "student" | "admin" | "partner"
-  role String @default("student")
+  // role: "applicant" | "student" | "manager" | "admin" | "partner"
+  role String @default("applicant")
 
-  // profile / program fields (from spec §2 USERS)
-  title              String? // display role label, e.g. "AI Software Eng · Track A"
+  // profile / program fields
+  title              String? // display label, e.g. "Fellow · Track A"
   initials           String?
   avatarBg           String?
+  phone              String?
   gender             String?
   country            String? @default("Cameroon")
+  city               String?
   track              String? // "A" | "B"
-  skillLevel         String? @default("beginner")
+  bio                String?
   progressPercentage Int     @default(0)
-  incomeStatus       String? @default("not_started") // not_started | earning | placed
-  githubUrl          String?
-  portfolioUrl       String?
-  score              Float? // vetted talent rating
-  incomeReadiness    Int     @default(0)
   streak             Int     @default(0)
-  skills             Json? // string[] of skill tags (talent pool)
-  projectsShipped    Int     @default(0)
+
+  // professional identity links (Phase 1 — Visibility)
+  githubUrl      String?
+  linkedinUrl    String?
+  xUrl           String?
+  mediumUrl      String?
+  huggingfaceUrl String?
+  kaggleUrl      String?
+  portfolioUrl   String?
+
+  // talent pool opt-in (partners can see the profile once true)
+  talentVisible Boolean @default(false)
+
+  // set when an account is created by staff with a temporary password
+  mustChangePassword Boolean @default(false)
 
   cohortId String?
   cohort   Cohort? @relation(fields: [cohortId], references: [id])
 
+  // for role=partner: the partner organisation this account belongs to
   partnerId String?
   partner   Partner? @relation(fields: [partnerId], references: [id])
 
-  accounts     Account[]
-  sessions     Session[]
-  submissions  Submission[]
-  tutorLogs    AiTutorLog[]
-  payouts      Payout[]
-  gigMatches   GigMatch[]
-  userBadges   UserBadge[]
-  pipelineCards PipelineCard[]
+  accounts             Account[]
+  sessions             Session[]
+  submissions          Submission[]
+  tutorLogs            AiTutorLog[]
+  lessonProgress       LessonProgress[]
+  userBadges           UserBadge[]
+  certificates         Certificate[]
+  notifications        Notification[]
+  posts                Post[]
+  events               Event[]              @relation("EventCreator")
+  visibilitySubmission VisibilitySubmission?
+  visibilityReviews    VisibilitySubmission[] @relation("VisibilityReviewer")
+  opportunities        Opportunity[]        @relation("OpportunityPoster")
+  interests            OpportunityInterest[]
+  pipelineCards        PipelineCard[]
+  ledgerEntries        LedgerEntry[]        @relation("LedgerSubject")
+  ledgerCreated        LedgerEntry[]        @relation("LedgerCreator")
+  applicationsReviewed Application[]        @relation("ApplicationReviewer")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -107,17 +125,16 @@ model VerificationToken {
 }
 
 // ------------------------------------------------------------------
-// Learning system (spec §2)
+// Program structure: cohorts, phases, modules, lessons
 // ------------------------------------------------------------------
 
 model Cohort {
   id        String    @id @default(cuid())
   name      String
-  track     String // "A" | "B" | "Foundations" | "Venture"
-  trackName String? // human label, e.g. "AI Software Eng"
-  status    String    @default("Active") // Active | Onboarding | Demo day | Completed
-  tone      String? // pos | warn | brand (dashboard chip colour)
-  hub       String? // city / hub location
+  // track: "ALL" | "A" | "B"
+  track     String    @default("ALL")
+  status    String    @default("Active") // Active | Onboarding | Completed
+  hub       String?
   startDate DateTime?
   endDate   DateTime?
   users     User[]
@@ -125,9 +142,33 @@ model Cohort {
   createdAt DateTime @default(now())
 }
 
+model Phase {
+  id          String    @id @default(cuid())
+  slug        String    @unique // visibility | ai-foundations | core-skills | build-studio | launch-earn
+  name        String
+  description String?
+  // track: "ALL" (shared) | "A" | "B" — which students this phase applies to.
+  // Track-specific content lives in Modules (module.track), so phases stay "ALL".
+  track       String    @default("ALL")
+  orderIndex  Int       @default(0)
+  startsAt    DateTime?
+  endsAt      DateTime?
+
+  // completion requirements beyond "all lessons complete"
+  requiresVisibilityApproval Boolean @default(false)
+  requiresProjectSubmission  Boolean @default(false)
+
+  modules      Module[]
+  badge        Badge?
+  certificates Certificate[]
+}
+
 model Module {
   id          String   @id @default(cuid())
-  track       String // "A" | "B"
+  phaseId     String
+  phase       Phase    @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  // track: "ALL" | "A" | "B" — who takes this module within the phase
+  track       String   @default("ALL")
   title       String
   description String?
   orderIndex  Int      @default(0)
@@ -142,44 +183,91 @@ model Lesson {
   title      String
   // type: "video" | "ai" | "quiz" | "task"
   type       String  @default("ai")
-  content    String? // lesson body (markdown)
+  duration   String?
+  objectives Json?   // string[]
+  content    String? // markdown lesson body
   aiPrompt   String? // extra context injected into the AI tutor for this lesson
   orderIndex Int     @default(0)
-  duration   String?
 
+  progress  LessonProgress[]
   tutorLogs AiTutorLog[]
 }
+
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+
+  @@unique([userId, lessonId])
+}
+
+// ------------------------------------------------------------------
+// Projects & submissions (Phase 4 capstones + any module projects)
+// ------------------------------------------------------------------
 
 model Project {
   id                    String       @id @default(cuid())
   moduleId              String?
   module                Module?      @relation(fields: [moduleId], references: [id])
+  // track: "ALL" | "A" | "B"
+  track                 String       @default("ALL")
   title                 String
   description           String?
-  deliverables          Json? // array of { title, ext }
+  deliverables          Json? // [{ title, ext }]
   monetizationPotential String?
   submissions           Submission[]
 }
 
 model Submission {
-  id             String  @id @default(cuid())
-  userId         String
-  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projectId      String
-  project        Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  submissionLink String?
-  notes          String?
-  aiScore        Int?
-  mentorScore    Int?
-  rubric         Json? // [{ label, score }]
-  aiFeedback     String?
+  id                     String  @id @default(cuid())
+  userId                 String
+  user                   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId              String
+  project                Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submissionLink         String?
+  notes                  String?
+  aiScore                Int?
+  mentorScore            Int?
+  rubric                 Json? // [{ label, score }]
+  aiFeedback             String?
+  mentorFeedback         String?
   monetizationSuggestion String?
-  // status: "draft" | "submitted" | "ai_reviewed" | "mentor_reviewed"
-  status         String  @default("submitted")
+  // status: "submitted" | "ai_reviewed" | "mentor_reviewed" | "approved" | "changes_requested"
+  status                 String  @default("submitted")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// ------------------------------------------------------------------
+// Phase 1 — Visibility submission (profile links, staff-reviewed)
+// ------------------------------------------------------------------
+
+model VisibilitySubmission {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  githubUrl      String
+  linkedinUrl    String
+  xUrl           String
+  mediumUrl      String
+  huggingfaceUrl String
+  kaggleUrl      String
+  // status: "pending" | "approved" | "changes_requested"
+  status         String    @default("pending")
+  reviewNote     String?
+  reviewerId     String?
+  reviewer       User?     @relation("VisibilityReviewer", fields: [reviewerId], references: [id])
+  submittedAt    DateTime  @default(now())
+  reviewedAt     DateTime?
+}
+
+// ------------------------------------------------------------------
+// AI tutor logs
+// ------------------------------------------------------------------
 
 model AiTutorLog {
   id        String   @id @default(cuid())
@@ -193,84 +281,7 @@ model AiTutorLog {
 }
 
 // ------------------------------------------------------------------
-// Partners, hiring & impact (spec §5)
-// ------------------------------------------------------------------
-
-model Partner {
-  id           String  @id @default(cuid())
-  name         String
-  abbr         String?
-  // type: "funding" | "hiring" | "tech" | "academic" | "govt"
-  type         String
-  contribution String?
-  benefit      String?
-  contactInfo  String?
-  value        String? // e.g. "8.5M F" or "Active"
-  seats        Int?
-  users        User[] // partner-portal users tied to this org
-
-  createdAt DateTime @default(now())
-}
-
-model PipelineCard {
-  id       String @id @default(cuid())
-  // stage: "Applied" | "Interview" | "Hired"
-  stage    String
-  userId   String?
-  user     User?   @relation(fields: [userId], references: [id])
-  name     String
-  role     String
-  initials String?
-  avBg     String?
-  orderIndex Int   @default(0)
-}
-
-// ------------------------------------------------------------------
-// Earn hub: gigs, matches, payouts
-// ------------------------------------------------------------------
-
-model Gig {
-  id        String     @id @default(cuid())
-  title     String
-  type      String? // "Freelance · React", "Partner brief · OpenAI", etc.
-  pay       String
-  skills    Json? // string[]
-  glyph     String?
-  tint      String?
-  tintBg    String?
-  // source: "freelance" | "studio" | "partner" | "sme"
-  source    String     @default("freelance")
-  need      String? // for SME gigs
-  location  String?
-  matches   GigMatch[]
-  createdAt DateTime   @default(now())
-}
-
-model GigMatch {
-  id       String @id @default(cuid())
-  gigId    String
-  gig      Gig    @relation(fields: [gigId], references: [id], onDelete: Cascade)
-  userId   String
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  matchPct Int    @default(0)
-  status   String @default("suggested") // suggested | applied | won | completed
-
-  @@unique([gigId, userId])
-}
-
-model Payout {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String
-  method    String? // "Mobile Money", "In escrow"
-  amount    Int // in local currency units (F)
-  status    String   @default("Pending") // Paid | Pending
-  createdAt DateTime @default(now())
-}
-
-// ------------------------------------------------------------------
-// Badges / credentials
+// Badges & certificates (auto-awarded per phase)
 // ------------------------------------------------------------------
 
 model Badge {
@@ -278,6 +289,10 @@ model Badge {
   name        String      @unique
   description String?
   iconPath    String?
+  tint        String?
+  // one badge per phase; program-level badges have phaseId null
+  phaseId     String?     @unique
+  phase       Phase?      @relation(fields: [phaseId], references: [id])
   userBadges  UserBadge[]
 }
 
@@ -292,21 +307,181 @@ model UserBadge {
   @@unique([userId, badgeId])
 }
 
+model Certificate {
+  id       String   @id @default(cuid())
+  code     String   @unique // public verification code
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phaseId  String?
+  phase    Phase?   @relation(fields: [phaseId], references: [id])
+  title    String // e.g. "Phase 1 — Visibility · Certificate of Completion"
+  track    String? // "A" | "B" for program certificates
+  issuedAt DateTime @default(now())
+
+  @@unique([userId, phaseId])
+}
+
 // ------------------------------------------------------------------
-// Landing-page applications (Apply form)
+// Events (program calendar)
+// ------------------------------------------------------------------
+
+model Event {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  // kind: "live_session" | "workshop" | "deadline" | "ceremony" | "community"
+  kind        String    @default("live_session")
+  // audience: "all" | "students" | "applicants" | "partners" | "staff"
+  audience    String    @default("all")
+  location    String? // "WhatsApp group", "Google Meet", "Douala hub"…
+  link        String?
+  startsAt    DateTime
+  endsAt      DateTime?
+  createdById String?
+  createdBy   User?     @relation("EventCreator", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ------------------------------------------------------------------
+// Community feed
+// ------------------------------------------------------------------
+
+model Post {
+  id        String   @id @default(cuid())
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ------------------------------------------------------------------
+// Notifications
+// ------------------------------------------------------------------
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String?
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// ------------------------------------------------------------------
+// Opportunities (jobs / gigs / internships) & interest
+// ------------------------------------------------------------------
+
+model Opportunity {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  // type: "freelance" | "job" | "internship" | "studio" | "sme"
+  type        String   @default("freelance")
+  pay         String? // e.g. "45,000 F" or "Negotiable"
+  skills      Json? // string[]
+  location    String?
+  // status: "open" | "closed"
+  status      String   @default("open")
+  postedById  String
+  postedBy    User     @relation("OpportunityPoster", fields: [postedById], references: [id])
+  partnerId   String?
+  partner     Partner? @relation(fields: [partnerId], references: [id])
+
+  interests OpportunityInterest[]
+  createdAt DateTime              @default(now())
+}
+
+model OpportunityInterest {
+  id            String      @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note          String?
+  // status: "interested" | "contacted" | "hired" | "declined"
+  status        String      @default("interested")
+  createdAt     DateTime    @default(now())
+
+  @@unique([opportunityId, userId])
+}
+
+// ------------------------------------------------------------------
+// Partners, hiring pipeline & finance ledger
+// ------------------------------------------------------------------
+
+model Partner {
+  id           String  @id @default(cuid())
+  name         String
+  abbr         String?
+  // type: "funding" | "hiring" | "tech" | "academic" | "govt"
+  type         String
+  contribution String?
+  contactInfo  String?
+  website      String?
+  users         User[]
+  opportunities Opportunity[]
+  pipelineCards PipelineCard[]
+  ledgerEntries LedgerEntry[]
+
+  createdAt DateTime @default(now())
+}
+
+model PipelineCard {
+  id         String   @id @default(cuid())
+  partnerId  String
+  partner    Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  // stage: "Shortlisted" | "Interview" | "Offer" | "Hired"
+  stage      String   @default("Shortlisted")
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note       String?
+  orderIndex Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@unique([partnerId, userId])
+}
+
+model LedgerEntry {
+  id          String   @id @default(cuid())
+  // kind: "sponsorship" | "revenue" | "payout" | "expense"
+  kind        String
+  amount      Int // in FCFA
+  note        String?
+  partnerId   String?
+  partner     Partner? @relation(fields: [partnerId], references: [id])
+  // for kind=payout: the student paid
+  userId      String?
+  user        User?    @relation("LedgerSubject", fields: [userId], references: [id])
+  createdById String?
+  createdBy   User?    @relation("LedgerCreator", fields: [createdById], references: [id])
+  occurredAt  DateTime @default(now())
+}
+
+// ------------------------------------------------------------------
+// Applications (landing form + applicant workspace)
 // ------------------------------------------------------------------
 
 model Application {
-  id         String   @id @default(cuid())
+  id           String    @id @default(cuid())
   // role: "learner" | "partner"
-  role       String
-  name       String
-  email      String
-  phone      String?
-  track      String? // "A" | "B" for learners
-  org        String? // for partners
-  motivation String?
-  fields     Json? // full raw form payload
-  status     String   @default("new") // new | reviewing | accepted | rejected
-  createdAt  DateTime @default(now())
+  role         String
+  name         String
+  email        String    @unique
+  phone        String?
+  city         String?
+  track        String? // "A" | "B"
+  org          String? // for partner enquiries
+  motivation   String?
+  fields       Json? // full raw form payload
+  // status: "new" | "reviewing" | "accepted" | "rejected"
+  status       String    @default("new")
+  reviewNote   String?
+  reviewedById String?
+  reviewedBy   User?     @relation("ApplicationReviewer", fields: [reviewedById], references: [id])
+  decidedAt    DateTime?
+  createdAt    DateTime  @default(now())
 }

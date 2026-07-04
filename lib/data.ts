@@ -2,12 +2,12 @@
 // Ported from the Claude Design export (renderVals()) into typed data.
 
 export const logos = [
-  "MTN Foundation",
-  "Orange Digital",
-  "UNDP",
-  "GIZ",
-  "Mastercard Fdn",
-  "Microsoft",
+  "AI-Native Curriculum",
+  "Real Client Projects",
+  "Verified Certificates",
+  "Partner Hiring Network",
+  "Income-First Training",
+  "Women-Led Community",
 ];
 
 export type Shift = { old: string; new: string };
@@ -112,42 +112,42 @@ export type JourneyStage = {
 };
 export const journey: JourneyStage[] = [
   {
-    stage: "STAGE 0",
-    title: "Explorer",
-    dur: "4 weeks",
-    body: "AI literacy, digital confidence & career orientation.",
+    stage: "PHASE 1",
+    title: "Visibility",
+    dur: "Jul 3 – 12",
+    body: "A professional identity across six platforms, reviewed by the team.",
     barColor: "linear-gradient(90deg,#C9B8F0,#7C3AED)",
     numColor: "#9C7AD6",
   },
   {
-    stage: "STAGE 1",
-    title: "Core Fellowship",
-    dur: "12 weeks",
-    body: "AI-assisted dev, automation, APIs, cloud & product.",
+    stage: "PHASE 2",
+    title: "AI Foundations",
+    dur: "Jul 13 – Aug 7",
+    body: "How models work, prompt craft, Git & the builder toolkit.",
     barColor: "linear-gradient(90deg,#7C3AED,#9C2FC0)",
     numColor: "#7C3AED",
   },
   {
-    stage: "STAGE 2",
-    title: "Studio",
-    dur: "12 weeks",
-    body: "Real client projects, paid pilots & startup prototypes.",
+    stage: "PHASE 3",
+    title: "Core Skills",
+    dur: "Aug 10 – Oct 9",
+    body: "Track-specific depth: engineering or automation, with an AI tutor.",
     barColor: "linear-gradient(90deg,#9C2FC0,#C026D3)",
     numColor: "#9C2FC0",
   },
   {
-    stage: "STAGE 3",
-    title: "Placement",
-    dur: "3–12 months",
-    body: "Employment, freelance income or venture path.",
+    stage: "PHASE 4",
+    title: "Build Studio",
+    dur: "Oct 12 – Nov 20",
+    body: "From brief to deployed capstone with AI evaluation & mentor review.",
     barColor: "linear-gradient(90deg,#C026D3,#D6336C)",
     numColor: "#C026D3",
   },
   {
-    stage: "STAGE 4",
-    title: "Alumni",
-    dur: "Ongoing",
-    body: "Job leads, mentor network & founder circles.",
+    stage: "PHASE 5",
+    title: "Launch & Earn",
+    dur: "Nov 23 – Dec 18",
+    body: "Freelancing, jobs & ventures — closing with Demo Day.",
     barColor: "linear-gradient(90deg,#D6336C,#F2994A)",
     numColor: "#D6336C",
   },
@@ -155,10 +155,10 @@ export const journey: JourneyStage[] = [
 
 export type Stat = { v: string; l: string };
 export const stats: Stat[] = [
-  { v: "50+", l: "women in the first cohort" },
-  { v: "82%", l: "completion rate" },
-  { v: "3.4×", l: "average income uplift" },
-  { v: "12", l: "SMEs digitised" },
+  { v: "2", l: "skill tracks — engineering & automation" },
+  { v: "5", l: "phases from visibility to income" },
+  { v: "24", l: "weeks of guided building" },
+  { v: "100%", l: "free for accepted fellows" },
 ];
 
 export type Testimonial = {
@@ -171,27 +171,27 @@ export type Testimonial = {
 export const testimonials: Testimonial[] = [
   {
     quote:
-      "I came in not knowing what an API was. Six months later I automated invoicing for two shops in Douala — and I get paid every month.",
-    name: "Amina N.",
-    role: "Automation Engineer · Cohort 01",
-    initials: "AN",
-    avBg: "linear-gradient(135deg,#F0A,#7C3AED)",
+      "You start by building a professional identity across six platforms — GitHub, LinkedIn, X, Medium, Hugging Face and Kaggle — each profile reviewed by the community team.",
+    name: "Phase 1",
+    role: "Visibility",
+    initials: "01",
+    avBg: "linear-gradient(135deg,#7C3AED,#9333EA)",
   },
   {
     quote:
-      "The AI tutor never made me feel stupid for asking. It explained things in French when I needed it, at 11pm, every time.",
-    name: "Marie D.",
-    role: "Frontend Developer",
-    initials: "MD",
+      "Then you go deep on your track's core skills — building real software and automations with an AI tutor beside you on every lesson.",
+    name: "Phase 3",
+    role: "Core Skills",
+    initials: "03",
+    avBg: "linear-gradient(135deg,#2D6FD9,#7C3AED)",
+  },
+  {
+    quote:
+      "Finally you turn skills into income — freelancing, jobs and ventures — closing the fellowship with Demo Day.",
+    name: "Phase 5",
+    role: "Launch & Earn",
+    initials: "05",
     avBg: "linear-gradient(135deg,#D6336C,#C97A0E)",
-  },
-  {
-    quote:
-      "TechAscend treated us like builders, not charity. I shipped a real product and now I am hiring my own first intern.",
-    name: "Grace M.",
-    role: "Founder · Studio track",
-    initials: "GM",
-    avBg: "linear-gradient(135deg,#1F9D6B,#7C3AED)",
   },
 ];
 

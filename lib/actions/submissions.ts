@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { evaluateSubmission } from "@/lib/ai";
 import { submissionSchema } from "@/lib/validation";
+import { runAwardChecks } from "@/lib/progress";
 
 export type SubmitState = {
   ok?: boolean;
@@ -56,8 +57,12 @@ export async function submitProjectAction(
     },
   });
 
+  // Submitting can complete Phase 4 → auto badge/certificate.
+  await runAwardChecks(session.user.id);
+
   revalidatePath("/projects");
   revalidatePath("/dashboard");
+  revalidatePath("/badges");
 
   return { ok: true, result: evaluation };
 }

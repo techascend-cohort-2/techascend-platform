@@ -16,116 +16,154 @@ export const getCurrentUser = cache(async () => {
   });
 });
 
-function asStringArray(v: unknown): string[] {
+export async function getNotifications(userId: string) {
+  const [items, unread] = await Promise.all([
+    prisma.notification.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 12 }),
+    prisma.notification.count({ where: { userId, readAt: null } }),
+  ]);
+  return { items, unread };
+}
+
+export function asStringArray(v: unknown): string[] {
   return Array.isArray(v) ? v.map(String) : [];
 }
 
+function trackFilter(userTrack: string | null) {
+  return userTrack ? { in: ["ALL", userTrack] } : { equals: "ALL" };
+}
+
 // ---------------------------------------------------------------------------
-// Student · Dashboard
+// Learning: full phase → module → lesson tree with per-user progress
+// ---------------------------------------------------------------------------
+
+export async function getLearningTree(userId: string, userTrack: string | null) {
+  const [phases, done, visibility] = await Promise.all([
+    prisma.phase.findMany({
+      orderBy: { orderIndex: "asc" },
+      include: {
+        badge: true,
+        modules: {
+          where: { track: trackFilter(userTrack) },
+          orderBy: { orderIndex: "asc" },
+          include: { lessons: { orderBy: { orderIndex: "asc" } }, projects: true },
+        },
+      },
+    }),
+    prisma.lessonProgress.findMany({ where: { userId }, select: { lessonId: true } }),
+    prisma.visibilitySubmission.findUnique({ where: { userId } }),
+  ]);
+  const doneSet = new Set(done.map((d) => d.lessonId));
+
+  const tree = phases.map((phase) => {
+    const lessons = phase.modules.flatMap((m) => m.lessons);
+    const completed = lessons.filter((l) => doneSet.has(l.id)).length;
+    return {
+      phase,
+      totalLessons: lessons.length,
+      completedLessons: completed,
+      pct: lessons.length ? Math.round((completed / lessons.length) * 100) : 0,
+      doneSet,
+    };
+  });
+
+  // Current lesson = first incomplete lesson across ordered phases.
+  let current: { lessonId: string; phaseSlug: string } | null = null;
+  outer: for (const t of tree) {
+    for (const m of t.phase.modules) {
+      for (const l of m.lessons) {
+        if (!doneSet.has(l.id)) {
+          current = { lessonId: l.id, phaseSlug: t.phase.slug };
+          break outer;
+        }
+      }
+    }
+  }
+
+  return { tree, doneSet, current, visibility };
+}
+
+export async function getLessonForUser(lessonId: string, userId: string) {
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    include: { module: { include: { phase: true, lessons: { orderBy: { orderIndex: "asc" } } } } },
+  });
+  if (!lesson) return null;
+  const progress = await prisma.lessonProgress.findUnique({
+    where: { userId_lessonId: { userId, lessonId } },
+  });
+  const siblings = lesson.module.lessons;
+  const idx = siblings.findIndex((l) => l.id === lessonId);
+  return {
+    lesson,
+    completed: Boolean(progress),
+    prev: idx > 0 ? siblings[idx - 1] : null,
+    next: idx >= 0 && idx < siblings.length - 1 ? siblings[idx + 1] : null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Student dashboard
 // ---------------------------------------------------------------------------
 
 export async function getStudentDashboard(userId: string) {
-  const [user, badgeCount, submissions, matches, paidAgg] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, include: { cohort: true } }),
-    prisma.userBadge.count({ where: { userId } }),
-    prisma.submission.count({ where: { userId } }),
-    prisma.gigMatch.findMany({
-      where: { userId },
-      include: { gig: true },
-      orderBy: { matchPct: "desc" },
-      take: 3,
-    }),
-    prisma.payout.aggregate({ where: { userId, status: "Paid" }, _sum: { amount: true } }),
-  ]);
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { cohort: true } });
   if (!user) throw new Error("User not found");
-  const earned = paidAgg._sum.amount ?? 0;
 
-  const stats = [
-    { label: "Overall progress", value: `${user.progressPercentage}%`, delta: "+8%", deltaColor: "var(--pos)", tint: "#7C3AED", tintBg: "#F1EAFC", iconPath: "M22 12A10 10 0 1112 2v10z" },
-    { label: "Day streak", value: `${user.streak}`, delta: "🔥", deltaColor: "var(--warn)", tint: "#C97A0E", tintBg: "#FCF1DE", iconPath: "M12 2s5 4 5 9a5 5 0 01-10 0c0-2 1-3 1-3s0 2 2 2 2-4 2-8z" },
-    { label: "Badges earned", value: `${badgeCount}`, delta: "+3", deltaColor: "var(--pos)", tint: "#D6336C", tintBg: "#FCE7F0", iconPath: "M12 15a6 6 0 100-12 6 6 0 000 12zM8 13l-1 8 5-3 5 3-1-8" },
-    { label: "Projects shipped", value: `${Math.max(user.projectsShipped, submissions)}`, delta: "+1", deltaColor: "var(--pos)", tint: "#1F9D6B", tintBg: "#E6F6EF", iconPath: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" },
-  ];
+  const [{ tree, current }, badgeCount, certCount, payoutAgg, upcomingEvents, openOpps] =
+    await Promise.all([
+      getLearningTree(userId, user.track),
+      prisma.userBadge.count({ where: { userId } }),
+      prisma.certificate.count({ where: { userId } }),
+      prisma.ledgerEntry.aggregate({ where: { userId, kind: "payout" }, _sum: { amount: true } }),
+      prisma.event.findMany({
+        where: { startsAt: { gte: new Date() }, audience: { in: ["all", "students"] } },
+        orderBy: { startsAt: "asc" },
+        take: 4,
+      }),
+      prisma.opportunity.count({ where: { status: "open" } }),
+    ]);
 
-  const tints = [
-    { tint: "#7C3AED", tintBg: "#F1EAFC" },
-    { tint: "#1F9D6B", tintBg: "#E6F6EF" },
-    { tint: "#D6336C", tintBg: "#FCE7F0" },
-  ];
-  const incomeTasks = matches.map((m, i) => ({
-    id: m.gigId,
-    title: m.gig.title,
-    meta: m.gig.type ?? "Freelance",
-    pay: m.gig.pay,
-    match: `${m.matchPct}%`,
-    glyph: m.gig.glyph ?? "W",
-    tint: m.gig.tint ?? tints[i % 3].tint,
-    tintBg: m.gig.tintBg ?? tints[i % 3].tintBg,
-  }));
+  const totalLessons = tree.reduce((s, t) => s + t.totalLessons, 0);
+  const doneLessons = tree.reduce((s, t) => s + t.completedLessons, 0);
+  const earned = payoutAgg._sum.amount ?? 0;
 
-  // Current module + upcoming milestones.
-  const currentModule = user.track
-    ? await prisma.module.findFirst({
-        where: { track: user.track },
-        orderBy: { orderIndex: "desc" },
-        include: { lessons: { orderBy: { orderIndex: "asc" } } },
-      })
+  const currentPhase = tree.find((t) => t.pct < 100) ?? tree[tree.length - 1] ?? null;
+  const currentLesson = current
+    ? await prisma.lesson.findUnique({ where: { id: current.lessonId }, include: { module: true } })
     : null;
 
-  const milestones = [
-    { title: `Finish ${currentModule?.title ?? "your module"}`, sub: "2 lessons left", dotBg: "var(--brand1)", dotBorder: "#E7DCFA" },
-    { title: "Submit capstone project", sub: "AI Customer Support Agent", dotBg: "#fff", dotBorder: "var(--line)" },
-    { title: "Live session: API design", sub: "Sat · 3:00 PM", dotBg: "#fff", dotBorder: "var(--line)" },
-    { title: 'Earn "API Integrator" badge', sub: "Unlocks new income tasks", dotBg: "#fff", dotBorder: "var(--line)" },
-  ];
-
-  const portfolio = {
-    projectsShipped: Math.max(user.projectsShipped, submissions),
-    earned,
-    earnedShort: earned >= 1000 ? `${Math.round(earned / 1000)}k` : `${earned}`,
+  return {
+    user,
+    progressPct: user.progressPercentage,
+    stats: {
+      lessonsDone: doneLessons,
+      lessonsTotal: totalLessons,
+      badges: badgeCount,
+      certificates: certCount,
+      earned,
+      earnedLabel: formatFcfa(earned),
+      openOpportunities: openOpps,
+    },
+    currentPhase,
+    currentLesson,
+    upcomingEvents,
+    trackLabel: user.track ? TRACK_LABELS[user.track] : "—",
   };
-
-  return { user, stats, incomeTasks, milestones, currentModule, portfolio };
 }
 
 // ---------------------------------------------------------------------------
-// Student · Learning
+// Tutor
 // ---------------------------------------------------------------------------
 
-export async function getLearning(track: string | null) {
-  const t = track ?? "A";
-  const modules = await prisma.module.findMany({
-    where: { track: t },
-    orderBy: { orderIndex: "asc" },
-    include: { lessons: { orderBy: { orderIndex: "asc" } } },
-  });
-
-  // "Current" lesson: the one flagged with content in the last module, else first.
-  const currentModule = modules[modules.length > 3 ? 3 : modules.length - 1] ?? modules[0];
-  const currentLesson =
-    currentModule?.lessons.find((l) => l.content) ?? currentModule?.lessons[0] ?? null;
-
-  const lessonPoints = currentLesson?.content
-    ? currentLesson.content
-        .split("\n")
-        .filter((l) => l.trim().startsWith("- "))
-        .map((l) => l.replace(/^-\s*/, "").trim())
-    : [];
-
-  return { modules, currentModule, currentLesson, lessonPoints, trackLabel: TRACK_LABELS[t] ?? t };
-}
-
-// ---------------------------------------------------------------------------
-// Student · Tutor
-// ---------------------------------------------------------------------------
-
-export async function getTutorData(userId: string, track: string | null) {
-  const [logs, learning] = await Promise.all([
+export async function getTutorData(userId: string, userTrack: string | null) {
+  const [{ current }, logs] = await Promise.all([
+    getLearningTree(userId, userTrack),
     prisma.aiTutorLog.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 20 }),
-    getLearning(track),
   ]);
+  const currentLesson = current
+    ? await prisma.lesson.findUnique({ where: { id: current.lessonId } })
+    : null;
 
-  // Rebuild the most recent conversation as seed messages.
   const recent = [...logs].reverse().slice(-2);
   const seedMessages =
     recent.length > 0
@@ -136,221 +174,340 @@ export async function getTutorData(userId: string, track: string | null) {
       : [
           {
             role: "bot" as const,
-            text: "Hi! 👋 I'm your AI Tutor. I can see your current lesson — what would you like help with?",
+            text: `Hi! 👋 I'm your AI Tutor.${currentLesson ? ` You're on “${currentLesson.title}”.` : ""} What would you like help with?`,
           },
         ];
-
   const chatHistory = Array.from(new Set(logs.map((l) => l.prompt))).slice(0, 6);
 
   return {
     seedMessages,
     chatHistory,
-    currentLessonId: learning.currentLesson?.id ?? null,
-    currentLessonTitle: learning.currentLesson?.title ?? null,
+    currentLessonId: currentLesson?.id ?? null,
+    currentLessonTitle: currentLesson?.title ?? null,
   };
 }
 
 // ---------------------------------------------------------------------------
-// Student · Projects
+// Projects
 // ---------------------------------------------------------------------------
 
-export async function getProjectsData(userId: string) {
+export async function getProjectsForUser(userId: string, userTrack: string | null) {
   const projects = await prisma.project.findMany({
-    orderBy: { title: "asc" },
+    where: { track: trackFilter(userTrack) },
     include: {
+      module: { include: { phase: true } },
       submissions: { where: { userId }, orderBy: { createdAt: "desc" }, take: 1 },
     },
+    orderBy: { title: "asc" },
   });
-
-  const featured = projects.find((p) => p.title.includes("Customer Support")) ?? projects[0] ?? null;
-  const latestSubmission = featured?.submissions[0] ?? null;
-
-  return {
-    featured,
-    latestSubmission,
-    deliverables: (featured?.deliverables as { title: string; ext: string }[] | null) ?? [],
-    projects,
-  };
+  return projects;
 }
 
 // ---------------------------------------------------------------------------
-// Student · Earn Hub
+// Earn hub (real: payouts from ledger + open opportunities + my interests)
 // ---------------------------------------------------------------------------
 
-export async function getEarn(userId: string) {
-  const [user, payouts, matches, smeGigs] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId } }),
-    prisma.payout.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
-    prisma.gigMatch.findMany({ where: { userId }, include: { gig: true }, orderBy: { matchPct: "desc" } }),
-    prisma.gig.findMany({ where: { source: "sme" } }),
+export async function getEarnData(userId: string) {
+  const [payouts, opportunities, interests] = await Promise.all([
+    prisma.ledgerEntry.findMany({
+      where: { userId, kind: "payout" },
+      orderBy: { occurredAt: "desc" },
+    }),
+    prisma.opportunity.findMany({
+      where: { status: "open" },
+      include: { partner: true, interests: { where: { userId } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.opportunityInterest.findMany({
+      where: { userId },
+      include: { opportunity: true },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
-
-  const paid = payouts.filter((p) => p.status === "Paid");
-  const totalEarned = paid.reduce((s, p) => s + p.amount, 0);
-  const pending = payouts.filter((p) => p.status !== "Paid").reduce((s, p) => s + p.amount, 0);
-
-  const kpis = [
-    { label: "Total earned", value: formatFcfa(totalEarned), delta: "+18% this month", color: "var(--pos)" },
-    { label: "This month", value: formatFcfa(Math.round(totalEarned * 0.35)), delta: `${paid.length} gigs completed`, color: "var(--muted)" },
-    { label: "Pending payout", value: formatFcfa(pending), delta: "Clears soon", color: "var(--warn)" },
-    { label: "Income readiness", value: `${user?.incomeReadiness ?? 0}/100`, delta: "AI assessed", color: "var(--brand1)" },
-  ];
-
-  const gigs = matches.map((m) => ({
-    id: m.gigId,
-    title: m.gig.title,
-    type: m.gig.type ?? "Freelance",
-    pay: m.gig.pay,
-    match: `${m.matchPct}%`,
-    glyph: m.gig.glyph ?? "W",
-    tint: m.gig.tint ?? "#7C3AED",
-    tintBg: m.gig.tintBg ?? "#F1EAFC",
-    skills: asStringArray(m.gig.skills),
-  }));
-
-  return {
-    kpis,
-    gigs,
-    smeGigs: smeGigs.map((g) => ({ name: g.title, need: g.need ?? "", pay: g.pay, loc: g.location ?? "", abbr: g.glyph ?? "SME" })),
-    payouts: payouts.map((p) => ({
-      title: p.title,
-      date: `${p.method ?? ""}`.trim(),
-      amount: `+${formatFcfa(p.amount)}`,
-      status: p.status,
-      tone: p.status === "Paid" ? ("pos" as const) : ("warn" as const),
-    })),
-  };
+  const total = payouts.reduce((s, p) => s + p.amount, 0);
+  return { payouts, opportunities, interests, total, totalLabel: formatFcfa(total) };
 }
 
 // ---------------------------------------------------------------------------
-// Student · Badges
+// Badges & certificates
 // ---------------------------------------------------------------------------
 
-export async function getBadges(userId: string) {
-  const [all, earned] = await Promise.all([
-    prisma.badge.findMany(),
-    prisma.userBadge.findMany({ where: { userId }, include: { badge: true } }),
+export async function getBadgesData(userId: string) {
+  const [allBadges, earned, certificates] = await Promise.all([
+    prisma.badge.findMany({ include: { phase: true }, orderBy: { name: "asc" } }),
+    prisma.userBadge.findMany({ where: { userId }, include: { badge: { include: { phase: true } } } }),
+    prisma.certificate.findMany({ where: { userId }, include: { phase: true }, orderBy: { issuedAt: "asc" } }),
   ]);
   const earnedIds = new Set(earned.map((e) => e.badgeId));
   return {
-    earned: earned.map((e) => e.badge),
-    locked: all.filter((b) => !earnedIds.has(b.id)),
+    earned: earned.sort((a, b) => (a.badge.phase?.orderIndex ?? 99) - (b.badge.phase?.orderIndex ?? 99)),
+    locked: allBadges
+      .filter((b) => !earnedIds.has(b.id))
+      .sort((a, b) => (a.phase?.orderIndex ?? 99) - (b.phase?.orderIndex ?? 99)),
+    certificates,
+  };
+}
+
+export async function getCertificateByCode(code: string) {
+  return prisma.certificate.findUnique({
+    where: { code },
+    include: { user: true, phase: true },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Community, events, opportunities (shared)
+// ---------------------------------------------------------------------------
+
+export async function getCommunityFeed() {
+  return prisma.post.findMany({
+    include: { author: { select: { id: true, name: true, initials: true, avatarBg: true, role: true, title: true } } },
+    orderBy: [{ pinned: "desc" }, { createdAt: "desc" }],
+    take: 60,
+  });
+}
+
+export async function getEventsForRole(role: string) {
+  const audiences =
+    role === "admin" || role === "manager"
+      ? undefined // staff see everything
+      : role === "student"
+        ? ["all", "students"]
+        : role === "partner"
+          ? ["all", "partners"]
+          : ["all", "applicants"];
+  const where = audiences ? { audience: { in: audiences } } : {};
+  const now = new Date();
+  const [upcoming, past] = await Promise.all([
+    prisma.event.findMany({ where: { ...where, startsAt: { gte: now } }, orderBy: { startsAt: "asc" }, take: 40 }),
+    prisma.event.findMany({ where: { ...where, startsAt: { lt: now } }, orderBy: { startsAt: "desc" }, take: 15 }),
+  ]);
+  return { upcoming, past };
+}
+
+export async function getOpportunitiesData(userId: string, role: string) {
+  const opportunities = await prisma.opportunity.findMany({
+    include: {
+      partner: true,
+      postedBy: { select: { name: true, role: true } },
+      interests: role === "student" ? { where: { userId } } : { include: { user: { select: { id: true, name: true, initials: true, avatarBg: true } } } },
+      _count: { select: { interests: true } },
+    },
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+  });
+  return opportunities;
+}
+
+// ---------------------------------------------------------------------------
+// Applicant workspace
+// ---------------------------------------------------------------------------
+
+export async function getWelcomeData(email: string) {
+  const [application, events, cohort] = await Promise.all([
+    prisma.application.findUnique({ where: { email: email.toLowerCase() } }),
+    prisma.event.findMany({
+      where: { startsAt: { gte: new Date() }, audience: { in: ["all", "applicants"] } },
+      orderBy: { startsAt: "asc" },
+      take: 5,
+    }),
+    prisma.cohort.findFirst({ orderBy: { createdAt: "asc" } }),
+  ]);
+  return { application, events, cohort };
+}
+
+// ---------------------------------------------------------------------------
+// Staff: admin overview, reviews, applications, students, curriculum, ledger
+// ---------------------------------------------------------------------------
+
+export async function getAdminOverview() {
+  const now = new Date();
+  const [students, applicants, pendingApps, pendingVis, pendingSubs, cohorts, partners, events, avg, ledger] =
+    await Promise.all([
+      prisma.user.count({ where: { role: "student" } }),
+      prisma.user.count({ where: { role: "applicant" } }),
+      prisma.application.count({ where: { status: { in: ["new", "reviewing"] } } }),
+      prisma.visibilitySubmission.count({ where: { status: "pending" } }),
+      prisma.submission.count({ where: { status: { in: ["submitted", "ai_reviewed"] } } }),
+      prisma.cohort.findMany({ include: { _count: { select: { users: true } } }, orderBy: { createdAt: "asc" } }),
+      prisma.partner.count(),
+      prisma.event.findMany({ where: { startsAt: { gte: now } }, orderBy: { startsAt: "asc" }, take: 5 }),
+      prisma.user.aggregate({ where: { role: "student" }, _avg: { progressPercentage: true } }),
+      prisma.ledgerEntry.groupBy({ by: ["kind"], _sum: { amount: true } }),
+    ]);
+
+  const ledgerByKind = Object.fromEntries(ledger.map((l) => [l.kind, l._sum.amount ?? 0]));
+  const badgesAwarded = await prisma.userBadge.count();
+  const certsIssued = await prisma.certificate.count();
+
+  return {
+    kpis: {
+      students,
+      applicants,
+      pendingApps,
+      pendingReviews: pendingVis + pendingSubs,
+      avgProgress: Math.round(avg._avg.progressPercentage ?? 0),
+      partners,
+      badgesAwarded,
+      certsIssued,
+      income: (ledgerByKind["sponsorship"] ?? 0) + (ledgerByKind["revenue"] ?? 0),
+      paidOut: ledgerByKind["payout"] ?? 0,
+    },
+    cohorts,
+    upcomingEvents: events,
+  };
+}
+
+export async function getReviewQueues() {
+  const [visibility, submissions] = await Promise.all([
+    prisma.visibilitySubmission.findMany({
+      where: { status: "pending" },
+      include: { user: { select: { id: true, name: true, email: true, track: true, initials: true, avatarBg: true } } },
+      orderBy: { submittedAt: "asc" },
+    }),
+    prisma.submission.findMany({
+      where: { status: { in: ["submitted", "ai_reviewed"] } },
+      include: {
+        user: { select: { id: true, name: true, email: true, track: true, initials: true, avatarBg: true } },
+        project: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+  const recentlyReviewed = await prisma.visibilitySubmission.findMany({
+    where: { status: { not: "pending" } },
+    include: { user: { select: { name: true } } },
+    orderBy: { reviewedAt: "desc" },
+    take: 8,
+  });
+  return { visibility, submissions, recentlyReviewed };
+}
+
+export async function getApplicationsAdmin() {
+  return prisma.application.findMany({
+    include: { reviewedBy: { select: { name: true } } },
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+  });
+}
+
+export async function getStudentsAdmin() {
+  const [users, cohorts] = await Promise.all([
+    prisma.user.findMany({
+      include: { cohort: true, partner: true, _count: { select: { userBadges: true, lessonProgress: true } } },
+      orderBy: [{ role: "asc" }, { createdAt: "desc" }],
+    }),
+    prisma.cohort.findMany({ orderBy: { createdAt: "asc" } }),
+  ]);
+  return { users, cohorts };
+}
+
+export async function getCurriculumAdmin() {
+  return prisma.phase.findMany({
+    orderBy: { orderIndex: "asc" },
+    include: {
+      badge: true,
+      modules: {
+        orderBy: { orderIndex: "asc" },
+        include: { lessons: { orderBy: { orderIndex: "asc" } }, projects: true },
+      },
+    },
+  });
+}
+
+export async function getCohortsAdmin() {
+  return prisma.cohort.findMany({
+    include: { _count: { select: { users: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+export async function getPartnersAdmin() {
+  return prisma.partner.findMany({
+    include: { users: true, _count: { select: { opportunities: true, pipelineCards: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+export async function getLedgerData() {
+  const [entries, partners, students] = await Promise.all([
+    prisma.ledgerEntry.findMany({
+      include: { partner: true, user: { select: { name: true } }, createdBy: { select: { name: true } } },
+      orderBy: { occurredAt: "desc" },
+    }),
+    prisma.partner.findMany({ orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { role: "student" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+  ]);
+  const sum = (kind: string) => entries.filter((e) => e.kind === kind).reduce((s, e) => s + e.amount, 0);
+  return {
+    entries,
+    partners,
+    students,
+    totals: {
+      sponsorship: sum("sponsorship"),
+      revenue: sum("revenue"),
+      payout: sum("payout"),
+      expense: sum("expense"),
+      net: sum("sponsorship") + sum("revenue") - sum("payout") - sum("expense"),
+    },
   };
 }
 
 // ---------------------------------------------------------------------------
-// Admin · Overview
-// ---------------------------------------------------------------------------
-
-export async function getAdminOverview() {
-  const [students, cohorts, partners, agg, atRisk] = await Promise.all([
-    prisma.user.count({ where: { role: "student" } }),
-    prisma.cohort.findMany({ orderBy: { createdAt: "asc" }, include: { _count: { select: { users: true } } } }),
-    prisma.partner.findMany({ orderBy: { createdAt: "asc" }, take: 3 }),
-    prisma.user.aggregate({ where: { role: "student" }, _avg: { progressPercentage: true } }),
-    prisma.user.findMany({ where: { role: "student", progressPercentage: { lt: 65 } }, take: 3 }),
-  ]);
-
-  const revenue = await prisma.payout.aggregate({ _sum: { amount: true } });
-  const completion = Math.round(agg._avg.progressPercentage ?? 0);
-
-  const kpis = [
-    { label: "Active learners", value: `${students}`, delta: "+22 this cohort", color: "var(--pos)" },
-    { label: "Completion rate", value: `${completion}%`, delta: "+5% vs last", color: "var(--pos)" },
-    { label: "At-risk (AI flag)", value: `${atRisk.length}`, delta: "Needs outreach", color: "var(--danger)" },
-    { label: "Revenue (Q2)", value: formatFcfa(revenue._sum.amount ?? 0), delta: "+31%", color: "var(--pos)" },
-  ];
-
-  const cohortRows = cohorts.map((c) => ({
-    name: c.name,
-    track: c.trackName ?? c.track,
-    learners: `${c._count.users}`,
-    pct: `${Math.min(95, 40 + c._count.users)}%`,
-    status: c.status,
-    tone: (c.tone ?? "pos") as "pos" | "warn" | "brand",
-  }));
-
-  const enrollBars = cohorts.slice(0, 6).map((c, i) => ({
-    label: `C${i + 1}`,
-    h1: `${Math.min(90, 50 + c._count.users)}%`,
-    h2: `${Math.max(10, 24 - i * 2)}%`,
-  }));
-
-  const riskTones = ["danger", "warn", "warn"] as const;
-  const riskList = atRisk.map((u, i) => ({
-    name: u.name,
-    reason: i === 0 ? "No activity in 9 days" : "Progress slowing",
-    initials: u.initials ?? u.name.slice(0, 2).toUpperCase(),
-    avBg: u.avatarBg ?? "linear-gradient(135deg,#D6336C,#7C3AED)",
-    risk: i === 0 ? "High" : "Med",
-    tone: riskTones[i] ?? "warn",
-  }));
-
-  const partnerMini = partners.map((p) => ({
-    abbr: p.abbr ?? p.name.slice(0, 2).toUpperCase(),
-    name: p.name,
-    type: `${p.type} · ${p.contribution ?? ""}`,
-    value: p.value ?? "Active",
-  }));
-
-  return { kpis, cohorts: cohortRows, enrollBars, riskList, partnerMini };
-}
-
-// ---------------------------------------------------------------------------
-// Partner · Overview / Talent / Pipeline / Impact
+// Partner suite
 // ---------------------------------------------------------------------------
 
 export async function getTalentPool() {
   const users = await prisma.user.findMany({
-    where: { role: "student", score: { not: null } },
-    orderBy: { score: "desc" },
+    where: { role: "student", talentVisible: true },
+    include: { _count: { select: { userBadges: true, submissions: true } }, cohort: true },
+    orderBy: { progressPercentage: "desc" },
   });
-  return users.map((u) => ({
-    id: u.id,
-    name: u.name,
-    role: u.title ?? "AI-native builder",
-    initials: u.initials ?? u.name.slice(0, 2).toUpperCase(),
-    avBg: u.avatarBg ?? "linear-gradient(135deg,#7C3AED,#D6336C)",
-    skills: asStringArray(u.skills),
-    score: u.score ? u.score.toFixed(1) : "—",
-    projects: `${u.projectsShipped}`,
-  }));
+  return users;
 }
 
-export async function getPipeline() {
-  const cards = await prisma.pipelineCard.findMany({ orderBy: { orderIndex: "asc" } });
-  const stages = ["Applied", "Interview", "Hired"];
-  return stages.map((stage) => {
-    const people = cards.filter((c) => c.stage === stage);
-    return {
-      stage,
-      count: `${people.length}`,
-      people: people.map((p) => ({
-        name: p.name,
-        role: p.role,
-        initials: p.initials ?? p.name.slice(0, 2).toUpperCase(),
-        avBg: p.avBg ?? "linear-gradient(135deg,#7C3AED,#D6336C)",
-      })),
-    };
+export async function getPipelineForPartner(partnerId: string) {
+  const cards = await prisma.pipelineCard.findMany({
+    where: { partnerId },
+    include: { user: { select: { id: true, name: true, initials: true, avatarBg: true, track: true, title: true, progressPercentage: true } } },
+    orderBy: { createdAt: "asc" },
   });
+  return cards;
 }
 
-export async function getImpact() {
-  const [trained, earning, smes] = await Promise.all([
+export async function getImpactData() {
+  const [students, visApproved, badges, certs, avg, hired, payoutAgg] = await Promise.all([
     prisma.user.count({ where: { role: "student" } }),
-    prisma.user.count({ where: { role: "student", incomeStatus: "earning" } }),
-    prisma.gig.count({ where: { source: "sme" } }),
+    prisma.visibilitySubmission.count({ where: { status: "approved" } }),
+    prisma.userBadge.count(),
+    prisma.certificate.count(),
+    prisma.user.aggregate({ where: { role: "student" }, _avg: { progressPercentage: true } }),
+    prisma.pipelineCard.count({ where: { stage: "Hired" } }),
+    prisma.ledgerEntry.aggregate({ where: { kind: "payout" }, _sum: { amount: true } }),
   ]);
-  const pct = (n: number, d: number) => (d ? Math.round((n / d) * 100) : 0);
-  return [
-    { label: "Women trained", value: `${trained}`, pct: "100%" },
-    { label: "Now earning income", value: `${earning}`, pct: `${pct(earning, trained)}%` },
-    { label: "SMEs digitized", value: `${smes}`, pct: "48%" },
-    { label: "Avg income uplift", value: "3.4×", pct: "85%" },
-  ];
+  return {
+    students,
+    visApproved,
+    badges,
+    certs,
+    avgProgress: Math.round(avg._avg.progressPercentage ?? 0),
+    hired,
+    paidToStudents: payoutAgg._sum.amount ?? 0,
+  };
 }
 
-export async function getPartnerOverview() {
-  const [pipeline, impact, talent] = await Promise.all([getPipeline(), getImpact(), getTalentPool()]);
-  return { pipeline, impact, talent: talent.slice(0, 4) };
+export async function getPartnerOverview(partnerId: string | null) {
+  const [org, impact] = await Promise.all([
+    partnerId
+      ? prisma.partner.findUnique({
+          where: { id: partnerId },
+          include: {
+            opportunities: { include: { _count: { select: { interests: true } } }, orderBy: { createdAt: "desc" } },
+            pipelineCards: { include: { user: { select: { name: true, initials: true, avatarBg: true } } } },
+            ledgerEntries: { orderBy: { occurredAt: "desc" }, take: 5 },
+          },
+        })
+      : Promise.resolve(null),
+    getImpactData(),
+  ]);
+  const talentCount = await prisma.user.count({ where: { role: "student", talentVisible: true } });
+  return { org, impact, talentCount };
 }

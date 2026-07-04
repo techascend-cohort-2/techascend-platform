@@ -3,78 +3,99 @@
 import { AuthError } from "next-auth";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { signIn, signOut } from "@/auth";
+import { auth, signIn, signOut } from "@/auth";
 import { signupSchema } from "@/lib/validation";
-import { ROLE_HOME, type Role } from "@/lib/constants";
+import { ROLE_HOME, isRole, initialsOf, avatarBgFor } from "@/lib/constants";
+import { notify } from "@/lib/progress";
 
 export type FormState = { error?: string; ok?: boolean };
 
-function initials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((s) => s[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
 export async function loginAction(_prev: FormState, formData: FormData): Promise<FormState> {
-  const email = String(formData.get("email") ?? "");
+  const email = String(formData.get("email") ?? "").toLowerCase();
   const password = String(formData.get("password") ?? "");
   try {
-    // Look up the role up front so we can land each user on their own home.
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-    const dest =
-      user && (["student", "admin", "partner"] as string[]).includes(user.role)
-        ? ROLE_HOME[user.role as Role]
-        : "/dashboard";
+    const user = await prisma.user.findUnique({ where: { email } });
+    const dest = user && isRole(user.role) ? ROLE_HOME[user.role] : "/login";
     await signIn("credentials", { email, password, redirectTo: dest });
     return { ok: true };
   } catch (error) {
-    if (error instanceof AuthError) {
-      return { error: "Invalid email or password." };
-    }
+    if (error instanceof AuthError) return { error: "Invalid email or password." };
     throw error; // re-throw Next.js redirect
   }
 }
 
+/**
+ * Signup creates an APPLICANT account + an Application record — unless an
+ * accepted application already exists for the email, in which case the
+ * account is created directly as a student on the accepted track.
+ */
 export async function signupAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const parsed = signupSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
     password: formData.get("password"),
-    role: formData.get("role") ?? "student",
     track: formData.get("track") || undefined,
-    country: formData.get("country") || undefined,
+    city: formData.get("city") || undefined,
+    phone: formData.get("phone") || undefined,
+    motivation: formData.get("motivation") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid details." };
+  const d = parsed.data;
+  const email = d.email.toLowerCase();
+
+  if (await prisma.user.findUnique({ where: { email } })) {
+    return { error: "An account with that email already exists — sign in instead." };
+  }
+
+  const accepted = await prisma.application.findFirst({
+    where: { email, status: "accepted", role: "learner" },
   });
 
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid details." };
-  }
-  const data = parsed.data;
+  const passwordHash = await bcrypt.hash(d.password, 10);
+  const role = accepted ? "student" : "applicant";
+  const track = accepted?.track ?? d.track ?? null;
+  const cohort = accepted ? await prisma.cohort.findFirst({ orderBy: { createdAt: "asc" } }) : null;
 
-  const existing = await prisma.user.findUnique({ where: { email: data.email.toLowerCase() } });
-  if (existing) return { error: "An account with that email already exists." };
-
-  const passwordHash = await bcrypt.hash(data.password, 10);
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: {
-      name: data.name,
-      email: data.email.toLowerCase(),
+      name: d.name,
+      email,
       passwordHash,
-      role: data.role,
-      track: data.track ?? null,
-      country: data.country ?? "Cameroon",
-      initials: initials(data.name),
-      title: data.role === "student" ? `Fellow${data.track ? ` · Track ${data.track}` : ""}` : undefined,
+      role,
+      track,
+      city: d.city ?? accepted?.city ?? null,
+      phone: d.phone ?? accepted?.phone ?? null,
+      initials: initialsOf(d.name),
+      avatarBg: avatarBgFor(d.name),
+      cohortId: cohort?.id ?? null,
+      title: role === "student" ? `Fellow${track ? ` · Track ${track}` : ""}` : "Applicant",
     },
   });
 
+  if (!accepted) {
+    await prisma.application.upsert({
+      where: { email },
+      create: {
+        role: "learner",
+        name: d.name,
+        email,
+        phone: d.phone ?? null,
+        city: d.city ?? null,
+        track: d.track ?? null,
+        motivation: d.motivation ?? null,
+        status: "new",
+      },
+      update: {}, // keep any existing application untouched
+    });
+  } else {
+    await notify(user.id, "Welcome to TechAscend! 🎉", "/dashboard", "Your application was accepted — your fellowship starts now.");
+  }
+
   try {
     await signIn("credentials", {
-      email: data.email.toLowerCase(),
-      password: data.password,
-      redirectTo: ROLE_HOME[data.role as Role] ?? "/dashboard",
+      email,
+      password: d.password,
+      redirectTo: ROLE_HOME[role],
     });
     return { ok: true };
   } catch (error) {
@@ -85,4 +106,23 @@ export async function signupAction(_prev: FormState, formData: FormData): Promis
 
 export async function logoutAction() {
   await signOut({ redirectTo: "/login" });
+}
+
+export async function changePasswordAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not signed in." };
+  const current = String(formData.get("current") ?? "");
+  const next = String(formData.get("next") ?? "");
+  if (next.length < 8) return { error: "New password must be at least 8 characters." };
+
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!user?.passwordHash) return { error: "Account not found." };
+  if (!(await bcrypt.compare(current, user.passwordHash))) {
+    return { error: "Current password is incorrect." };
+  }
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await bcrypt.hash(next, 10), mustChangePassword: false },
+  });
+  return { ok: true };
 }

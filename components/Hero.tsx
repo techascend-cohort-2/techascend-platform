@@ -69,7 +69,7 @@ export default function Hero() {
 
       <div className={styles.logoStrip}>
         <div className={styles.logoStripInner}>
-          <span className={styles.logoStripLabel}>BUILT WITH PARTNERS LIKE</span>
+          <span className={styles.logoStripLabel}>WHAT THE FELLOWSHIP IS BUILT ON</span>
           {logos.map((l) => (
             <span key={l} className={styles.logoStripLogo}>
               {l}

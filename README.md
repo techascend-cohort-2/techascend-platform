@@ -1,129 +1,90 @@
 # TechAscend Platform
 
-An AI-native learning + income-generation ecosystem for women in tech in Cameroon.
-This is a **live, full-stack application**: real authentication, a real database, and
-a real AI Tutor + project evaluator powered by Claude.
+The live platform for the **TechAscend AI-Native Fellowship** — training women in
+Cameroon to build with AI and turn skills into income. Full-stack, database-backed,
+no placeholder pages, no fabricated data.
 
-- **Marketing site** — the public landing page and a working application form.
-- **Platform app** — role-based dashboards for **students**, **admins**, and **partners**,
-  backed by a database (courses, cohorts, projects, submissions, gigs, payouts,
-  partners, badges, hiring pipeline).
-- **AI Tutor** — context-aware, streaming chat that knows the student's current lesson.
-- **AI project evaluation** — submissions are scored against a rubric with feedback
-  and a monetization suggestion.
+## The program it runs (Cohort 02 · July–December 2026)
 
-## Tech stack
+| Phase | Dates | Completion earns |
+| ----- | ----- | ---------------- |
+| 1 · Visibility | Jul 3 – Jul 12 | Visibility Badge + certificate (profile links reviewed by staff) |
+| 2 · AI Foundations | Jul 13 – Aug 7 | AI Foundations Badge + certificate |
+| 3 · Core Skills (per track) | Aug 10 – Oct 9 | Core Builder Badge + certificate |
+| 4 · Build Studio (capstones) | Oct 12 – Nov 20 | Studio Builder Badge + certificate |
+| 5 · Launch & Earn | Nov 23 – Dec 18 | Launch Ready Badge + certificate |
 
-| Layer     | Choice                                                        |
-| --------- | ------------------------------------------------------------- |
-| Framework | Next.js 15 (App Router, React 19) + TypeScript                |
-| Auth      | Auth.js (NextAuth v5) — credentials + role-based access       |
-| Database  | Prisma ORM — **SQLite** for local dev, **Postgres** for prod  |
-| AI        | Claude (Anthropic) — tutor + evaluation                       |
-| Styling   | CSS Modules + global CSS                                       |
+Completing all five auto-issues the **program certificate** + Graduate badge.
+Badges/certificates are generated automatically by the award engine (`lib/progress.ts`)
+— every certificate has a public verification page at `/certificates/<code>`.
 
-## Quick start (local, zero config)
+Seeded content: **5 phases · 19 modules · 76 real lessons** (shared + Track A
+"AI-Powered Software Engineering" + Track B "AI Product & Automation"),
+**6 capstone briefs**, and a **57-event calendar** (orientation Jul 6, Tue/Thu live
+sessions, phase kickoffs, deadlines, Demo Day Dec 12, graduation Dec 18).
+
+## Roles & workspaces
+
+- **Student** — dashboard, curriculum with per-lesson progress, AI Tutor (lesson-aware,
+  streaming), capstone submission with AI evaluation, community, events, opportunities,
+  Earn Hub (real payouts only), badges & certificates, profile (incl. Phase 1 links submission).
+- **Applicant** — anyone who signs up: application status workspace, events, profile.
+  Accepted by staff → becomes a student automatically.
+- **Community manager** — community feed moderation, review queues (visibility +
+  project submissions), members list, events management, opportunities.
+- **Admin** — everything: overview KPIs, applications, reviews, members (roles/tracks/
+  cohorts/password resets), full curriculum editor, cohorts, partners, events,
+  opportunities, revenue ledger.
+- **Partner** — portal, opted-in talent pool, hiring pipeline (kanban), own
+  opportunities, live impact metrics.
+
+## Run it
 
 ```bash
-npm install            # installs deps + generates the Prisma client
-npm run db:push        # creates the local SQLite database (prisma/dev.db)
-npm run db:seed        # seeds cohorts, curriculum, partners, demo users…
+npm install
+npm run db:push        # create SQLite db (dev)
+npm run db:seed        # seed the full program
 npm run dev            # http://localhost:3000
 ```
 
-Then open the app and sign in with a demo account.
+### Operating accounts (seeded — CHANGE BOTH PASSWORDS after first login)
 
-### Demo accounts (password: `password`)
+| Role | Email | Password |
+| ---- | ----- | -------- |
+| Admin | `admin@techascend.africa` | `TechAscend-Admin-2026` |
+| Community manager | `community@techascend.africa` | `TechAscend-Team-2026` |
 
-| Role    | Email                       | Lands on          |
-| ------- | --------------------------- | ----------------- |
-| Student | `amina@techascend.africa`   | `/dashboard`      |
-| Admin   | `admin@techascend.africa`   | `/admin`          |
-| Partner | `partner@techascend.africa` | `/partner`        |
+Students are **not** pre-seeded (no fake data): they sign up at `/signup` (become
+applicants) and are accepted in **Applications**; or staff accept a landing-page
+application and generate an account with a one-time temporary password.
 
-The login screen has one-click buttons that fill each demo account for you.
-You can also create a fresh account at `/signup`.
+## AI
 
-## Turning on the AI
-
-The AI Tutor and project evaluation work in a graceful **demo mode** without a key
-(they explain how to enable themselves). To make them live, set an Anthropic key:
+Claude powers the tutor (spec system prompt + per-lesson context injection, streaming)
+and capstone evaluation (rubric + feedback + monetization suggestion). Without
+`ANTHROPIC_API_KEY` both run in a clearly-labelled demo fallback.
 
 ```bash
 # .env.local
 ANTHROPIC_API_KEY="sk-ant-..."
-# optional, defaults to claude-sonnet-5
-ANTHROPIC_MODEL="claude-sonnet-5"
+ANTHROPIC_MODEL="claude-sonnet-5"   # optional
 ```
 
-## Environment variables
+## Production
 
-See `.env.example`. The committed `.env` holds **safe local-dev defaults only**
-(SQLite path + a dev auth secret + empty AI key). Never put real secrets in `.env` —
-use `.env.local` (gitignored) locally and your host's secret manager in production.
+1. `prisma/schema.prisma`: change provider `sqlite` → `postgresql`; set `DATABASE_URL`.
+2. Set `AUTH_SECRET` (`openssl rand -base64 32`), `AUTH_TRUST_HOST=true`, `ANTHROPIC_API_KEY`.
+3. `npm run db:push && npm run db:seed` once against prod, then deploy (`prisma generate && next build`).
 
-| Variable            | Purpose                                                        |
-| ------------------- | -------------------------------------------------------------- |
-| `DATABASE_URL`      | Prisma connection string (SQLite file in dev, Postgres in prod)|
-| `AUTH_SECRET`       | Auth.js session signing secret (`openssl rand -base64 32`)     |
-| `AUTH_TRUST_HOST`   | `true` behind a proxy / on platforms that don't set the host   |
-| `ANTHROPIC_API_KEY` | Enables the live AI Tutor + evaluation                         |
-| `ANTHROPIC_MODEL`   | Optional model override                                        |
-
-## Deploying to production (Vercel + Postgres)
-
-1. **Switch the database to Postgres** — in `prisma/schema.prisma` change:
-   ```prisma
-   datasource db {
-     provider = "postgresql"   // was "sqlite"
-     url      = env("DATABASE_URL")
-   }
-   ```
-   The models use only portable types, so no other schema change is needed.
-2. Create a Postgres database (e.g. **Supabase** or **Neon**) and set `DATABASE_URL`
-   to its connection string.
-3. Set `AUTH_SECRET`, `AUTH_TRUST_HOST=true`, and `ANTHROPIC_API_KEY` in your host's
-   env settings.
-4. Run the schema + seed once against prod: `npm run db:push && npm run db:seed`.
-5. Deploy. The build runs `prisma generate && next build`.
-
-## Data model
-
-Prisma models (see `prisma/schema.prisma`) implement the platform spec
-(`project/uploads/TechAscend_AI_Platform_Spec.md`): `User`, `Cohort`, `Module`,
-`Lesson`, `Project`, `Submission`, `AiTutorLog`, `Partner`, plus supporting
-`Gig`/`GigMatch`, `Payout`, `Badge`/`UserBadge`, `PipelineCard`, and `Application`.
-
-## Project layout
+## Key architecture
 
 ```
-app/
-  (platform)/          role-gated app screens (dashboard, learning, tutor, projects, earn, admin, partner…)
-  api/
-    auth/[...nextauth] Auth.js handler
-    tutor/             streaming AI Tutor endpoint
-  apply/               public application form
-  login/  signup/      auth pages
-  page.tsx             marketing landing page
-auth.ts, auth.config.ts, middleware.ts   authentication + route protection
-lib/
-  db.ts                Prisma client singleton
-  ai.ts                Claude tutor + evaluation
-  queries.ts           server-side data access for every screen
-  actions/             server actions (auth, submissions, applications)
-  validation.ts        zod schemas
-prisma/
-  schema.prisma        data model
-  seed.ts              database seed
+lib/progress.ts        award engine: lesson/visibility/capstone completion → auto badge + certificate + notification
+lib/queries.ts         all server-side data access
+lib/actions/           server actions (auth, program, community, staff, submissions, applications)
+auth.config.ts         5-role route protection (edge middleware)
+prisma/curriculum/     full seeded curriculum (shared + track A + track B)
+prisma/seed.ts         program install: phases, badges, events, staff accounts
+app/(platform)/        all role workspaces
+app/certificates/[code] public certificate verification & print
 ```
-
-## Useful scripts
-
-| Script              | Does                                             |
-| ------------------- | ------------------------------------------------ |
-| `npm run dev`       | Start the dev server                             |
-| `npm run build`     | `prisma generate` + production build             |
-| `npm run db:push`   | Sync the schema to the database                  |
-| `npm run db:seed`   | Seed demo data                                    |
-| `npm run db:reset`  | Reset + reseed the database                      |
-| `npm run db:studio` | Open Prisma Studio                               |

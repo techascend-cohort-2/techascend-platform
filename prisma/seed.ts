@@ -1,332 +1,427 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { sharedContent } from "./curriculum/shared";
+import { trackAContent, trackAProjects } from "./curriculum/trackA";
+import { trackBContent, trackBProjects } from "./curriculum/trackB";
+import type { PhaseContent, ProjectSeed } from "./curriculum/types";
 
 const prisma = new PrismaClient();
 
-// Every demo account uses this password.
-const DEMO_PASSWORD = "password";
+// ---------------------------------------------------------------------------
+// TechAscend Cohort 02 — July–December 2026.
+// Seeds ONLY real program structure: phases, curriculum, badges, events, and
+// the two staff accounts needed to operate the platform. No fabricated
+// students, partners, payouts or metrics.
+// ---------------------------------------------------------------------------
 
-async function main() {
-  console.log("🌱 Seeding TechAscend platform…");
+// Times below are West Africa Time (UTC+1) expressed in UTC.
+function wat(dateStr: string, hour: number, minute = 0): Date {
+  const d = new Date(`${dateStr}T00:00:00.000Z`);
+  d.setUTCHours(hour - 1, minute, 0, 0);
+  return d;
+}
 
-  // Idempotent reset (safe on a fresh or existing db).
-  await prisma.gigMatch.deleteMany();
-  await prisma.payout.deleteMany();
-  await prisma.gig.deleteMany();
-  await prisma.userBadge.deleteMany();
-  await prisma.badge.deleteMany();
-  await prisma.aiTutorLog.deleteMany();
-  await prisma.submission.deleteMany();
-  await prisma.lesson.deleteMany();
-  await prisma.project.deleteMany();
-  await prisma.module.deleteMany();
-  await prisma.pipelineCard.deleteMany();
-  await prisma.application.deleteMany();
-  await prisma.session.deleteMany();
-  await prisma.account.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.cohort.deleteMany();
-  await prisma.partner.deleteMany();
-
-  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
-
-  // ---------------- Cohorts ----------------
-  const [doualaA, yaoundeB, buea, studio] = await Promise.all([
-    prisma.cohort.create({
-      data: { name: "Douala · Track A", track: "A", trackName: "AI Software Eng", status: "Active", tone: "pos", hub: "Douala" },
-    }),
-    prisma.cohort.create({
-      data: { name: "Yaoundé · Track B", track: "B", trackName: "AI Automation", status: "Active", tone: "pos", hub: "Yaoundé" },
-    }),
-    prisma.cohort.create({
-      data: { name: "Buea · Explorer", track: "Foundations", trackName: "Foundations", status: "Onboarding", tone: "warn", hub: "Buea" },
-    }),
-    prisma.cohort.create({
-      data: { name: "Douala · Studio", track: "Venture", trackName: "Venture", status: "Demo day", tone: "brand", hub: "Douala" },
-    }),
-  ]);
-
-  // ---------------- Partners ----------------
-  const mtn = await prisma.partner.create({
-    data: { name: "MTN Foundation", abbr: "MTN", type: "funding", contribution: "50 sponsored seats", benefit: "Employer branding + CSR impact reporting", value: "8.5M F", seats: 50, contactInfo: "foundation@mtn.cm" },
-  });
-  await prisma.partner.createMany({
-    data: [
-      { name: "Orange Digital", abbr: "OR", type: "tech", contribution: "Infra + cloud credits", benefit: "Innovation exposure", value: "Active" },
-      { name: "UNDP Cameroon", abbr: "UN", type: "funding", contribution: "Cohort grant", benefit: "SDG impact reporting", value: "6.2M F", seats: 40 },
-      { name: "GIZ", abbr: "GIZ", type: "govt", contribution: "Youth employment support", benefit: "National skills development", value: "Active" },
-      { name: "Mastercard Foundation", abbr: "MC", type: "funding", contribution: "Scholarships", benefit: "Pan-African reach", value: "12M F", seats: 80 },
-      { name: "Microsoft", abbr: "MS", type: "tech", contribution: "Azure credits + tooling", benefit: "Talent pipeline access", value: "Active" },
-    ],
-  });
-
-  // ---------------- Users ----------------
-  const student = await prisma.user.create({
-    data: {
-      name: "Amina Njoya",
-      email: "amina@techascend.africa",
-      passwordHash,
-      role: "student",
-      title: "AI Software Eng · Track A",
-      initials: "AN",
-      avatarBg: "linear-gradient(135deg,#F0A,#7C3AED)",
-      gender: "female",
-      country: "Cameroon",
-      track: "A",
-      skillLevel: "intermediate",
-      progressPercentage: 72,
-      incomeStatus: "earning",
-      githubUrl: "https://github.com/aminanjoya",
-      portfolioUrl: "https://aminanjoya.dev",
-      score: 4.9,
-      incomeReadiness: 78,
-      streak: 12,
-      skills: ["React", "Node", "OpenAI"],
-      projectsShipped: 7,
-      cohortId: doualaA.id,
+const PHASES = [
+  {
+    slug: "visibility",
+    name: "Phase 1 — Visibility",
+    description:
+      "Build your professional identity before you build software: GitHub, LinkedIn, X, Medium/Substack, Hugging Face and Kaggle — reviewed by the community team.",
+    orderIndex: 1,
+    startsAt: wat("2026-07-03", 0),
+    endsAt: wat("2026-07-12", 23, 59),
+    requiresVisibilityApproval: true,
+    requiresProjectSubmission: false,
+    badge: {
+      name: "Visibility Badge",
+      description: "Professional identity established and verified across six platforms.",
+      iconPath: "M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6 7 18.2l1.9-5.8L4 8.8h6.1z",
+      tint: "#7C3AED",
     },
-  });
+  },
+  {
+    slug: "ai-foundations",
+    name: "Phase 2 — AI Foundations",
+    description:
+      "Think and work with AI: how models work, prompt craft, verification, plus your builder toolkit — terminal, Git & GitHub, VS Code and the web's mental model.",
+    orderIndex: 2,
+    startsAt: wat("2026-07-13", 0),
+    endsAt: wat("2026-08-07", 23, 59),
+    requiresVisibilityApproval: false,
+    requiresProjectSubmission: false,
+    badge: {
+      name: "AI Foundations Badge",
+      description: "AI-native fundamentals: prompting, verification, Git and the builder toolkit.",
+      iconPath: "M12 2s5 4 5 9a5 5 0 01-10 0c0-2 1-3 1-3s0 2 2 2 2-4 2-8z",
+      tint: "#2D6FD9",
+    },
+  },
+  {
+    slug: "core-skills",
+    name: "Phase 3 — Core Skills",
+    description:
+      "Track-specific depth. Track A: web foundations, JavaScript, React, APIs & databases, AI-assisted engineering. Track B: automation thinking, n8n, APIs & webhooks, AI workflows, no-code products.",
+    orderIndex: 3,
+    startsAt: wat("2026-08-10", 0),
+    endsAt: wat("2026-10-09", 23, 59),
+    requiresVisibilityApproval: false,
+    requiresProjectSubmission: false,
+    badge: {
+      name: "Core Builder Badge",
+      description: "Core track skills completed — ready to build real products.",
+      iconPath: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
+      tint: "#C026D3",
+    },
+  },
+  {
+    slug: "build-studio",
+    name: "Phase 4 — Build Studio",
+    description:
+      "From brief to deployed product: guided build sprints and a capstone project submitted for AI evaluation and mentor review.",
+    orderIndex: 4,
+    startsAt: wat("2026-10-12", 0),
+    endsAt: wat("2026-11-20", 23, 59),
+    requiresVisibilityApproval: false,
+    requiresProjectSubmission: true,
+    badge: {
+      name: "Studio Builder Badge",
+      description: "Shipped a real capstone: deployed, documented and demoed.",
+      iconPath: "M20 6L9 17l-5-5",
+      tint: "#1F9D6B",
+    },
+  },
+  {
+    slug: "launch-earn",
+    name: "Phase 5 — Launch & Earn",
+    description:
+      "Turn skills into income: channels, pricing, portfolio, interviews, first leads, getting paid — closing with Demo Day and graduation.",
+    orderIndex: 5,
+    startsAt: wat("2026-11-23", 0),
+    endsAt: wat("2026-12-18", 23, 59),
+    requiresVisibilityApproval: false,
+    requiresProjectSubmission: false,
+    badge: {
+      name: "Launch Ready Badge",
+      description: "Publicly launched with portfolio, pricing and first leads in motion.",
+      iconPath: "M12 2v20M16 6.5c-1-1.2-2.5-1.5-4-1.5-2.2 0-4 1-4 3s1.8 2.5 4 3 4 1 4 3-1.8 3-4 3c-1.5 0-3-.3-4-1.5",
+      tint: "#D6336C",
+    },
+  },
+] as const;
 
-  const admin = await prisma.user.create({
-    data: {
-      name: "Grace Mbeki",
-      email: "admin@techascend.africa",
-      passwordHash,
-      role: "admin",
-      title: "Program Director",
-      initials: "GM",
-      avatarBg: "linear-gradient(135deg,#1F9D6B,#7C3AED)",
-      country: "Cameroon",
-    },
-  });
-
-  const partnerUser = await prisma.user.create({
-    data: {
-      name: "MTN Foundation",
-      email: "partner@techascend.africa",
-      passwordHash,
-      role: "partner",
-      title: "Sponsorship Partner",
-      initials: "MF",
-      avatarBg: "linear-gradient(135deg,#FFCB05,#C97A0E)",
-      partnerId: mtn.id,
-    },
-  });
-
-  // Additional learners that populate the talent pool + hiring pipeline.
-  const talentSeed = [
-    { name: "Marie Doh", email: "marie@techascend.africa", title: "Automation Engineer", initials: "MD", avatarBg: "linear-gradient(135deg,#D6336C,#C97A0E)", track: "B", score: 4.8, skills: ["n8n", "APIs", "Stripe"], projects: 5, cohortId: yaoundeB.id },
-    { name: "Grace Mba", email: "gracemba@techascend.africa", title: "AI Data Analyst", initials: "GM", avatarBg: "linear-gradient(135deg,#1F9D6B,#7C3AED)", track: "A", score: 4.7, skills: ["SQL", "Python", "BI"], projects: 6, cohortId: doualaA.id },
-    { name: "Joy Etang", email: "joy@techascend.africa", title: "Product Builder", initials: "JE", avatarBg: "linear-gradient(135deg,#7C3AED,#4F46E5)", track: "B", score: 4.6, skills: ["Bubble", "UX", "AI"], projects: 4, cohortId: yaoundeB.id },
-    { name: "Fatima N.", email: "fatima@techascend.africa", title: "AI Engineer", initials: "FN", avatarBg: "linear-gradient(135deg,#7C3AED,#D6336C)", track: "A", score: 4.9, skills: ["React", "Node", "OpenAI"], projects: 7, cohortId: doualaA.id },
-  ];
-  const talentUsers = [] as { id: string; name: string }[];
-  for (const t of talentSeed) {
-    const u = await prisma.user.create({
-      data: {
-        name: t.name, email: t.email, passwordHash, role: "student", title: t.title,
-        initials: t.initials, avatarBg: t.avatarBg, track: t.track, score: t.score,
-        skillLevel: "intermediate", incomeStatus: "earning", country: "Cameroon",
-        skills: t.skills, projectsShipped: t.projects,
-        progressPercentage: 60 + t.projects, cohortId: t.cohortId,
-        portfolioUrl: `https://portfolio.techascend.africa/${t.email.split("@")[0]}`,
-      },
-    });
-    talentUsers.push({ id: u.id, name: u.name });
-  }
-  // Amina's own skill set (stored via GigMatch/skills usage) — keep on the main student too.
-  const aminaSkills = ["React", "Node", "OpenAI"];
-
-  // ---------------- Modules, Lessons, Projects (Track A) ----------------
-  const trackAModules = [
-    {
-      title: "Foundations of AI-Assisted Development", order: 1,
-      lessons: [
-        { title: "How AI changes software engineering", type: "video" },
-        { title: "Your AI-native toolchain", type: "task" },
-      ],
-    },
-    {
-      title: "Frontend Engineering with React", order: 2,
-      lessons: [
-        { title: "Components & state", type: "ai" },
-        { title: "Building a real UI", type: "task" },
-      ],
-    },
-    {
-      title: "Backend & Databases", order: 3,
-      lessons: [
-        { title: "Node.js fundamentals", type: "ai" },
-        { title: "Modelling data with PostgreSQL", type: "ai" },
-      ],
-    },
-    {
-      title: "API & System Integration", order: 4, current: true,
-      lessons: [
-        { title: "What is an API?", type: "ai", content: "An API is a contract that lets two programs talk to each other. You'll learn what an endpoint is, how requests and responses flow, and why APIs power every modern app." },
-        { title: "HTTP methods & status codes", type: "ai", content: "GET, POST, PUT, DELETE — and how to read 2xx/4xx/5xx status codes." },
-        { title: "Building REST APIs", type: "ai", order: 3, current: true, duration: "18 min",
-          content: "## REST APIs\n\nLearn to design and build RESTful endpoints end-to-end.\n\n**In this lesson:**\n- What an API is and why it matters\n- How REST APIs work end-to-end\n- HTTP methods: GET, POST, PUT, DELETE\n- Reading and handling status codes\n- Testing endpoints with AI assistance",
-          aiPrompt: "The student is on Lesson 4.3 — Building REST APIs. Focus help on REST concepts, HTTP methods, endpoints, status codes, and testing APIs. Use JavaScript/Node examples." },
-        { title: "Authentication with JWT", type: "ai" },
-        { title: "Testing endpoints with AI", type: "task" },
-      ],
-    },
-    {
-      title: "Cloud & Deployment", order: 5,
-      lessons: [
-        { title: "Deploying to the cloud", type: "video" },
-        { title: "CI/CD with GitHub", type: "task" },
-      ],
-    },
-    {
-      title: "Capstone & Portfolio", order: 6,
-      lessons: [
-        { title: "Scoping your capstone", type: "task" },
-        { title: "Shipping & presenting", type: "task" },
-      ],
-    },
-  ];
-
-  let currentLessonId: string | null = null;
-  let module4Id: string | null = null;
-  for (const m of trackAModules) {
-    const mod = await prisma.module.create({
-      data: { track: "A", title: m.title, orderIndex: m.order, description: `Track A · Module ${m.order}` },
-    });
-    if (m.current) module4Id = mod.id;
-    let li = 1;
-    for (const l of m.lessons as any[]) {
-      const lesson = await prisma.lesson.create({
+async function seedCurriculum(
+  phaseIds: Record<string, string>,
+  content: PhaseContent[],
+  track: "ALL" | "A" | "B",
+) {
+  for (const pc of content) {
+    const phaseId = phaseIds[pc.phaseSlug];
+    if (!phaseId) throw new Error(`Unknown phase slug: ${pc.phaseSlug}`);
+    const existingCount = await prisma.module.count({ where: { phaseId } });
+    let mi = existingCount;
+    for (const mod of pc.modules) {
+      mi += 1;
+      const m = await prisma.module.create({
         data: {
-          moduleId: mod.id, title: l.title, type: l.type,
-          content: l.content ?? null, aiPrompt: l.aiPrompt ?? null,
-          orderIndex: l.order ?? li, duration: l.duration ?? "12 min",
+          phaseId,
+          track,
+          title: mod.title,
+          description: mod.description,
+          orderIndex: mi,
         },
       });
-      if (l.current) currentLessonId = lesson.id;
-      li++;
+      let li = 0;
+      for (const lesson of mod.lessons) {
+        li += 1;
+        await prisma.lesson.create({
+          data: {
+            moduleId: m.id,
+            title: lesson.title,
+            type: lesson.type,
+            duration: lesson.duration,
+            objectives: lesson.objectives,
+            content: lesson.content,
+            aiPrompt: lesson.aiPrompt,
+            orderIndex: li,
+          },
+        });
+      }
     }
   }
+}
 
-  // Track B modules (lighter).
-  for (const [i, title] of [
-    "Automation Foundations (n8n)", "No-code / Low-code Building", "AI Workflows with LangChain", "Freelancing & Monetization",
-  ].entries()) {
-    const mod = await prisma.module.create({ data: { track: "B", title, orderIndex: i + 1, description: `Track B · Module ${i + 1}` } });
-    await prisma.lesson.create({ data: { moduleId: mod.id, title: `${title} — intro`, type: "ai", orderIndex: 1, duration: "15 min" } });
-  }
-
-  // ---------------- Projects ----------------
-  const capstone = await prisma.project.create({
-    data: {
-      moduleId: module4Id,
-      title: "AI Customer Support Agent",
-      description: "Build and deploy an AI-powered customer support agent for a real local business, with documentation and a demo video.",
-      deliverables: [
-        { title: "Project Documentation", ext: "PDF" },
-        { title: "Source Code", ext: "ZIP" },
-        { title: "Demo Video", ext: "MP4" },
-      ],
-      monetizationPotential: "High — SMEs pay 60,000–120,000 F for a working support bot.",
-    },
-  });
-  await prisma.project.createMany({
-    data: [
-      { moduleId: module4Id, title: "REST API for a bookings app", description: "Design and build a documented REST API.", monetizationPotential: "Medium", deliverables: [{ title: "Source Code", ext: "ZIP" }] },
-      { title: "Landing page for a local bakery", description: "Ship a responsive marketing site.", monetizationPotential: "45,000 F freelance", deliverables: [{ title: "Deployed URL", ext: "LINK" }] },
-    ],
-  });
-
-  // A completed, AI-reviewed submission for the demo student.
-  await prisma.submission.create({
-    data: {
-      userId: student.id, projectId: capstone.id,
-      submissionLink: "https://github.com/aminanjoya/support-agent",
-      notes: "Deployed on Vercel with an OpenAI-backed chat widget.",
-      aiScore: 87, mentorScore: 84, status: "mentor_reviewed",
-      aiFeedback: "Strong functionality and clear docs. Improve error handling on the API layer and add tests.",
-      monetizationSuggestion: "Package this as a 3-tier support-bot service for Douala SMEs (setup + monthly retainer).",
-      rubric: [
-        { label: "Functionality", score: 92 },
-        { label: "Code quality", score: 85 },
-        { label: "Documentation", score: 80 },
-        { label: "Monetization potential", score: 90 },
-      ],
-    },
-  });
-
-  // ---------------- AI tutor history for the demo student ----------------
-  await prisma.aiTutorLog.createMany({
-    data: [
-      { userId: student.id, lessonId: currentLessonId, prompt: "Can you explain what an API endpoint actually is, in simple terms?", response: "An endpoint is just a specific URL where an API listens for requests — like a phone number for one service. For example, GET /api/users returns a list of users.\n\nNext action: try fetching /api/users in your editor and log the result." },
-      { userId: student.id, prompt: "Explain JWT authentication", response: "JWT is a signed token the server gives you after login; you send it back on each request to prove who you are.\n\nNext action: add an Authorization: Bearer <token> header to a test request." },
-    ],
-  });
-
-  // ---------------- Badges ----------------
-  const badgeData = [
-    { name: "First Commit", iconPath: "M12 15a6 6 0 100-12 6 6 0 000 12z" },
-    { name: "API Integrator", iconPath: "M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6 7 18.2l1.9-5.8L4 8.8h6.1z" },
-    { name: "React Builder", iconPath: "M4 4h7v7H4z" },
-    { name: "First Payout", iconPath: "M12 2v20" },
-    { name: "Team Player", iconPath: "M17 21v-2a4 4 0 00-4-4H7" },
-    { name: "Shipped to Prod", iconPath: "M20 6L9 17l-5-5" },
-  ];
-  const badges = [];
-  for (const b of badgeData) badges.push(await prisma.badge.create({ data: { name: b.name, iconPath: b.iconPath, description: `${b.name} achievement` } }));
-  // Award most badges to the demo student.
-  for (const b of badges.slice(0, 5)) await prisma.userBadge.create({ data: { userId: student.id, badgeId: b.id } });
-
-  // ---------------- Gigs + matches (Earn Hub) ----------------
-  const gigSeed = [
-    { title: "Landing page for a bakery", type: "Freelance · React", pay: "45,000 F", match: 96, glyph: "B", tint: "#7C3AED", tintBg: "#F1EAFC", skills: ["React", "Tailwind"], source: "freelance" },
-    { title: "Invoice automation for an SME", type: "Studio gig · n8n", pay: "80,000 F", match: 91, glyph: "A", tint: "#1F9D6B", tintBg: "#E6F6EF", skills: ["n8n", "APIs"], source: "studio" },
-    { title: "WhatsApp AI support bot", type: "Partner brief · OpenAI", pay: "120,000 F", match: 88, glyph: "AI", tint: "#D6336C", tintBg: "#FCE7F0", skills: ["OpenAI", "Node"], source: "partner" },
-  ];
-  for (const g of gigSeed) {
-    const gig = await prisma.gig.create({
-      data: { title: g.title, type: g.type, pay: g.pay, glyph: g.glyph, tint: g.tint, tintBg: g.tintBg, skills: g.skills, source: g.source },
+async function seedProjects(
+  phaseIds: Record<string, string>,
+  projects: ProjectSeed[],
+  track: "A" | "B",
+) {
+  for (const p of projects) {
+    const phaseId = phaseIds[p.phaseSlug];
+    // Attach to the LAST module of that phase for this track (the submission module).
+    const mod = await prisma.module.findFirst({
+      where: { phaseId, track },
+      orderBy: { orderIndex: "desc" },
     });
-    await prisma.gigMatch.create({ data: { gigId: gig.id, userId: student.id, matchPct: g.match } });
+    await prisma.project.create({
+      data: {
+        moduleId: mod?.id ?? null,
+        track,
+        title: p.title,
+        description: p.description,
+        deliverables: p.deliverables,
+        monetizationPotential: p.monetizationPotential,
+      },
+    });
   }
-  // SME gigs (no match)
-  await prisma.gig.createMany({
-    data: [
-      { title: "Online ordering page", type: "SME · Douala", pay: "35,000 F", source: "sme", need: "Online ordering page", location: "Douala", glyph: "MG", skills: ["React"] },
-      { title: "Appointment chatbot", type: "SME · Buea", pay: "60,000 F", source: "sme", need: "Appointment chatbot", location: "Buea", glyph: "BH", skills: ["OpenAI", "Node"] },
-    ],
+}
+
+async function seedEvents(createdById: string) {
+  const events: {
+    title: string;
+    kind: string;
+    audience?: string;
+    location?: string;
+    description?: string;
+    startsAt: Date;
+    endsAt?: Date;
+  }[] = [];
+
+  const GROUP = "WhatsApp group";
+
+  // Milestones
+  events.push(
+    {
+      title: "Cohort 02 Orientation — Program & Platform Walkthrough",
+      kind: "ceremony",
+      audience: "all",
+      location: GROUP,
+      description:
+        "Official start of the fellowship: how the program works, the five phases, how badges and certificates are earned, and a live tour of the platform.",
+      startsAt: wat("2026-07-06", 20),
+      endsAt: wat("2026-07-06", 21, 30),
+    },
+    {
+      title: "Visibility submissions due — Phase 1 deadline",
+      kind: "deadline",
+      audience: "students",
+      location: "Platform · My Profile",
+      description: "Submit all six profile links for review to earn the Visibility Badge.",
+      startsAt: wat("2026-07-12", 20),
+    },
+    {
+      title: "Phase 2 kickoff — AI Foundations",
+      kind: "live_session",
+      audience: "students",
+      location: GROUP,
+      startsAt: wat("2026-07-13", 20),
+      endsAt: wat("2026-07-13", 21, 30),
+    },
+    {
+      title: "Phase 3 kickoff — Core Skills (tracks split)",
+      kind: "live_session",
+      audience: "students",
+      location: GROUP,
+      startsAt: wat("2026-08-10", 20),
+      endsAt: wat("2026-08-10", 21, 30),
+    },
+    {
+      title: "Phase 4 kickoff — Build Studio",
+      kind: "live_session",
+      audience: "students",
+      location: GROUP,
+      startsAt: wat("2026-10-12", 20),
+      endsAt: wat("2026-10-12", 21, 30),
+    },
+    {
+      title: "Capstone submissions due",
+      kind: "deadline",
+      audience: "students",
+      location: "Platform · Projects",
+      description: "Submit your capstone for AI evaluation and mentor review.",
+      startsAt: wat("2026-11-20", 20),
+    },
+    {
+      title: "Phase 5 kickoff — Launch & Earn",
+      kind: "live_session",
+      audience: "students",
+      location: GROUP,
+      startsAt: wat("2026-11-23", 20),
+      endsAt: wat("2026-11-23", 21, 30),
+    },
+    {
+      title: "Demo Day — Cohort 02",
+      kind: "ceremony",
+      audience: "all",
+      location: "To be announced",
+      description: "Every fellow presents her capstone to the cohort, staff and partners.",
+      startsAt: wat("2026-12-12", 15),
+      endsAt: wat("2026-12-12", 18),
+    },
+    {
+      title: "Graduation — Cohort 02",
+      kind: "ceremony",
+      audience: "all",
+      location: "To be announced",
+      description: "Program certificates for fellows completing all five phases.",
+      startsAt: wat("2026-12-18", 15),
+      endsAt: wat("2026-12-18", 17),
+    },
+  );
+
+  // Weekly live sessions: Tuesdays & Thursdays 20:00–21:30 WAT, Jul 7 – Dec 17.
+  const milestoneDays = new Set(events.map((e) => e.startsAt.toISOString().slice(0, 10)));
+  const start = new Date("2026-07-07T00:00:00.000Z");
+  const end = new Date("2026-12-17T23:59:59.000Z");
+  for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+    const dow = d.getUTCDay(); // 2 = Tue, 4 = Thu
+    if (dow !== 2 && dow !== 4) continue;
+    const dateStr = d.toISOString().slice(0, 10);
+    if (milestoneDays.has(dateStr)) continue;
+    events.push({
+      title: "Live session — Cohort 02",
+      kind: "live_session",
+      audience: "students",
+      location: GROUP,
+      startsAt: wat(dateStr, 20),
+      endsAt: wat(dateStr, 21, 30),
+    });
+  }
+
+  await prisma.event.createMany({
+    data: events.map((e) => ({ ...e, createdById })),
+  });
+  return events.length;
+}
+
+async function main() {
+  console.log("🌱 Seeding TechAscend Cohort 02 (live program — no fake data)…");
+
+  // Wipe everything (fresh program install).
+  await prisma.$transaction([
+    prisma.notification.deleteMany(),
+    prisma.opportunityInterest.deleteMany(),
+    prisma.opportunity.deleteMany(),
+    prisma.pipelineCard.deleteMany(),
+    prisma.ledgerEntry.deleteMany(),
+    prisma.post.deleteMany(),
+    prisma.event.deleteMany(),
+    prisma.certificate.deleteMany(),
+    prisma.userBadge.deleteMany(),
+    prisma.badge.deleteMany(),
+    prisma.aiTutorLog.deleteMany(),
+    prisma.visibilitySubmission.deleteMany(),
+    prisma.submission.deleteMany(),
+    prisma.lessonProgress.deleteMany(),
+    prisma.project.deleteMany(),
+    prisma.lesson.deleteMany(),
+    prisma.module.deleteMany(),
+    prisma.phase.deleteMany(),
+    prisma.application.deleteMany(),
+    prisma.session.deleteMany(),
+    prisma.account.deleteMany(),
+    prisma.user.deleteMany(),
+    prisma.partner.deleteMany(),
+    prisma.cohort.deleteMany(),
+  ]);
+
+  // ---------------- Cohort ----------------
+  const cohort = await prisma.cohort.create({
+    data: {
+      name: "Cohort 02 — July 2026",
+      track: "ALL",
+      status: "Active",
+      hub: "Cameroon",
+      startDate: wat("2026-07-06", 8),
+      endDate: wat("2026-12-18", 18),
+    },
   });
 
-  // ---------------- Payouts ----------------
-  await prisma.payout.createMany({
-    data: [
-      { userId: student.id, title: "Bakery landing page", method: "Mobile Money", amount: 45000, status: "Paid" },
-      { userId: student.id, title: "CRM automation setup", method: "Mobile Money", amount: 80000, status: "Paid" },
-      { userId: student.id, title: "AI support bot pilot", method: "In escrow", amount: 45000, status: "Pending" },
-    ],
+  // ---------------- Phases + badges ----------------
+  const phaseIds: Record<string, string> = {};
+  for (const p of PHASES) {
+    const phase = await prisma.phase.create({
+      data: {
+        slug: p.slug,
+        name: p.name,
+        description: p.description,
+        track: "ALL",
+        orderIndex: p.orderIndex,
+        startsAt: p.startsAt,
+        endsAt: p.endsAt,
+        requiresVisibilityApproval: p.requiresVisibilityApproval,
+        requiresProjectSubmission: p.requiresProjectSubmission,
+      },
+    });
+    phaseIds[p.slug] = phase.id;
+    await prisma.badge.create({
+      data: { ...p.badge, phaseId: phase.id },
+    });
+  }
+  // Program-level badge (auto-awarded when all phases complete).
+  await prisma.badge.create({
+    data: {
+      name: "TechAscend Graduate",
+      description: "Completed the full TechAscend fellowship — all five phases.",
+      iconPath: "M22 10L12 5 2 10l10 5 10-5zM6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5",
+      tint: "#0F172A",
+    },
   });
 
-  // ---------------- Hiring pipeline (partner portal) ----------------
-  const byName = (n: string) => talentUsers.find((t) => t.name === n)?.id ?? null;
-  await prisma.pipelineCard.createMany({
-    data: [
-      { stage: "Applied", userId: student.id, name: "Amina Njoya", role: "Frontend Eng", initials: "AN", avBg: "linear-gradient(135deg,#F0A,#7C3AED)", orderIndex: 1 },
-      { stage: "Applied", userId: byName("Joy Etang"), name: "Joy Etang", role: "Automation", initials: "JE", avBg: "linear-gradient(135deg,#7C3AED,#4F46E5)", orderIndex: 2 },
-      { stage: "Interview", userId: byName("Marie Doh"), name: "Marie Doh", role: "Full-stack", initials: "MD", avBg: "linear-gradient(135deg,#D6336C,#C97A0E)", orderIndex: 1 },
-      { stage: "Interview", userId: byName("Grace Mba"), name: "Grace Mba", role: "Data analyst", initials: "GM", avBg: "linear-gradient(135deg,#1F9D6B,#7C3AED)", orderIndex: 2 },
-      { stage: "Hired", userId: byName("Fatima N."), name: "Fatima N.", role: "AI Engineer", initials: "FN", avBg: "linear-gradient(135deg,#7C3AED,#D6336C)", orderIndex: 1 },
-    ],
+  // ---------------- Curriculum ----------------
+  await seedCurriculum(phaseIds, sharedContent, "ALL");
+  await seedCurriculum(phaseIds, trackAContent, "A");
+  await seedCurriculum(phaseIds, trackBContent, "B");
+  await seedProjects(phaseIds, trackAProjects, "A");
+  await seedProjects(phaseIds, trackBProjects, "B");
+
+  const [phases, modules, lessons, projects] = await Promise.all([
+    prisma.phase.count(),
+    prisma.module.count(),
+    prisma.lesson.count(),
+    prisma.project.count(),
+  ]);
+
+  // ---------------- Staff accounts ----------------
+  // Real operating accounts — CHANGE THESE PASSWORDS after first login.
+  const adminPwd = "TechAscend-Admin-2026";
+  const managerPwd = "TechAscend-Team-2026";
+  await prisma.user.create({
+    data: {
+      name: "TechAscend Admin",
+      email: "admin@techascend.africa",
+      passwordHash: await bcrypt.hash(adminPwd, 10),
+      role: "admin",
+      title: "Program Director",
+      initials: "TA",
+      avatarBg: "linear-gradient(135deg,#7C3AED,#D6336C)",
+      mustChangePassword: true,
+    },
+  });
+  await prisma.user.create({
+    data: {
+      name: "Community Team",
+      email: "community@techascend.africa",
+      passwordHash: await bcrypt.hash(managerPwd, 10),
+      role: "manager",
+      title: "Community Manager",
+      initials: "CT",
+      avatarBg: "linear-gradient(135deg,#2D6FD9,#1F9D6B)",
+      mustChangePassword: true,
+    },
   });
 
-  // Store Amina's skills on a match-less gig-independent place isn't needed; skills live per talent user.
-  void aminaSkills;
+  // ---------------- Events ----------------
+  const admin = await prisma.user.findUnique({ where: { email: "admin@techascend.africa" } });
+  const eventCount = await seedEvents(admin!.id);
 
   console.log("✅ Seed complete.");
-  console.log(`   Demo logins (password: "${DEMO_PASSWORD}")`);
-  console.log("   • student  amina@techascend.africa");
-  console.log("   • admin    admin@techascend.africa");
-  console.log("   • partner  partner@techascend.africa");
+  console.log(`   Cohort:  ${cohort.name}`);
+  console.log(`   Program: ${phases} phases · ${modules} modules · ${lessons} lessons · ${projects} capstone briefs`);
+  console.log(`   Events:  ${eventCount} calendar entries (orientation Jul 6 → graduation Dec 18)`);
+  console.log("   Accounts (CHANGE THESE PASSWORDS):");
+  console.log(`   • admin     admin@techascend.africa      ${adminPwd}`);
+  console.log(`   • manager   community@techascend.africa  ${managerPwd}`);
+  console.log("   Students join via /signup (applicants) → accepted in /applications.");
 }
 
 main()

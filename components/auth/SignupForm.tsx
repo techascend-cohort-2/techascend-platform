@@ -5,7 +5,9 @@ import Link from "next/link";
 import { signupAction, type FormState } from "@/lib/actions/auth";
 import styles from "./auth.module.css";
 
-export default function SignupForm({ defaultRole = "student" }: { defaultRole?: string }) {
+// defaultRole is kept for compatibility with the /signup page, but every
+// signup is an application to the fellowship — there is no role picker.
+export default function SignupForm({ defaultRole: _defaultRole = "student" }: { defaultRole?: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(signupAction, {});
 
   return (
@@ -19,7 +21,7 @@ export default function SignupForm({ defaultRole = "student" }: { defaultRole?: 
       </div>
 
       <h1 className={styles.title}>Create your account</h1>
-      <p className={styles.sub}>Join the ecosystem — learn, build, and earn with AI.</p>
+      <p className={styles.sub}>Apply to join the fellowship — your application goes straight to our team.</p>
 
       {state.error ? <div className={styles.error}>{state.error}</div> : null}
 
@@ -38,22 +40,27 @@ export default function SignupForm({ defaultRole = "student" }: { defaultRole?: 
         </div>
         <div className={styles.row}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="role">I am a</label>
-            <select className={styles.select} id="role" name="role" defaultValue={defaultRole}>
-              <option value="student">Learner</option>
-              <option value="partner">Partner</option>
-            </select>
+            <label className={styles.label} htmlFor="city">City</label>
+            <input className={styles.input} id="city" name="city" type="text" placeholder="Douala" autoComplete="address-level2" />
           </div>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="track">Track (learners)</label>
-            <select className={styles.select} id="track" name="track" defaultValue="A">
-              <option value="A">A · Software Eng</option>
-              <option value="B">B · Automation</option>
-            </select>
+            <label className={styles.label} htmlFor="phone">Phone (optional)</label>
+            <input className={styles.input} id="phone" name="phone" type="text" placeholder="+237 …" autoComplete="tel" />
           </div>
         </div>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="track">Preferred track</label>
+          <select className={styles.select} id="track" name="track" defaultValue="A">
+            <option value="A">A · AI Software Engineering</option>
+            <option value="B">B · AI Product &amp; Automation</option>
+          </select>
+        </div>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="motivation">Why do you want to join?</label>
+          <textarea className={styles.input} id="motivation" name="motivation" rows={3} placeholder="Tell us a little about you and what you want to build." />
+        </div>
         <button className={styles.btn} type="submit" disabled={pending}>
-          {pending ? "Creating account…" : "Create account"}
+          {pending ? "Creating account…" : "Create account & apply"}
         </button>
       </form>
 

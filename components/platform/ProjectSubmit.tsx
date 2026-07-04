@@ -4,7 +4,13 @@ import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import { useToast } from "@/components/platform/Toast";
 import { submitProjectAction, type SubmitState } from "@/lib/actions/submissions";
-import { projectSteps } from "@/lib/platformData";
+
+const projectSteps: { n: string; label: string }[] = [
+  { n: "1", label: "Details" },
+  { n: "2", label: "Upload" },
+  { n: "3", label: "Preview" },
+  { n: "4", label: "Submit" },
+];
 
 type Deliverable = { title: string; ext: string };
 type Evaluation = {

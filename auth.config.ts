@@ -1,31 +1,61 @@
 import type { NextAuthConfig } from "next-auth";
 
-// Route protection groups. These paths live in the app/(platform) route group.
-const ADMIN_PATHS = ["/admin", "/cohorts", "/students", "/partners", "/revenue"];
-const PARTNER_PATHS = ["/partner", "/talent-pool", "/hiring-pipeline", "/impact"];
-const STUDENT_PATHS = [
-  "/dashboard",
-  "/learning",
-  "/tutor",
-  "/projects",
-  "/earn",
-  "/community",
-  "/opportunities",
-  "/badges",
+// ---------------------------------------------------------------------------
+// Route access groups (paths live in the app/(platform) route group).
+// ---------------------------------------------------------------------------
+const ADMIN_ONLY = ["/admin", "/applications", "/curriculum", "/cohorts", "/partners", "/revenue"];
+const STAFF_PATHS = ["/reviews", "/students"]; // admin + manager
+const STUDENT_ONLY = ["/dashboard", "/learning", "/tutor", "/projects", "/earn", "/badges"];
+const PARTNER_ONLY = ["/partner", "/talent-pool", "/hiring-pipeline", "/impact"];
+const APPLICANT_ONLY = ["/welcome"];
+// Any signed-in member except applicants:
+const MEMBER_SHARED = ["/community", "/opportunities"];
+// Any signed-in user at all:
+const AUTH_SHARED = ["/events", "/profile"];
+
+const ALL_PROTECTED = [
+  ...ADMIN_ONLY,
+  ...STAFF_PATHS,
+  ...STUDENT_ONLY,
+  ...PARTNER_ONLY,
+  ...APPLICANT_ONLY,
+  ...MEMBER_SHARED,
+  ...AUTH_SHARED,
 ];
-const PROTECTED = [...ADMIN_PATHS, ...PARTNER_PATHS, ...STUDENT_PATHS];
 
 const HOME_BY_ROLE: Record<string, string> = {
+  applicant: "/welcome",
   student: "/dashboard",
+  manager: "/community",
   admin: "/admin",
   partner: "/partner",
 };
 
-function startsWithAny(path: string, list: string[]) {
-  return list.some((p) => path === p || path.startsWith(p + "/"));
+function inGroup(path: string, group: string[]) {
+  return group.some((p) => path === p || path.startsWith(p + "/"));
 }
 
-// Edge-safe config shared with middleware. Contains NO Node-only imports
+function roleAllows(role: string, path: string): boolean {
+  if (inGroup(path, AUTH_SHARED)) return true;
+  switch (role) {
+    case "admin":
+      return (
+        inGroup(path, ADMIN_ONLY) || inGroup(path, STAFF_PATHS) || inGroup(path, MEMBER_SHARED)
+      );
+    case "manager":
+      return inGroup(path, STAFF_PATHS) || inGroup(path, MEMBER_SHARED);
+    case "student":
+      return inGroup(path, STUDENT_ONLY) || inGroup(path, MEMBER_SHARED);
+    case "partner":
+      return inGroup(path, PARTNER_ONLY) || inGroup(path, MEMBER_SHARED);
+    case "applicant":
+      return inGroup(path, APPLICANT_ONLY);
+    default:
+      return false;
+  }
+}
+
+// Edge-safe config shared with middleware. NO Node-only imports here
 // (no Prisma, no bcrypt) — the Credentials provider is added in ./auth.ts.
 export const authConfig = {
   trustHost: true,
@@ -33,35 +63,31 @@ export const authConfig = {
   session: { strategy: "jwt" },
   providers: [],
   callbacks: {
-    jwt({ token, user }) {
-      if (user) token.role = (user as { role?: string }).role ?? "student";
+    jwt({ token, user, trigger, session }) {
+      if (user) token.role = (user as { role?: string }).role ?? "applicant";
+      // allow role refresh after promotion (session.update({ role }))
+      if (trigger === "update" && session?.role) token.role = session.role as string;
       return token;
     },
     session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub ?? "";
-        session.user.role = (token.role as string) ?? "student";
+        session.user.role = (token.role as string) ?? "applicant";
       }
       return session;
     },
     authorized({ auth, request: { nextUrl } }) {
       const path = nextUrl.pathname;
-      if (!startsWithAny(path, PROTECTED)) return true;
+      if (!inGroup(path, ALL_PROTECTED)) return true;
 
       const user = auth?.user;
       if (!user) return false; // → redirect to /login
 
-      const role = (user as { role?: string }).role ?? "student";
-      const home = HOME_BY_ROLE[role] ?? "/dashboard";
+      const role = (user as { role?: string }).role ?? "applicant";
+      if (roleAllows(role, path)) return true;
 
-      const needsAdmin = startsWithAny(path, ADMIN_PATHS);
-      const needsPartner = startsWithAny(path, PARTNER_PATHS);
-      const needsStudent = startsWithAny(path, STUDENT_PATHS);
-      if (needsAdmin && role !== "admin") return Response.redirect(new URL(home, nextUrl));
-      if (needsPartner && role !== "partner") return Response.redirect(new URL(home, nextUrl));
-      if (needsStudent && role !== "student") return Response.redirect(new URL(home, nextUrl));
-
-      return true;
+      const home = HOME_BY_ROLE[role] ?? "/login";
+      return Response.redirect(new URL(home, nextUrl));
     },
   },
 } satisfies NextAuthConfig;
