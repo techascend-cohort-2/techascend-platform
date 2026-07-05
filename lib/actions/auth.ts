@@ -7,19 +7,20 @@ import { auth, signIn, signOut } from "@/auth";
 import { signupSchema } from "@/lib/validation";
 import { ROLE_HOME, isRole, initialsOf, avatarBgFor } from "@/lib/constants";
 import { notify } from "@/lib/progress";
+import { normalizeEmailOrPhone } from "@/lib/contact";
 
 export type FormState = { error?: string; ok?: boolean };
 
 export async function loginAction(_prev: FormState, formData: FormData): Promise<FormState> {
-  const email = String(formData.get("email") ?? "").toLowerCase();
+  const email = normalizeEmailOrPhone(String(formData.get("email") ?? "")) ?? "";
   const password = String(formData.get("password") ?? "");
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findFirst({ where: { OR: [{ email }, { phone: email }] } });
     const dest = user && isRole(user.role) ? ROLE_HOME[user.role] : "/login";
     await signIn("credentials", { email, password, redirectTo: dest });
     return { ok: true };
   } catch (error) {
-    if (error instanceof AuthError) return { error: "Invalid email or password." };
+    if (error instanceof AuthError) return { error: "Invalid email/phone or password." };
     throw error; // re-throw Next.js redirect
   }
 }

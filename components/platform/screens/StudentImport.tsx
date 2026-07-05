@@ -6,7 +6,7 @@ import { importStudentsAction, type ImportState } from "@/lib/actions/staff";
 
 const EXAMPLE = `name,email,track,city,phone
 Amina Njoya,amina@example.com,A,Douala,+237600000001
-Marie Doh,marie@example.com,B,Yaoundé,
+Marie Doh,,B,Yaoundé,+237600000002
 Grace Mba,grace@example.com,A,Buea,+237600000003`;
 
 const input: React.CSSProperties = {
@@ -53,7 +53,7 @@ export default function StudentImport({ cohorts }: { cohorts: { id: string; name
         <form action={action} style={{ marginTop: 14 }}>
           <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
             Format (header optional): <code style={{ fontFamily: "var(--font-mono)", background: "#F4F1FA", padding: "1px 6px", borderRadius: 5 }}>name,email,track,city,phone</code>
-            {" "}— <b>name</b> and <b>email</b> required; <b>track</b> A/B (defaults A); city/phone optional.
+            {" "}— <b>name</b> required, plus <b>email</b> or <b>phone</b>. <b>track</b> A/B (defaults A); city optional.
           </div>
 
           <textarea

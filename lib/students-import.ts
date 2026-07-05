@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { initialsOf, avatarBgFor } from "@/lib/constants";
+import { normalizeEmail, normalizePhone } from "@/lib/contact";
 
 // ---------------------------------------------------------------------------
 // Bulk student import.
@@ -9,14 +10,14 @@ import { initialsOf, avatarBgFor } from "@/lib/constants";
 //   name,email,track,city,phone
 //
 // - name   (required)
-// - email  (required, unique)
+// - email  (optional if phone is provided, unique when present)
 // - track  (optional: "A" or "B"; defaults to "A")
 // - city   (optional)
-// - phone  (optional)
+// - phone  (optional if email is provided, unique when present)
 //
 // Each imported student gets the shared default password and is flagged
 // mustChangePassword=true, so the app prompts them to set their own on first
-// sign-in. Rows whose email already has an account are skipped (not overwritten).
+// sign-in. Rows whose email or phone already has an account are skipped (not overwritten).
 // ---------------------------------------------------------------------------
 
 export type ImportRow = {
@@ -31,8 +32,6 @@ export type ParseResult = {
   rows: ImportRow[];
   errors: string[]; // human-readable "line N: reason"
 };
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Split a single CSV line honouring simple double-quoted fields.
 function splitCsvLine(line: string): string[] {
@@ -82,27 +81,46 @@ export function parseStudentsCsv(text: string): ParseResult {
   for (let i = start; i < lines.length; i++) {
     const lineNo = i + 1;
     const cols = splitCsvLine(lines[i]);
-    const [name, email, trackRaw, city, phone] = cols;
+    const [name, emailRaw, trackRaw, city, phoneRaw] = cols;
 
-    if (!name || !email) {
-      errors.push(`line ${lineNo}: needs at least name and email`);
+    if (!name) {
+      errors.push(`line ${lineNo}: needs a name`);
       continue;
     }
-    const emailLc = email.toLowerCase();
-    if (!EMAIL_RE.test(emailLc)) {
-      errors.push(`line ${lineNo}: "${email}" is not a valid email`);
+
+    const email = emailRaw ? normalizeEmail(emailRaw) : null;
+    const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
+    if (emailRaw && !email) {
+      errors.push(`line ${lineNo}: "${emailRaw}" is not a valid email`);
       continue;
     }
-    if (seen.has(emailLc)) {
-      errors.push(`line ${lineNo}: duplicate email "${emailLc}" in file`);
+    if (phoneRaw && !phone) {
+      errors.push(`line ${lineNo}: "${phoneRaw}" is not a valid phone number`);
       continue;
     }
-    seen.add(emailLc);
+
+    const identifier = email ?? phone;
+    if (!identifier) {
+      errors.push(`line ${lineNo}: needs an email or phone number`);
+      continue;
+    }
+
+    const duplicate = [email, phone].filter((value): value is string => Boolean(value)).find((value) => seen.has(value));
+    if (duplicate) {
+      errors.push(`line ${lineNo}: duplicate identifier "${duplicate}" in file`);
+      continue;
+    }
+    if (seen.has(identifier)) {
+      errors.push(`line ${lineNo}: duplicate identifier "${identifier}" in file`);
+      continue;
+    }
+    seen.add(identifier);
+    if (phone) seen.add(phone);
 
     const track = (trackRaw || "A").toUpperCase() === "B" ? "B" : "A";
     rows.push({
       name,
-      email: emailLc,
+      email: identifier,
       track,
       city: city || undefined,
       phone: phone || undefined,
@@ -115,7 +133,7 @@ export function parseStudentsCsv(text: string): ParseResult {
 export type ImportResult = {
   created: number;
   createdEmails: string[];
-  skipped: string[]; // emails that already had accounts
+  skipped: string[]; // identifiers that already had accounts
   errors: string[];
 };
 
@@ -126,18 +144,27 @@ export async function importStudents(
 ): Promise<ImportResult> {
   const passwordHash = await bcrypt.hash(opts.defaultPassword, 10);
 
-  // Which of these emails already exist?
+  // Which of these emails or phone numbers already exist?
   const emails = rows.map((r) => r.email);
+  const phones = rows.map((r) => r.phone).filter((phone): phone is string => Boolean(phone));
   const existing = await prisma.user.findMany({
-    where: { email: { in: emails } },
-    select: { email: true },
+    where: {
+      OR: [
+        { email: { in: emails } },
+        ...(phones.length ? [{ phone: { in: phones } }] : []),
+      ],
+    },
+    select: { email: true, phone: true },
   });
   const existingSet = new Set(existing.map((e) => e.email));
+  existing.forEach((e) => {
+    if (e.phone) existingSet.add(e.phone);
+  });
 
   const result: ImportResult = { created: 0, createdEmails: [], skipped: [], errors: [] };
 
   for (const row of rows) {
-    if (existingSet.has(row.email)) {
+    if (existingSet.has(row.email) || (row.phone && existingSet.has(row.phone))) {
       result.skipped.push(row.email);
       continue;
     }
@@ -169,6 +196,7 @@ export async function importStudents(
       result.created++;
       result.createdEmails.push(row.email);
       existingSet.add(row.email); // guard against dup within the same batch
+      if (row.phone) existingSet.add(row.phone);
     } catch (e) {
       result.errors.push(`${row.email}: ${(e as Error).message}`);
     }

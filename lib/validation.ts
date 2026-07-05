@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeEmailOrPhone } from "@/lib/contact";
 import {
   TRACKS,
   APPLICATION_ROLES,
@@ -13,7 +14,14 @@ import {
 } from "@/lib/constants";
 
 export const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1).transform((value, ctx) => {
+    const normalized = normalizeEmailOrPhone(value);
+    if (!normalized) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid email or phone number" });
+      return z.NEVER;
+    }
+    return normalized;
+  }),
   password: z.string().min(1),
 });
 

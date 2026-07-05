@@ -25,8 +25,8 @@ export default function LoginForm() {
 
       <form id="login-form" action={action}>
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="email">Email</label>
-          <input className={styles.input} id="email" name="email" type="email" placeholder="you@example.com" required autoComplete="email" />
+          <label className={styles.label} htmlFor="email">Email or phone</label>
+          <input className={styles.input} id="email" name="email" type="text" placeholder="you@example.com or +237600000001" required autoComplete="username" />
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="password">Password</label>
