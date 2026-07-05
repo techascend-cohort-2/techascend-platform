@@ -13,6 +13,12 @@ export default async function PlatformLayout({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  // Belt-and-braces on top of the middleware check in auth.config.ts: this
+  // reads the live DB value (not the JWT snapshot), so it also catches the
+  // moment right after sign-in when a client-side transition can otherwise
+  // slip past the edge check before the next hard navigation.
+  if (user.mustChangePassword) redirect("/change-password");
+
   const persona = (isRole(user.role) ? user.role : "applicant") as Persona;
   const { items, unread } = await getNotifications(user.id);
 

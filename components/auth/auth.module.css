@@ -131,6 +131,16 @@
   margin-bottom: 14px;
 }
 
+.success {
+  background: #e6f6ef;
+  border: 1px solid #b9e6cf;
+  color: #14543a;
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+}
+
 .foot {
   margin-top: 18px;
   text-align: center;

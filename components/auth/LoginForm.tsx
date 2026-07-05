@@ -5,7 +5,7 @@ import Link from "next/link";
 import { loginAction, type FormState } from "@/lib/actions/auth";
 import styles from "./auth.module.css";
 
-export default function LoginForm() {
+export default function LoginForm({ passwordChanged = false }: { passwordChanged?: boolean }) {
   const [state, action, pending] = useActionState<FormState, FormData>(loginAction, {});
 
   return (
@@ -21,12 +21,15 @@ export default function LoginForm() {
       <h1 className={styles.title}>Welcome back</h1>
       <p className={styles.sub}>Sign in to continue learning and earning.</p>
 
+      {passwordChanged ? (
+        <div className={styles.success}>Password updated — sign in with your new password.</div>
+      ) : null}
       {state.error ? <div className={styles.error}>{state.error}</div> : null}
 
       <form id="login-form" action={action}>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="email">Email or phone</label>
-          <input className={styles.input} id="email" name="email" type="text" placeholder="you@example.com or +237600000001" required autoComplete="username" />
+          <input className={styles.input} id="email" name="email" type="text" placeholder="you@example.com or 677123456" required autoComplete="username" />
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="password">Password</label>

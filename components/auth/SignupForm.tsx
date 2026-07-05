@@ -45,7 +45,7 @@ export default function SignupForm({ defaultRole: _defaultRole = "student" }: { 
           </div>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="phone">Phone (optional)</label>
-            <input className={styles.input} id="phone" name="phone" type="text" placeholder="+237 …" autoComplete="tel" />
+            <input className={styles.input} id="phone" name="phone" type="text" placeholder="677123456" autoComplete="tel" />
           </div>
         </div>
         <div className={styles.field}>

@@ -16,7 +16,11 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   const password = String(formData.get("password") ?? "");
   try {
     const user = await prisma.user.findFirst({ where: { OR: [{ email }, { phone: email }] } });
-    const dest = user && isRole(user.role) ? ROLE_HOME[user.role] : "/login";
+    const dest = user?.mustChangePassword
+      ? "/change-password"
+      : user && isRole(user.role)
+        ? ROLE_HOME[user.role]
+        : "/login";
     await signIn("credentials", { email, password, redirectTo: dest });
     return { ok: true };
   } catch (error) {
@@ -121,9 +125,17 @@ export async function changePasswordAction(_prev: FormState, formData: FormData)
   if (!(await bcrypt.compare(current, user.passwordHash))) {
     return { error: "Current password is incorrect." };
   }
+  const wasForced = user.mustChangePassword;
   await prisma.user.update({
     where: { id: user.id },
     data: { passwordHash: await bcrypt.hash(next, 10), mustChangePassword: false },
   });
+
+  if (wasForced) {
+    // The signed-in session still carries the old mustChangePassword=true
+    // flag, so force a fresh login to pick up the change — same pattern as
+    // role promotion elsewhere in this file.
+    await signOut({ redirectTo: "/login?changed=1" });
+  }
   return { ok: true };
 }

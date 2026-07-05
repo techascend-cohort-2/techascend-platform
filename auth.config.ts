@@ -12,6 +12,9 @@ const APPLICANT_ONLY = ["/welcome"];
 const MEMBER_SHARED = ["/community", "/opportunities"];
 // Any signed-in user at all:
 const AUTH_SHARED = ["/events", "/profile"];
+// Forced first-login password change — reachable by any signed-in user,
+// checked before role gating so it can't be bypassed via a role-allowed path.
+const CHANGE_PASSWORD_PATH = "/change-password";
 
 const ALL_PROTECTED = [
   ...ADMIN_ONLY,
@@ -21,6 +24,7 @@ const ALL_PROTECTED = [
   ...APPLICANT_ONLY,
   ...MEMBER_SHARED,
   ...AUTH_SHARED,
+  CHANGE_PASSWORD_PATH,
 ];
 
 const HOME_BY_ROLE: Record<string, string> = {
@@ -64,7 +68,10 @@ export const authConfig = {
   providers: [],
   callbacks: {
     jwt({ token, user, trigger, session }) {
-      if (user) token.role = (user as { role?: string }).role ?? "applicant";
+      if (user) {
+        token.role = (user as { role?: string }).role ?? "applicant";
+        token.mustChangePassword = Boolean((user as { mustChangePassword?: boolean }).mustChangePassword);
+      }
       // allow role refresh after promotion (session.update({ role }))
       if (trigger === "update" && session?.role) token.role = session.role as string;
       return token;
@@ -73,6 +80,7 @@ export const authConfig = {
       if (session.user) {
         session.user.id = token.sub ?? "";
         session.user.role = (token.role as string) ?? "applicant";
+        session.user.mustChangePassword = Boolean(token.mustChangePassword);
       }
       return session;
     },
@@ -82,6 +90,14 @@ export const authConfig = {
 
       const user = auth?.user;
       if (!user) return false; // → redirect to /login
+
+      // Forced first-login password change wins over every other rule —
+      // any signed-in user with a temporary password is bounced here first,
+      // regardless of role, until it's changed.
+      if (user.mustChangePassword && path !== CHANGE_PASSWORD_PATH) {
+        return Response.redirect(new URL(CHANGE_PASSWORD_PATH, nextUrl));
+      }
+      if (path === CHANGE_PASSWORD_PATH) return true;
 
       const role = (user as { role?: string }).role ?? "applicant";
       if (roleAllows(role, path)) return true;

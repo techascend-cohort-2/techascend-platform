@@ -141,7 +141,7 @@ export default function ProfileScreen({ user, visibility }: { user: ProfileUser;
           </div>
           <div>
             <label style={label} htmlFor="phone">Phone / WhatsApp</label>
-            <input style={input} id="phone" name="phone" defaultValue={user.phone ?? ""} placeholder="+237 …" />
+            <input style={input} id="phone" name="phone" defaultValue={user.phone ?? ""} placeholder="677123456" />
           </div>
           <div>
             <label style={label} htmlFor="portfolioUrl">Portfolio URL</label>

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalizeEmailOrPhone } from "@/lib/contact";
+import { normalizeEmailOrPhone, normalizePhone } from "@/lib/contact";
 import {
   TRACKS,
   APPLICATION_ROLES,
@@ -12,6 +12,21 @@ import {
   LESSON_TYPES,
   PARTNER_TYPES,
 } from "@/lib/constants";
+
+// Optional phone field: blank passes through as undefined; anything else must
+// normalize (bare local numbers are assumed Cameroon — see lib/contact.ts).
+const optionalPhone = z
+  .string()
+  .optional()
+  .transform((value, ctx) => {
+    if (!value || !value.trim()) return undefined;
+    const normalized = normalizePhone(value);
+    if (!normalized) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid phone number, e.g. 677123456 or +237677123456" });
+      return z.NEVER;
+    }
+    return normalized;
+  });
 
 export const loginSchema = z.object({
   email: z.string().min(1).transform((value, ctx) => {
@@ -31,7 +46,7 @@ export const signupSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   track: z.enum(TRACKS).optional(),
   city: z.string().optional(),
-  phone: z.string().optional(),
+  phone: optionalPhone,
   motivation: z.string().optional(),
 });
 
@@ -53,7 +68,7 @@ export const applicationSchema = z.object({
   role: z.enum(APPLICATION_ROLES),
   name: z.string().min(2),
   email: z.string().email(),
-  phone: z.string().optional(),
+  phone: optionalPhone,
   city: z.string().optional(),
   track: z.enum(TRACKS).optional(),
   org: z.string().optional(),
@@ -75,7 +90,7 @@ export const profileSchema = z.object({
   name: z.string().min(2),
   bio: z.string().max(600).optional(),
   city: z.string().optional(),
-  phone: z.string().optional(),
+  phone: optionalPhone,
   portfolioUrl: z.string().url().optional().or(z.literal("")),
   githubUrl: z.string().url().optional().or(z.literal("")),
   linkedinUrl: z.string().url().optional().or(z.literal("")),
