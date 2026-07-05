@@ -62,6 +62,9 @@ export default function Nav() {
             {l.label}
           </a>
         ))}
+        <a href="/dashboard" onClick={() => setOpen(false)}>
+          Sign in
+        </a>
         <a href="/apply" className={styles.mobileApply} onClick={() => setOpen(false)}>
           Apply now
         </a>
