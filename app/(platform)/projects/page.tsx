@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import Icon from "@/components/Icon";
 import { getCurrentUser, getProjectsForUser } from "@/lib/queries";
+import { ICON } from "@/lib/platformData";
 
-const STATUS: Record<string, { label: string; c: string; bg: string }> = {
-  submitted: { label: "Submitted", c: "#2D6FD9", bg: "#E6F0FC" },
-  ai_reviewed: { label: "AI reviewed", c: "#7C3AED", bg: "#F1EAFC" },
-  mentor_reviewed: { label: "Mentor reviewed", c: "#C97A0E", bg: "#FCF1DE" },
-  approved: { label: "Approved ✓", c: "var(--pos)", bg: "var(--posbg)" },
-  changes_requested: { label: "Changes requested", c: "#B3243F", bg: "#FDECEF" },
+const STATUS: Record<string, { label: string; badgeClass: string }> = {
+  submitted: { label: "Submitted", badgeClass: "pf-badge-neutral" },
+  ai_reviewed: { label: "AI reviewed", badgeClass: "pf-badge-brand" },
+  mentor_reviewed: { label: "Mentor reviewed", badgeClass: "pf-badge-warn" },
+  approved: { label: "Approved ✓", badgeClass: "pf-badge-pos" },
+  changes_requested: { label: "Changes requested", badgeClass: "pf-badge-danger" },
 };
 
 export default async function ProjectsPage() {
@@ -18,23 +20,33 @@ export default async function ProjectsPage() {
 
   return (
     <div className="pf-screen pf-w1180">
-      <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
-        Capstone briefs for your track. Submit your work to get an instant AI evaluation;
-        a mentor reviews it after. An accepted capstone completes Phase 4 automatically.
+      <div className="pf-page-intro">
+        <div>
+          <div className="pf-eyebrow">Build Studio</div>
+          <div style={{ fontFamily: "var(--font-sora)", fontWeight: 800, fontSize: 22, letterSpacing: -0.4 }}>
+            Projects
+          </div>
+          <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2, maxWidth: 640 }}>
+            Capstone briefs for your track. Submit your work to get an instant AI evaluation;
+            a mentor reviews it after. An accepted capstone completes Phase 4 automatically.
+          </div>
+        </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
+
+      <div className="pf-proj-list">
         {projects.map((p) => {
           const sub = p.submissions[0];
           const st = sub ? STATUS[sub.status] ?? STATUS.submitted : null;
           return (
-            <div key={p.id} className="pf-card" style={{ padding: 20, display: "flex", flexDirection: "column" }}>
+            <div key={p.id} className="pf-card pf-proj-card">
+              <div className="pf-proj-icon">
+                <Icon path={ICON.grid} size={17} />
+              </div>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "var(--brand1)", marginBottom: 6 }}>
                 {p.module?.phase?.name?.toUpperCase() ?? "CAPSTONE"}
               </div>
               <div style={{ fontFamily: "var(--font-sora)", fontWeight: 800, fontSize: 16, lineHeight: 1.3 }}>{p.title}</div>
-              <div style={{ fontSize: 12.5, color: "var(--muted)", margin: "8px 0 10px", lineHeight: 1.55, flex: 1 }}>
-                {p.description}
-              </div>
+              <div className="pf-proj-desc">{p.description}</div>
               {p.monetizationPotential ? (
                 <div style={{ fontSize: 12, background: "var(--posbg)", color: "#14543A", borderRadius: 9, padding: "8px 11px", marginBottom: 12 }}>
                   💡 {p.monetizationPotential}
@@ -49,7 +61,7 @@ export default async function ProjectsPage() {
                   {sub ? "View / resubmit" : "Start submission →"}
                 </Link>
                 {st ? (
-                  <span style={{ fontSize: 11, fontWeight: 800, color: st.c, background: st.bg, padding: "5px 11px", borderRadius: 20, whiteSpace: "nowrap" }}>
+                  <span className={`pf-badge ${st.badgeClass}`} style={{ whiteSpace: "nowrap" }}>
                     {sub?.aiScore ? `${st.label} · ${sub.aiScore}` : st.label}
                   </span>
                 ) : null}

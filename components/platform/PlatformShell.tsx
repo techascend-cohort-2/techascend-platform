@@ -77,7 +77,9 @@ export default function PlatformShell({
     ROUTES[pathname] ??
     (pathname.startsWith("/learning/")
       ? { title: "Lesson", sub: "My Learning" }
-      : ROUTES[PERSONA_HOME[user.persona]] ?? { title: "TechAscend", sub: "" });
+      : pathname.startsWith("/projects/")
+        ? { title: "Submit Project", sub: "Projects" }
+        : ROUTES[PERSONA_HOME[user.persona]] ?? { title: "TechAscend", sub: "" });
   const persona = user.persona;
   const nav = NAV[persona];
   const mobileNav =

@@ -56,8 +56,9 @@ export default function ProjectSubmit({
 
   return (
     <div className="pf-screen pf-w1180">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 14 }}>
+      <div className="pf-page-intro" style={{ marginBottom: 18 }}>
         <div>
+          <div className="pf-eyebrow">Build Studio</div>
           <div style={{ fontFamily: "var(--font-sora)", fontWeight: 800, fontSize: 22, letterSpacing: -0.4 }}>
             Submit Project
           </div>
