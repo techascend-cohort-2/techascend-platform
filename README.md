@@ -70,12 +70,13 @@ Accounts that already exist are skipped (never overwritten).
 ```csv
 name,email,track,city,phone
 Amina Njoya,amina@example.com,A,Douala,+237600000001
-Marie Doh,marie@example.com,B,Yaoundé,
+Marie Doh,,B,Yaoundé,+237600000002
 ```
 
-- `name`, `email` — required (email must be unique)
+- `name` — required
+- `email`, `phone` — at least one is required; each must be unique when present
 - `track` — `A` or `B` (defaults to `A`)
-- `city`, `phone` — optional
+- `city` — optional
 
 **Option 1 — Admin UI:** sign in as admin → **Members** → *Import from CSV*.
 Paste rows or upload a `.csv`, set the default password and cohort, and import.
@@ -108,6 +109,8 @@ ANTHROPIC_MODEL="claude-sonnet-5"   # optional
 1. `prisma/schema.prisma`: change provider `sqlite` → `postgresql`; set `DATABASE_URL`.
 2. Set `AUTH_SECRET` (`openssl rand -base64 32`), `AUTH_TRUST_HOST=true`, `ANTHROPIC_API_KEY`.
 3. `npm run db:push && npm run db:seed` once against prod, then deploy (`prisma generate && next build`).
+
+For the full free Vercel + Postgres checklist, see `DEPLOYMENT.md`.
 
 ## Key architecture
 
