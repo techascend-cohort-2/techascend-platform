@@ -38,11 +38,31 @@ sessions, phase kickoffs, deadlines, Demo Day Dec 12, graduation Dec 18).
 - **Partner** — portal, opted-in talent pool, hiring pipeline (kanban), own
   opportunities, live impact metrics.
 
+## Database setup
+
+The platform runs on **Postgres** (required — SQLite doesn't work on serverless
+hosts like Vercel, whose functions have an ephemeral/read-only filesystem). No
+`.env` file is committed — copy `.env.example` to `.env.local` and fill it in.
+
+**Local dev, no account needed** — a `docker-compose.yml` is included:
+
+```bash
+docker compose up -d          # starts Postgres on localhost:5432
+cp .env.example .env.local    # its DATABASE_URL already matches the compose service
+```
+
+Don't want Docker? Point `DATABASE_URL` in `.env.local` at any Postgres instead
+(a free Supabase or Neon project works fine).
+
+**Production:** set your real `DATABASE_URL` in your host's environment settings
+(e.g. Vercel Project Settings → Environment Variables) — never commit it. See
+`DEPLOYMENT.md` for the full checklist.
+
 ## Run it
 
 ```bash
 npm install
-npm run db:push        # create SQLite db (dev)
+npm run db:push        # create the schema
 npm run db:seed        # seed the full program
 npm run dev            # http://localhost:3000
 ```
@@ -106,11 +126,18 @@ ANTHROPIC_MODEL="claude-sonnet-5"   # optional
 
 ## Production
 
-1. `prisma/schema.prisma`: change provider `sqlite` → `postgresql`; set `DATABASE_URL`.
+1. Set `DATABASE_URL` to your production Postgres (Vercel Postgres, Supabase, Neon, …).
 2. Set `AUTH_SECRET` (`openssl rand -base64 32`), `AUTH_TRUST_HOST=true`, `ANTHROPIC_API_KEY`.
 3. `npm run db:push && npm run db:seed` once against prod, then deploy (`prisma generate && next build`).
 
 For the full free Vercel + Postgres checklist, see `DEPLOYMENT.md`.
+
+### Dependency security
+
+Keep `next` current — Next.js ships frequent security patches, some (like
+middleware/proxy bypasses) directly affect this app's role-based route
+protection in `auth.config.ts`. Run `npm audit` periodically and bump `next`
+promptly on any advisory affecting middleware, RSC, or Server Actions.
 
 ## Key architecture
 

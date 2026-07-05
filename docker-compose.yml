@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: techascend
+      POSTGRES_PASSWORD: techascend
+      POSTGRES_DB: techascend
+    ports:
+      - "5432:5432"
+    volumes:
+      - techascend-db-data:/var/lib/postgresql/data
+
+volumes:
+  techascend-db-data:

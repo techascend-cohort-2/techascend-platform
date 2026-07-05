@@ -1,18 +1,21 @@
 // TechAscend platform data model — v2 (live program platform).
 //
-// Local/dev runs on SQLite out of the box. For production switch the provider
-// to "postgresql" and point DATABASE_URL at Postgres. Only portable types are
-// used, so the switch is a one-line change.
+// Postgres-backed (required for serverless hosts like Vercel — SQLite's file
+// storage doesn't survive on an ephemeral/read-only filesystem). Point
+// DATABASE_URL at any Postgres instance (Vercel Postgres, Supabase, Neon, or
+// local). See README "Database setup" for local options.
 //
 // Enum-like string fields document allowed values inline; they are enforced by
-// lib/constants.ts + zod schemas (SQLite has no native Prisma enums).
+// lib/constants.ts + zod schemas (kept as plain strings rather than native
+// Prisma enums so the same schema can still target SQLite for quick local
+// experiments if ever needed).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
