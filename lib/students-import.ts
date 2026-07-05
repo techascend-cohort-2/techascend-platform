@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { initialsOf, avatarBgFor } from "@/lib/constants";
-import { normalizeEmail, normalizePhone } from "@/lib/contact";
+import { normalizeEmail, normalizePhone, stripInvisible } from "@/lib/contact";
 
 // ---------------------------------------------------------------------------
 // Bulk student import.
@@ -59,7 +59,7 @@ function splitCsvLine(line: string): string[] {
     }
   }
   out.push(cur);
-  return out.map((s) => s.trim());
+  return out.map((s) => stripInvisible(s).trim());
 }
 
 export function parseStudentsCsv(text: string): ParseResult {

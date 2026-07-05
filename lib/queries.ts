@@ -400,6 +400,100 @@ export async function getStudentsAdmin() {
   return { users, cohorts };
 }
 
+// ---------------------------------------------------------------------------
+// Student progress insights (admin + manager): who's behind schedule in the
+// current phase, and who's gone quiet — so staff can follow up proactively.
+// ---------------------------------------------------------------------------
+
+export type StudentInsight = {
+  userId: string;
+  status: "on_track" | "behind" | "inactive";
+  phasePct: number; // % of current-phase lessons completed
+  expectedPct: number; // % of current-phase time elapsed
+  daysSinceActivity: number | null;
+  currentPhaseName: string | null;
+};
+
+export async function getStudentProgressInsights(): Promise<{
+  currentPhaseName: string | null;
+  insights: StudentInsight[];
+}> {
+  const now = new Date();
+
+  const phases = await prisma.phase.findMany({
+    orderBy: { orderIndex: "asc" },
+    include: { modules: { include: { lessons: { select: { id: true } } } } },
+  });
+  // The active phase: the latest one that has already started. Falls back to
+  // the first phase if the program hasn't officially started yet.
+  const currentPhase = [...phases].reverse().find((p) => p.startsAt && p.startsAt <= now) ?? phases[0] ?? null;
+
+  let phaseElapsedPct = 0;
+  const lessonIdsByTrack: Record<string, Set<string>> = { ALL: new Set(), A: new Set(), B: new Set() };
+  if (currentPhase) {
+    if (currentPhase.startsAt && currentPhase.endsAt) {
+      const span = currentPhase.endsAt.getTime() - currentPhase.startsAt.getTime();
+      const elapsed = now.getTime() - currentPhase.startsAt.getTime();
+      phaseElapsedPct = span > 0 ? Math.min(1, Math.max(0, elapsed / span)) : 1;
+    }
+    for (const m of currentPhase.modules) {
+      if (!lessonIdsByTrack[m.track]) lessonIdsByTrack[m.track] = new Set();
+      for (const l of m.lessons) lessonIdsByTrack[m.track].add(l.id);
+    }
+  }
+
+  const [students, lessonProgress, tutorActivity] = await Promise.all([
+    prisma.user.findMany({ where: { role: "student" }, select: { id: true, track: true, progressPercentage: true } }),
+    prisma.lessonProgress.findMany({ select: { userId: true, lessonId: true, completedAt: true } }),
+    prisma.aiTutorLog.groupBy({ by: ["userId"], _max: { createdAt: true } }),
+  ]);
+
+  const lastActivity = new Map<string, Date>();
+  const bump = (userId: string, at: Date) => {
+    const prev = lastActivity.get(userId);
+    if (!prev || at > prev) lastActivity.set(userId, at);
+  };
+  const doneLessonsByUser = new Map<string, Set<string>>();
+  for (const lp of lessonProgress) {
+    bump(lp.userId, lp.completedAt);
+    if (!doneLessonsByUser.has(lp.userId)) doneLessonsByUser.set(lp.userId, new Set());
+    doneLessonsByUser.get(lp.userId)!.add(lp.lessonId);
+  }
+  for (const t of tutorActivity) {
+    if (t._max.createdAt) bump(t.userId, t._max.createdAt);
+  }
+
+  const INACTIVE_DAYS = 7;
+  const BEHIND_THRESHOLD = 0.2; // 20 percentage points behind the phase clock
+
+  const insights: StudentInsight[] = students.map((u) => {
+    const applicable = new Set<string>([
+      ...lessonIdsByTrack.ALL,
+      ...(u.track ? lessonIdsByTrack[u.track] ?? [] : []),
+    ]);
+    const done = doneLessonsByUser.get(u.id) ?? new Set();
+    const doneInPhase = [...applicable].filter((id) => done.has(id)).length;
+    const phasePct = applicable.size > 0 ? doneInPhase / applicable.size : 0;
+
+    const last = lastActivity.get(u.id) ?? null;
+    const daysSinceActivity = last ? Math.floor((now.getTime() - last.getTime()) / 86_400_000) : null;
+
+    const isInactive = u.progressPercentage < 100 && (daysSinceActivity === null || daysSinceActivity >= INACTIVE_DAYS);
+    const isBehind = Boolean(currentPhase?.endsAt) && phaseElapsedPct - phasePct > BEHIND_THRESHOLD;
+
+    return {
+      userId: u.id,
+      status: isInactive ? "inactive" : isBehind ? "behind" : "on_track",
+      phasePct: Math.round(phasePct * 100),
+      expectedPct: Math.round(phaseElapsedPct * 100),
+      daysSinceActivity,
+      currentPhaseName: currentPhase?.name ?? null,
+    };
+  });
+
+  return { currentPhaseName: currentPhase?.name ?? null, insights };
+}
+
 export async function getCurriculumAdmin() {
   return prisma.phase.findMany({
     orderBy: { orderIndex: "asc" },

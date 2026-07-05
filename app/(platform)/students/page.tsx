@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, getStudentsAdmin } from "@/lib/queries";
+import { getCurrentUser, getStudentsAdmin, getStudentProgressInsights } from "@/lib/queries";
 import MembersScreen from "@/components/platform/screens/MembersScreen";
 import StudentImport from "@/components/platform/screens/StudentImport";
 
@@ -7,9 +7,18 @@ export default async function StudentsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { users, cohorts } = await getStudentsAdmin();
   const isAdmin = user.role === "admin";
+  const [{ users, cohorts }, { currentPhaseName, insights }] = await Promise.all([
+    getStudentsAdmin(),
+    getStudentProgressInsights(),
+  ]);
   const cohortOptions = cohorts.map((c) => ({ id: c.id, name: c.name }));
+  const insightsByUserId = Object.fromEntries(
+    insights.map((i) => [
+      i.userId,
+      { status: i.status, phasePct: i.phasePct, expectedPct: i.expectedPct, daysSinceActivity: i.daysSinceActivity },
+    ]),
+  );
 
   return (
     <>
@@ -19,8 +28,10 @@ export default async function StudentsPage() {
         </div>
       ) : null}
       <MembersScreen
-        isAdmin={isAdmin}
+        viewerRole={isAdmin ? "admin" : "manager"}
         cohorts={cohortOptions}
+        insightsByUserId={insightsByUserId}
+        currentPhaseName={currentPhaseName}
         members={users.map((u) => ({
           id: u.id,
           name: u.name,

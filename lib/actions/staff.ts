@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { isStaff, initialsOf, avatarBgFor } from "@/lib/constants";
-import { userAdminSchema, partnerOrgSchema, cohortSchema, ledgerSchema, lessonEditSchema } from "@/lib/validation";
+import { isStaff, initialsOf, avatarBgFor, TRACK_LABELS } from "@/lib/constants";
+import { userAdminSchema, studentTrackSchema, partnerOrgSchema, cohortSchema, ledgerSchema, lessonEditSchema } from "@/lib/validation";
 import { notify, recomputeUserProgress } from "@/lib/progress";
 import { parseStudentsCsv, importStudents } from "@/lib/students-import";
 
@@ -119,6 +119,30 @@ export async function updateUserAction(_prev: ActionState, formData: FormData): 
       ...(d.title ? { title: d.title } : {}),
     },
   });
+  revalidatePath("/students");
+  return { ok: true };
+}
+
+// Track changes are a routine pedagogical call — open to admins AND managers,
+// unlike role/cohort changes (updateUserAction, admin only).
+export async function updateStudentTrackAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireStaff();
+  const parsed = studentTrackSchema.safeParse({
+    userId: formData.get("userId"),
+    track: formData.get("track"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid." };
+  const { userId, track } = parsed.data;
+
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  if (!target || target.role !== "student") return { error: "This account isn't a student." };
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { track, title: `Fellow · Track ${track}` },
+  });
+  await recomputeUserProgress(userId); // lesson set is track-dependent
+  await notify(userId, `Your track was changed to Track ${track}`, "/learning", TRACK_LABELS[track]);
   revalidatePath("/students");
   return { ok: true };
 }

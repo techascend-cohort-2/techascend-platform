@@ -142,6 +142,13 @@ export const userAdminSchema = z.object({
   title: z.string().optional(),
 });
 
+// Lighter-weight than userAdminSchema: track-only, for staff who can move a
+// student between tracks but shouldn't touch role/cohort (managers).
+export const studentTrackSchema = z.object({
+  userId: z.string().min(1),
+  track: z.enum(TRACKS),
+});
+
 export const partnerOrgSchema = z.object({
   name: z.string().min(2),
   abbr: z.string().optional(),
