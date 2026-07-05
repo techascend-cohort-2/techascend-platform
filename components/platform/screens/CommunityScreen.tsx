@@ -147,7 +147,7 @@ function PostCard({ post, me }: { post: FeedPost; me: CommunityScreenProps["me"]
             </span>
             {post.pinned ? (
               <span className="pf-badge-sm pf-badge-brand" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                📌 Pinned
+                Pinned
               </span>
             ) : null}
           </div>
@@ -188,8 +188,29 @@ function PostCard({ post, me }: { post: FeedPost; me: CommunityScreenProps["me"]
 }
 
 export default function CommunityScreen({ posts, me }: CommunityScreenProps) {
+  const pinnedCount = posts.filter((post) => post.pinned).length;
+
   return (
     <div className="pf-screen pf-w1180">
+      <div className="pf-community-hero">
+        <div>
+          <div className="pf-eyebrow">Fellowship space</div>
+          <div className="pf-community-title">Build in public, learn together.</div>
+          <div className="pf-community-copy">
+            Share wins, questions, useful resources, and program announcements with the TechAscend community.
+          </div>
+        </div>
+        <div className="pf-community-stats">
+          <div>
+            <b>{posts.length}</b>
+            <span>updates</span>
+          </div>
+          <div>
+            <b>{pinnedCount}</b>
+            <span>pinned</span>
+          </div>
+        </div>
+      </div>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
         <Composer meName={me.name} />
 
@@ -200,7 +221,6 @@ export default function CommunityScreen({ posts, me }: CommunityScreenProps) {
 
           {posts.length === 0 ? (
             <div className="pf-card" style={{ padding: "44px 32px", textAlign: "center" }}>
-              <div style={{ fontSize: 34, marginBottom: 10 }}>👋</div>
               <div className="pf-h" style={{ fontSize: 17, marginBottom: 6 }}>
                 It&apos;s quiet in here… for now
               </div>

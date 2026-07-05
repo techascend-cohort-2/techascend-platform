@@ -21,8 +21,9 @@ export default async function LearningPage() {
 
   return (
     <div className="pf-screen pf-w1180">
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+      <div className="pf-page-intro">
         <div>
+          <div className="pf-eyebrow">Program path</div>
           <div style={{ fontFamily: "var(--font-sora)", fontWeight: 800, fontSize: 22, letterSpacing: -0.4 }}>
             {trackLabel}
           </div>
@@ -44,7 +45,7 @@ export default async function LearningPage() {
             ? phase.modules.some((m) => m.lessons.some((l) => l.id === current.lessonId))
             : false;
           return (
-            <div key={phase.id} className="pf-card" style={{ padding: 22, borderColor: isCurrent ? "var(--brand1)" : undefined }}>
+            <div key={phase.id} className={`pf-card pf-learning-phase ${isCurrent ? "pf-learning-current" : ""}`}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                 <div style={{ flex: 1, minWidth: 220 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -106,9 +107,9 @@ export default async function LearningPage() {
                 </div>
               ) : null}
 
-              <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+              <div className="pf-learning-modules">
                 {phase.modules.map((mod) => (
-                  <div key={mod.id}>
+                  <div key={mod.id} className="pf-learning-module">
                     <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: "var(--faint)", marginBottom: 8 }}>
                       {mod.title.toUpperCase()}
                       {mod.track !== "ALL" ? ` · TRACK ${mod.track}` : ""}
@@ -122,17 +123,7 @@ export default async function LearningPage() {
                           <Link
                             key={lesson.id}
                             href={`/learning/${lesson.id}`}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 11,
-                              padding: "9px 12px",
-                              borderRadius: 10,
-                              border: `1px solid ${isNow ? "var(--brand1)" : "var(--line)"}`,
-                              background: done ? "#FBFAFE" : "#fff",
-                              textDecoration: "none",
-                              color: "inherit",
-                            }}
+                            className={`pf-lesson-row ${done ? "pf-lesson-done" : ""} ${isNow ? "pf-lesson-current" : ""}`}
                           >
                             <span
                               style={{

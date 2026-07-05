@@ -63,8 +63,6 @@ export default async function DashboardPage() {
       {/* welcome + ring */}
       <div className="pf-dash-top">
         <div className="pf-welcome">
-          <div className="pf-welcome-b1" />
-          <div className="pf-welcome-b2" />
           <div style={{ position: "relative" }}>
             <div className="pf-welcome-eyebrow">WELCOME BACK</div>
             <div className="pf-welcome-title">{firstName}, keep building.</div>
@@ -85,6 +83,20 @@ export default async function DashboardPage() {
               <Link href="/tutor" className="ghost">
                 Ask AI Tutor
               </Link>
+            </div>
+            <div className="pf-today-strip">
+              <div>
+                <span>Current phase</span>
+                <b>{currentPhase?.phase.name ?? "Ready when published"}</b>
+              </div>
+              <div>
+                <span>Next event</span>
+                <b>{upcomingEvents[0]?.title ?? "No event scheduled"}</b>
+              </div>
+              <div>
+                <span>Track</span>
+                <b>{trackLabel}</b>
+              </div>
             </div>
           </div>
         </div>
@@ -130,8 +142,11 @@ export default async function DashboardPage() {
         <div className="pf-col">
           {/* continue learning */}
           <div className="pf-card pf-pad">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <div className="pf-h">Continue learning</div>
+            <div className="pf-section-head">
+              <div>
+                <div className="pf-eyebrow">Today</div>
+                <div className="pf-h">Continue learning</div>
+              </div>
               <Link href="/learning" className="pf-link">View curriculum →</Link>
             </div>
 
@@ -156,17 +171,7 @@ export default async function DashboardPage() {
             )}
 
             {currentLesson ? (
-              <div
-                style={{
-                  marginTop: 14,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 13,
-                  padding: 13,
-                  border: "1px solid var(--line)",
-                  borderRadius: 12,
-                }}
-              >
+              <div className="pf-next-card">
                 <div className="pf-stat-icon" style={{ background: "#f1eafc", color: "var(--brand1)", flexShrink: 0 }}>
                   <Icon path={ICON.book} size={17} />
                 </div>
@@ -197,8 +202,11 @@ export default async function DashboardPage() {
 
           {/* open opportunities */}
           <div className="pf-card pf-pad">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <div className="pf-h">Open opportunities</div>
+            <div className="pf-section-head" style={{ marginBottom: 6 }}>
+              <div>
+                <div className="pf-eyebrow">Career</div>
+                <div className="pf-h">Open opportunities</div>
+              </div>
               <span style={{ fontSize: 11.5, color: "var(--muted)" }}>Earn while you learn</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -213,6 +221,7 @@ export default async function DashboardPage() {
         <div className="pf-col">
           {/* upcoming events */}
           <div className="pf-card pf-pad">
+            <div className="pf-eyebrow">Calendar</div>
             <div className="pf-h" style={{ marginBottom: 14 }}>Upcoming events</div>
             {upcomingEvents.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -244,6 +253,7 @@ export default async function DashboardPage() {
 
           {/* your journey */}
           <div className="pf-card pf-pad">
+            <div className="pf-eyebrow">Proof</div>
             <div className="pf-h" style={{ marginBottom: 14 }}>Your journey</div>
             <div className="pf-pf-stats">
               <div className="pf-pf-stat">

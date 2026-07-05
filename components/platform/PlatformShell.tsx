@@ -42,6 +42,24 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+function navGroupLabel(persona: Persona, label: string, index: number): string | null {
+  if (index === 0) return persona === "student" ? "Today" : persona === "admin" ? "Command" : "Workspace";
+  if (persona === "student") {
+    if (label === "My Learning") return "Learn";
+    if (label === "Community") return "Connect";
+    if (label === "Opportunities") return "Career";
+    if (label === "My Profile") return "Account";
+  }
+  if (persona === "admin") {
+    if (label === "Applications") return "Operations";
+    if (label === "Curriculum") return "Program";
+    if (label === "Partners") return "Growth";
+  }
+  if (persona === "partner" && label === "Talent Pool") return "Hiring";
+  if (persona === "manager" && label === "Reviews") return "Operations";
+  return null;
+}
+
 export default function PlatformShell({
   user,
   notifications,
@@ -62,6 +80,10 @@ export default function PlatformShell({
       : ROUTES[PERSONA_HOME[user.persona]] ?? { title: "TechAscend", sub: "" });
   const persona = user.persona;
   const nav = NAV[persona];
+  const mobileNav =
+    persona === "student"
+      ? nav.filter((item) => ["Dashboard", "My Learning", "Community", "Earn Hub", "My Profile"].includes(item.label))
+      : [];
   const searchTargets = SEARCH_TARGETS.filter((t) => t.roles.includes(persona));
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -131,18 +153,21 @@ export default function PlatformShell({
             </div>
 
             <nav className="pf-nav">
-              {nav.map((item) => {
+              {nav.map((item, index) => {
                 const active = item.href === pathname;
+                const group = navGroupLabel(persona, item.label, index);
                 return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className={`pf-nav-item ${active ? "pf-nav-active" : ""}`}
-                  >
-                    <Icon path={item.icon} size={19} strokeWidth={1.7} />
-                    <span style={{ flex: 1 }}>{item.label}</span>
-                    {item.badge ? <span className="pf-nav-badge">{item.badge}</span> : null}
-                  </Link>
+                  <div key={item.label}>
+                    {group ? <div className="pf-nav-section">{group}</div> : null}
+                    <Link
+                      href={item.href}
+                      className={`pf-nav-item ${active ? "pf-nav-active" : ""}`}
+                    >
+                      <Icon path={item.icon} size={19} strokeWidth={1.7} />
+                      <span style={{ flex: 1 }}>{item.label}</span>
+                      {item.badge ? <span className="pf-nav-badge">{item.badge}</span> : null}
+                    </Link>
+                  </div>
                 );
               })}
             </nav>
@@ -271,6 +296,20 @@ export default function PlatformShell({
                 <Icon path={ICON.star} size={18} strokeWidth={2} />
                 Ask AI
               </Link>
+            ) : null}
+
+            {mobileNav.length ? (
+              <nav className="pf-mobile-tabbar" aria-label="Primary">
+                {mobileNav.map((item) => {
+                  const active = item.href === pathname;
+                  return (
+                    <Link key={item.label} href={item.href} className={`pf-mobile-tab ${active ? "pf-mobile-tab-active" : ""}`}>
+                      <Icon path={item.icon} size={18} strokeWidth={1.9} />
+                      <span>{item.label === "My Learning" ? "Learn" : item.label === "Earn Hub" ? "Earn" : item.label === "My Profile" ? "Profile" : item.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
             ) : null}
           </main>
         </div>
