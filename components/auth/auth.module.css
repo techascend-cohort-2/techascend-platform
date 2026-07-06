@@ -97,6 +97,30 @@
   gap: 12px;
 }
 
+.passWrap {
+  position: relative;
+}
+.passInput {
+  padding-right: 42px;
+}
+.eyeBtn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 40px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  color: #9990b0;
+  cursor: pointer;
+  padding: 0;
+}
+.eyeBtn:hover {
+  color: #7c3aed;
+}
+
 .btn {
   width: 100%;
   margin-top: 8px;

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { loginAction, type FormState } from "@/lib/actions/auth";
+import PasswordField from "./PasswordField";
 import styles from "./auth.module.css";
 
 export default function LoginForm({ passwordChanged = false }: { passwordChanged?: boolean }) {
@@ -31,10 +32,7 @@ export default function LoginForm({ passwordChanged = false }: { passwordChanged
           <label className={styles.label} htmlFor="email">Email or phone</label>
           <input className={styles.input} id="email" name="email" type="text" placeholder="you@example.com or 677123456" required autoComplete="username" />
         </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="password">Password</label>
-          <input className={styles.input} id="password" name="password" type="password" placeholder="••••••••" required autoComplete="current-password" />
-        </div>
+        <PasswordField id="password" name="password" label="Password" placeholder="••••••••" autoComplete="current-password" />
         <button className={styles.btn} type="submit" disabled={pending}>
           {pending ? "Signing in…" : "Sign in"}
         </button>

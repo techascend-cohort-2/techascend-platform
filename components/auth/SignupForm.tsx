@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { signupAction, type FormState } from "@/lib/actions/auth";
+import PasswordField from "./PasswordField";
 import styles from "./auth.module.css";
 
 // defaultRole is kept for compatibility with the /signup page, but every
@@ -34,10 +35,7 @@ export default function SignupForm({ defaultRole: _defaultRole = "student" }: { 
           <label className={styles.label} htmlFor="email">Email</label>
           <input className={styles.input} id="email" name="email" type="email" placeholder="you@example.com" required autoComplete="email" />
         </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="password">Password</label>
-          <input className={styles.input} id="password" name="password" type="password" placeholder="At least 8 characters" required autoComplete="new-password" minLength={8} />
-        </div>
+        <PasswordField id="password" name="password" label="Password" placeholder="At least 8 characters" autoComplete="new-password" minLength={8} />
         <div className={styles.row}>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="city">City</label>
