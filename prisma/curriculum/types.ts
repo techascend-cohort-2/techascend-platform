@@ -50,4 +50,10 @@ export type ProjectSeed = {
   description: string;
   deliverables: { title: string; ext: string }[];
   monetizationPotential: string;
+  /** "Build Studio" | "Automation" | "Support & Ops" | "Data & AI" */
+  category: string;
+  /** "Beginner" | "Intermediate" | "Intermediate-Advanced" | "Advanced" */
+  difficulty: string;
+  /** e.g. "3-5 weeks" */
+  estimatedWeeks: string;
 };

@@ -221,6 +221,12 @@ model Project {
   description           String?
   deliverables          Json? // [{ title, ext }]
   monetizationPotential String?
+  // "Build Studio" | "Automation" | "Support & Ops" | "Data & AI"
+  category              String       @default("Build Studio")
+  // "Beginner" | "Intermediate" | "Intermediate-Advanced" | "Advanced"
+  difficulty            String?
+  // e.g. "3-5 weeks"
+  estimatedWeeks        String?
   submissions           Submission[]
 }
 

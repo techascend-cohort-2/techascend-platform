@@ -19,6 +19,13 @@ export const ICON = {
   check: "M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11",
   edit: "M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z",
   user: "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 3a4 4 0 100 8 4 4 0 000-8z",
+  clock: "M12 22a10 10 0 100-20 10 10 0 000 20zM12 6v6l4 2",
+  tag: "M12.59 2.59A2 2 0 0011.17 2H4a2 2 0 00-2 2v7.17a2 2 0 00.59 1.42l8.7 8.7a2 2 0 002.83 0l6.29-6.29a2 2 0 000-2.83zM7 7h.01",
+  cloudUpload: "M7 18a4 4 0 01-.6-7.96 5 5 0 019.44-2A4.5 4.5 0 0117.5 18H7zM12 11v6M9.5 13.5L12 11l2.5 2.5",
+  document: "M6 2h9l3 3v17a1 1 0 01-1 1H6a1 1 0 01-1-1V3a1 1 0 011-1zM9 8h6M9 12h6M9 16h4",
+  chevronDown: "M6 9l6 6 6-6",
+  zap: "M13 2L4 14h6l-1 8 9-12h-6l1-8z",
+  close: "M18 6L6 18M6 6l12 12",
 } as const;
 
 export type RouteMeta = { title: string; sub: string };

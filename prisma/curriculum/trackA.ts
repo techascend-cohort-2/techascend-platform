@@ -1251,6 +1251,9 @@ export const trackAProjects: ProjectSeed[] = [
     ],
     monetizationPotential:
       "Cameroonian SMEs pay 150,000-400,000 FCFA for a configured support agent, plus 20,000-50,000 FCFA monthly for hosting, knowledge-base updates and conversation reports. Five retained clients makes this a 100,000-250,000 FCFA monthly recurring income stream.",
+    category: "Support & Ops",
+    difficulty: "Intermediate",
+    estimatedWeeks: "3-5 weeks",
   },
   {
     phaseSlug: "build-studio",
@@ -1265,6 +1268,9 @@ export const trackAProjects: ProjectSeed[] = [
     ],
     monetizationPotential:
       "Custom booking and order systems for Cameroonian SMEs typically bill 250,000-800,000 FCFA per build depending on scope, with 15,000-40,000 FCFA monthly for hosting and support. One clinic or restaurant client per quarter, plus retainers, is a realistic first-year freelance base.",
+    category: "Build Studio",
+    difficulty: "Intermediate-Advanced",
+    estimatedWeeks: "4-6 weeks",
   },
   {
     phaseSlug: "build-studio",
@@ -1279,5 +1285,8 @@ export const trackAProjects: ProjectSeed[] = [
     ],
     monetizationPotential:
       "The portfolio converts directly: freelancers with case-study portfolios command 50,000-150,000 FCFA for starter websites and 200,000+ FCFA for app work, while a visible open-source record unlocks remote junior roles paying 300,000-900,000 FCFA monthly. It is the highest-leverage marketing asset a new engineer owns.",
+    category: "Build Studio",
+    difficulty: "Intermediate",
+    estimatedWeeks: "2-3 weeks",
   },
 ];

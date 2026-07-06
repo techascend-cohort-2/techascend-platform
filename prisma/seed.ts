@@ -170,6 +170,9 @@ async function seedProjects(
         description: p.description,
         deliverables: p.deliverables,
         monetizationPotential: p.monetizationPotential,
+        category: p.category,
+        difficulty: p.difficulty,
+        estimatedWeeks: p.estimatedWeeks,
       },
     });
   }

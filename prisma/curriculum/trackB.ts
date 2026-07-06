@@ -942,6 +942,9 @@ export const trackBProjects: ProjectSeed[] = [
     ],
     monetizationPotential:
       "Sells as a productised package at 80,000-150,000 F setup plus 15,000-25,000 F monthly for monitoring, knowledge-base updates, and message costs. Ten clients on maintenance alone is 150,000-250,000 F of recurring monthly income before any new setup fees.",
+    category: "Support & Ops",
+    difficulty: "Intermediate",
+    estimatedWeeks: "3-5 weeks",
   },
   {
     phaseSlug: "build-studio",
@@ -956,6 +959,9 @@ export const trackBProjects: ProjectSeed[] = [
     ],
     monetizationPotential:
       "The classic 60,000-150,000 F setup depending on tier, plus 10,000-20,000 F monthly maintenance. Its ROI story closes deals fast: a client recovering two forgotten 15,000 F invoices per month pays back a 90,000 F setup in three months, making this the easiest first sale in your portfolio.",
+    category: "Automation",
+    difficulty: "Intermediate",
+    estimatedWeeks: "3-5 weeks",
   },
   {
     phaseSlug: "build-studio",
@@ -970,5 +976,8 @@ export const trackBProjects: ProjectSeed[] = [
     ],
     monetizationPotential:
       "A niche micro-SaaS at 5,000-15,000 F per client per month reaches 100,000-300,000 F monthly recurring revenue at 20 clients, while a productised service closing two Standard packages a month generates around 200,000 F plus growing maintenance income. Either path scales on templates and reputation rather than hours worked.",
+    category: "Build Studio",
+    difficulty: "Intermediate-Advanced",
+    estimatedWeeks: "4-6 weeks",
   },
 ];
