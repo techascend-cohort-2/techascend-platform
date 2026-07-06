@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { changePasswordAction, type FormState } from "@/lib/actions/auth";
+import PasswordField from "./PasswordField";
 import styles from "./auth.module.css";
 
 export default function ChangePasswordForm({ forced }: { forced: boolean }) {
@@ -27,32 +28,20 @@ export default function ChangePasswordForm({ forced }: { forced: boolean }) {
       {state.error ? <div className={styles.error}>{state.error}</div> : null}
 
       <form action={action}>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="current">
-            {forced ? "Temporary password" : "Current password"}
-          </label>
-          <input
-            className={styles.input}
-            id="current"
-            name="current"
-            type="password"
-            required
-            autoComplete="current-password"
-          />
-        </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="next">New password</label>
-          <input
-            className={styles.input}
-            id="next"
-            name="next"
-            type="password"
-            placeholder="At least 8 characters"
-            required
-            autoComplete="new-password"
-            minLength={8}
-          />
-        </div>
+        <PasswordField
+          id="current"
+          name="current"
+          label={forced ? "Temporary password" : "Current password"}
+          autoComplete="current-password"
+        />
+        <PasswordField
+          id="next"
+          name="next"
+          label="New password"
+          placeholder="At least 8 characters"
+          autoComplete="new-password"
+          minLength={8}
+        />
         <button className={styles.btn} type="submit" disabled={pending}>
           {pending ? "Saving…" : "Save & continue"}
         </button>
