@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition, useActionState } from "react";
+import Link from "next/link";
 import { ROLES, TRACKS, TRACK_LABELS } from "@/lib/constants";
 import { updateUserAction, updateStudentTrackAction, resetPasswordAction, type ActionState } from "@/lib/actions/staff";
 
@@ -342,7 +343,9 @@ export default function MembersScreen({
                 >
                   {member.initials ?? member.name.slice(0, 2).toUpperCase()}
                 </div>
-                <div style={{ fontSize: 12.5, fontWeight: 700, flex: "1 1 140px", minWidth: 0 }}>{member.name}</div>
+                <Link href={`/students/${member.id}`} className="pf-link" style={{ fontSize: 12.5, fontWeight: 700, flex: "1 1 140px", minWidth: 0, color: "var(--ink)" }}>
+                  {member.name}
+                </Link>
                 <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{member.track ? `Track ${member.track}` : "No track"}</div>
                 <StatusChip insight={insight} />
               </div>
@@ -409,7 +412,14 @@ export default function MembersScreen({
                   </div>
                   <div style={{ flex: "1 1 200px", minWidth: 0 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      {m.name} <RoleChip role={m.role} />
+                      {m.role === "student" ? (
+                        <Link href={`/students/${m.id}`} className="pf-link" style={{ color: "var(--ink)", fontWeight: 700 }}>
+                          {m.name}
+                        </Link>
+                      ) : (
+                        m.name
+                      )}
+                      <RoleChip role={m.role} />
                       {m.role === "student" ? <StatusChip insight={insightsByUserId[m.id]} /> : null}
                     </div>
                     <div style={{ fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

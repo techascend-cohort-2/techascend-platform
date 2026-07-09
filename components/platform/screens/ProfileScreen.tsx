@@ -1,7 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
-import { updateProfileAction, type ActionState } from "@/lib/actions/community";
+import { useActionState, useState, useTransition } from "react";
+import {
+  updateProfileAction,
+  saveGeminiKeyAction,
+  removeGeminiKeyAction,
+  type ActionState,
+} from "@/lib/actions/community";
 import { submitVisibilityAction } from "@/lib/actions/program";
 import { changePasswordAction, type FormState } from "@/lib/actions/auth";
 
@@ -15,6 +20,54 @@ const input: React.CSSProperties = {
   background: "#FBFAFF",
 };
 const label: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 700, color: "var(--muted)", margin: "12px 0 5px" };
+
+function RevealField({ id, name, placeholder }: { id: string; name: string; placeholder: string }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        style={{ ...input, paddingRight: 40, fontFamily: "var(--font-mono)" }}
+        id={id}
+        name={name}
+        type={visible ? "text" : "password"}
+        placeholder={placeholder}
+        autoComplete="off"
+        required
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? "Hide key" : "Show key"}
+        tabIndex={-1}
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: 38,
+          display: "grid",
+          placeItems: "center",
+          background: "none",
+          border: "none",
+          color: "var(--muted)",
+          cursor: "pointer",
+        }}
+      >
+        {visible ? (
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17.94 17.94A10.94 10.94 0 0112 20c-6 0-10-6-10-8 0-.98 1.02-2.98 2.68-4.74M9.9 4.24A10.5 10.5 0 0112 4c6 0 10 6 10 8 0 .8-.6 2.14-1.68 3.44M14.12 14.12a3 3 0 11-4.24-4.24" />
+            <line x1="2" y1="2" x2="22" y2="22" />
+          </svg>
+        ) : (
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 12s4-8 10-8 10 8 10 8-4 8-10 8-10-8-10-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
+}
 
 function Msg({ state, okText }: { state: { ok?: boolean; error?: string }; okText: string }) {
   if (state.error)
@@ -40,6 +93,7 @@ export type ProfileUser = {
   kaggleUrl: string | null;
   talentVisible: boolean;
   mustChangePassword: boolean;
+  geminiKeyMasked: string | null;
 };
 
 export type VisibilityInfo = {
@@ -66,6 +120,9 @@ export default function ProfileScreen({ user, visibility }: { user: ProfileUser;
   const [pState, pAction, pPending] = useActionState<ActionState, FormData>(updateProfileAction, {});
   const [vState, vAction, vPending] = useActionState<ActionState, FormData>(submitVisibilityAction, {});
   const [wState, wAction, wPending] = useActionState<FormState, FormData>(changePasswordAction, {});
+  const [gState, gAction, gPending] = useActionState<ActionState, FormData>(saveGeminiKeyAction, {});
+  const [removing, startRemove] = useTransition();
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const isStudent = user.role === "student";
 
@@ -179,6 +236,59 @@ export default function ProfileScreen({ user, visibility }: { user: ProfileUser;
         </div>
         <Msg state={pState} okText="Profile saved." />
       </form>
+
+      {/* AI Tutor — personal Gemini key */}
+      {isStudent ? (
+        <div className="pf-card" style={{ padding: 24, marginBottom: 16 }}>
+          <div className="pf-h">AI Tutor — your Gemini API key</div>
+          <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4, lineHeight: 1.6 }}>
+            The AI Tutor runs on your own free Gemini API key, so your chats are never limited by other students&apos;
+            usage. Get a free key from{" "}
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="pf-link">
+              Google AI Studio
+            </a>{" "}
+            — it takes about a minute, no card required.
+          </div>
+
+          {user.geminiKeyMasked ? (
+            <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--pos)" }}>✓ Key saved</span>
+              <span style={{ fontSize: 12.5, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
+                {user.geminiKeyMasked}
+              </span>
+              <button
+                type="button"
+                className="pf-btn-soft"
+                style={{ fontSize: 12, color: "var(--danger)" }}
+                disabled={removing}
+                onClick={() => {
+                  setRemoveError(null);
+                  startRemove(async () => {
+                    const res = await removeGeminiKeyAction();
+                    if (!res.ok) setRemoveError(res.error ?? "Could not remove the key.");
+                  });
+                }}
+              >
+                {removing ? "Removing…" : "Remove key"}
+              </button>
+              {removeError ? <span style={{ fontSize: 12, color: "var(--danger)" }}>{removeError}</span> : null}
+            </div>
+          ) : null}
+
+          <form action={gAction} style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 260px" }}>
+              <label style={label} htmlFor="geminiApiKey">
+                {user.geminiKeyMasked ? "Replace your key" : "Paste your Gemini API key"}
+              </label>
+              <RevealField id="geminiApiKey" name="geminiApiKey" placeholder="AIza…" />
+            </div>
+            <button className="pf-btn-grad" style={{ padding: "11px 20px", borderRadius: 11, fontSize: 13 }} disabled={gPending}>
+              {gPending ? "Saving…" : "Save key"}
+            </button>
+          </form>
+          <Msg state={gState} okText="Key saved — your AI Tutor is ready." />
+        </div>
+      ) : null}
 
       {/* Password */}
       <form className="pf-card" style={{ padding: 24 }} action={wAction}>

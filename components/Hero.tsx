@@ -1,7 +1,10 @@
 import { logos } from "@/lib/data";
+import { getOpenCohortForApply } from "@/lib/queries";
 import styles from "./Hero.module.css";
 
-export default function Hero() {
+export default async function Hero() {
+  const openCohort = await getOpenCohortForApply();
+
   return (
     <section id="top" className={styles.hero}>
       <div className={styles.blobA} />
@@ -11,7 +14,7 @@ export default function Hero() {
         <div>
           <div className={styles.badge}>
             <span className={styles.dot} />
-            Central Africa · Applications open for Cohort 01
+            {openCohort ? `Central Africa · Applications open for ${openCohort.name}` : "Central Africa · Applications closed — join the waitlist"}
           </div>
           <h1 className={styles.h1}>
             Not just women in tech.
@@ -25,7 +28,7 @@ export default function Hero() {
           </p>
           <div className={styles.ctas}>
             <a href="/apply" className={styles.ctaPrimary}>
-              Apply to the next cohort →
+              {openCohort ? "Apply to the next cohort →" : "Join the waitlist →"}
             </a>
             <a href="#partners" className={styles.ctaGhost}>
               Partner with us

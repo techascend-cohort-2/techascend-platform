@@ -8,6 +8,7 @@ import { isStaff, initialsOf, avatarBgFor, TRACK_LABELS } from "@/lib/constants"
 import { userAdminSchema, studentTrackSchema, partnerOrgSchema, cohortSchema, ledgerSchema, lessonEditSchema } from "@/lib/validation";
 import { notify, recomputeUserProgress } from "@/lib/progress";
 import { parseStudentsCsv, importStudents } from "@/lib/students-import";
+import { getAssignableCohort } from "@/lib/queries";
 
 export type ActionState = { ok?: boolean; error?: string; tempPassword?: string };
 
@@ -45,7 +46,7 @@ export async function reviewApplicationAction(
   // If the applicant already has an account, promote / notify.
   const existing = await prisma.user.findUnique({ where: { email: app.email } });
   if (existing && decision === "accepted" && existing.role === "applicant" && app.role === "learner") {
-    const cohort = await prisma.cohort.findFirst({ orderBy: { createdAt: "asc" } });
+    const cohort = await getAssignableCohort();
     await prisma.user.update({
       where: { id: existing.id },
       data: {
@@ -76,7 +77,7 @@ export async function createAccountForApplicationAction(applicationId: string): 
     return { error: "This person already has an account." };
   }
   const pwd = tempPassword();
-  const cohort = await prisma.cohort.findFirst({ orderBy: { createdAt: "asc" } });
+  const cohort = await getAssignableCohort();
   await prisma.user.create({
     data: {
       name: app.name,
@@ -200,11 +201,14 @@ export async function saveCohortAction(cohortId: string | null, _prev: ActionSta
     hub: formData.get("hub") || undefined,
     startDate: formData.get("startDate") || undefined,
     endDate: formData.get("endDate") || undefined,
+    applicationsOpen: formData.get("applicationsOpen") === "on",
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid." };
   if (cohortId) await prisma.cohort.update({ where: { id: cohortId }, data: parsed.data });
   else await prisma.cohort.create({ data: parsed.data });
   revalidatePath("/cohorts");
+  revalidatePath("/apply");
+  revalidatePath("/");
   return { ok: true };
 }
 

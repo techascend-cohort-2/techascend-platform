@@ -13,6 +13,7 @@ export type CohortRow = {
   startDate: string | null; // ISO
   endDate: string | null; // ISO
   members: number;
+  applicationsOpen: boolean;
 };
 
 const inp: React.CSSProperties = {
@@ -98,6 +99,15 @@ function CohortForm({
           <input type="date" name="endDate" defaultValue={dateInputValue(cohort?.endDate ?? null)} style={{ ...inp, marginTop: 4 }} />
         </label>
       </div>
+      <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 14, fontSize: 13, cursor: "pointer" }}>
+        <input type="checkbox" name="applicationsOpen" defaultChecked={cohort?.applicationsOpen ?? false} style={{ marginTop: 3 }} />
+        <span>
+          <b>Open for applications.</b>{" "}
+          <span style={{ color: "var(--muted)" }}>
+            The public landing page and /apply will advertise this cohort as accepting applicants while this is on.
+          </span>
+        </span>
+      </label>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
         <button type="submit" className="pf-btn-grad" disabled={pending} style={{ fontSize: 12.5 }}>
           {pending ? "Saving…" : cohort ? "Save changes" : "Create cohort"}
@@ -130,6 +140,9 @@ function CohortItem({ cohort }: { cohort: CohortRow }) {
           {cohort.track === "ALL" ? "All tracks" : `Track ${cohort.track}`}
         </div>
         <span className={`pf-badge ${STATUS_BADGE[cohort.status] ?? "pf-badge-brand"}`}>{cohort.status}</span>
+        <span className={`pf-badge ${cohort.applicationsOpen ? "pf-badge-pos" : "pf-badge-neutral"}`}>
+          {cohort.applicationsOpen ? "Applications open" : "Applications closed"}
+        </span>
         <div style={{ width: 90, fontSize: 12.5, color: "var(--muted)" }}>
           {cohort.members} member{cohort.members === 1 ? "" : "s"}
         </div>

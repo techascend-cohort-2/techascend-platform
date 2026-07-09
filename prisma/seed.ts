@@ -336,6 +336,9 @@ async function main() {
       hub: "Cameroon",
       startDate: wat("2026-07-06", 8),
       endDate: wat("2026-12-18", 18),
+      // Already in session by the time this seed runs — open the NEXT
+      // cohort for applications from the admin Cohorts screen when ready.
+      applicationsOpen: false,
     },
   });
 

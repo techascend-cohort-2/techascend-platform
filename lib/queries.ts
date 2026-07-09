@@ -248,6 +248,29 @@ export async function getBadgesData(userId: string) {
   };
 }
 
+// Staff view: every badge/certificate ever issued, with who earned it — the
+// admin overview's "Badges awarded"/"Certificates" cards link here so those
+// counts are actually explorable, not just numbers.
+export async function getBadgesAdmin() {
+  const [userBadges, certificates] = await Promise.all([
+    prisma.userBadge.findMany({
+      include: {
+        badge: { include: { phase: true } },
+        user: { select: { id: true, name: true, email: true, track: true, initials: true, avatarBg: true } },
+      },
+      orderBy: { earnedAt: "desc" },
+    }),
+    prisma.certificate.findMany({
+      include: {
+        phase: true,
+        user: { select: { id: true, name: true, email: true, track: true, initials: true, avatarBg: true } },
+      },
+      orderBy: { issuedAt: "desc" },
+    }),
+  ]);
+  return { userBadges, certificates };
+}
+
 export async function getCertificateByCode(code: string) {
   return prisma.certificate.findUnique({
     where: { code },
@@ -302,6 +325,29 @@ export async function getOpportunitiesData(userId: string, role: string) {
 // Applicant workspace
 // ---------------------------------------------------------------------------
 
+// Cohort a new/accepted applicant should land in: prefer whichever cohort is
+// currently open for applications, else fall back to the most recently
+// started cohort. Used instead of blindly picking the oldest cohort, which
+// would misassign applicants once a program has run more than one cohort.
+export async function getAssignableCohort() {
+  const open = await prisma.cohort.findFirst({
+    where: { applicationsOpen: true },
+    orderBy: [{ startDate: "desc" }, { createdAt: "desc" }],
+  });
+  if (open) return open;
+  return prisma.cohort.findFirst({ orderBy: [{ startDate: "desc" }, { createdAt: "desc" }] });
+}
+
+// Public-safe: whichever cohort is currently open for applications (landing
+// page banner + /apply). Returns null when nothing is open right now.
+export async function getOpenCohortForApply() {
+  return prisma.cohort.findFirst({
+    where: { applicationsOpen: true },
+    orderBy: [{ startDate: "desc" }, { createdAt: "desc" }],
+    select: { id: true, name: true },
+  });
+}
+
 export async function getWelcomeData(email: string) {
   const [application, events, cohort] = await Promise.all([
     prisma.application.findUnique({ where: { email: email.toLowerCase() } }),
@@ -310,7 +356,7 @@ export async function getWelcomeData(email: string) {
       orderBy: { startsAt: "asc" },
       take: 5,
     }),
-    prisma.cohort.findFirst({ orderBy: { createdAt: "asc" } }),
+    getAssignableCohort(),
   ]);
   return { application, events, cohort };
 }
@@ -358,28 +404,59 @@ export async function getAdminOverview() {
 }
 
 export async function getReviewQueues() {
-  const [visibility, submissions] = await Promise.all([
-    prisma.visibilitySubmission.findMany({
-      where: { status: "pending" },
-      include: { user: { select: { id: true, name: true, email: true, track: true, initials: true, avatarBg: true } } },
-      orderBy: { submittedAt: "asc" },
-    }),
-    prisma.submission.findMany({
-      where: { status: { in: ["submitted", "ai_reviewed"] } },
-      include: {
-        user: { select: { id: true, name: true, email: true, track: true, initials: true, avatarBg: true } },
-        project: true,
-      },
-      orderBy: { createdAt: "asc" },
-    }),
-  ]);
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [visibility, submissions, activeReviewers, approvedVisThisMonth, approvedSubsThisMonth, reviewedVisThisMonth] =
+    await Promise.all([
+      prisma.visibilitySubmission.findMany({
+        where: { status: "pending" },
+        include: { user: { select: { id: true, name: true, email: true, track: true, initials: true, avatarBg: true } } },
+        orderBy: { submittedAt: "asc" },
+      }),
+      prisma.submission.findMany({
+        where: { status: { in: ["submitted", "ai_reviewed"] } },
+        include: {
+          user: { select: { id: true, name: true, email: true, track: true, initials: true, avatarBg: true } },
+          project: true,
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.user.count({ where: { role: { in: ["admin", "manager"] } } }),
+      prisma.visibilitySubmission.count({ where: { status: "approved", reviewedAt: { gte: monthStart } } }),
+      prisma.submission.count({ where: { status: "approved", updatedAt: { gte: monthStart } } }),
+      prisma.visibilitySubmission.findMany({
+        where: { status: { not: "pending" }, reviewedAt: { gte: monthStart } },
+        select: { submittedAt: true, reviewedAt: true },
+      }),
+    ]);
+
   const recentlyReviewed = await prisma.visibilitySubmission.findMany({
     where: { status: { not: "pending" } },
     include: { user: { select: { name: true } } },
     orderBy: { reviewedAt: "desc" },
     take: 8,
   });
-  return { visibility, submissions, recentlyReviewed };
+
+  const reviewDurations = reviewedVisThisMonth
+    .filter((v): v is { submittedAt: Date; reviewedAt: Date } => v.reviewedAt !== null)
+    .map((v) => v.reviewedAt.getTime() - v.submittedAt.getTime());
+  const avgReviewDays = reviewDurations.length
+    ? Math.round((reviewDurations.reduce((a, b) => a + b, 0) / reviewDurations.length / 86_400_000) * 10) / 10
+    : null;
+
+  return {
+    visibility,
+    submissions,
+    recentlyReviewed,
+    stats: {
+      pendingVisibility: visibility.length,
+      pendingProjects: submissions.length,
+      approvedThisMonth: approvedVisThisMonth + approvedSubsThisMonth,
+      avgReviewDays,
+      activeReviewers,
+    },
+  };
 }
 
 export async function getApplicationsAdmin() {
@@ -492,6 +569,56 @@ export async function getStudentProgressInsights(): Promise<{
   });
 
   return { currentPhaseName: currentPhase?.name ?? null, insights };
+}
+
+// ---------------------------------------------------------------------------
+// Single-student detail (staff): full progress/submissions/badges/activity
+// breakdown for one student, used by the Reviews/Members "view profile" link.
+// ---------------------------------------------------------------------------
+
+export async function getStudentDetail(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      cohort: true,
+      partner: true,
+      userBadges: { include: { badge: true }, orderBy: { earnedAt: "desc" } },
+      certificates: { include: { phase: true }, orderBy: { issuedAt: "desc" } },
+      visibilitySubmission: true,
+      submissions: { include: { project: true }, orderBy: { createdAt: "desc" } },
+      lessonProgress: { select: { lessonId: true, completedAt: true } },
+    },
+  });
+  if (!user) return null;
+
+  const [tutorCount, lastTutor] = await Promise.all([
+    prisma.aiTutorLog.count({ where: { userId } }),
+    prisma.aiTutorLog.findFirst({ where: { userId }, orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
+  ]);
+
+  const phases = await prisma.phase.findMany({
+    orderBy: { orderIndex: "asc" },
+    include: { modules: { where: { track: { in: ["ALL", user.track ?? "A"] } }, include: { lessons: { select: { id: true } } } } },
+  });
+  const doneLessonIds = new Set(user.lessonProgress.map((lp) => lp.lessonId));
+  const phaseBreakdown = phases.map((phase) => {
+    const lessons = phase.modules.flatMap((m) => m.lessons);
+    const done = lessons.filter((l) => doneLessonIds.has(l.id)).length;
+    return {
+      id: phase.id,
+      name: phase.name,
+      total: lessons.length,
+      done,
+      pct: lessons.length ? Math.round((done / lessons.length) * 100) : 0,
+    };
+  });
+
+  const lastLessonAt = user.lessonProgress.reduce<Date | null>(
+    (max, lp) => (!max || lp.completedAt > max ? lp.completedAt : max),
+    null,
+  );
+
+  return { user, phaseBreakdown, tutorCount, lastTutorAt: lastTutor?.createdAt ?? null, lastLessonAt };
 }
 
 export async function getCurriculumAdmin() {

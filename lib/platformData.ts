@@ -26,6 +26,9 @@ export const ICON = {
   chevronDown: "M6 9l6 6 6-6",
   zap: "M13 2L4 14h6l-1 8 9-12h-6l1-8z",
   close: "M18 6L6 18M6 6l12 12",
+  filter: "M4 4h16l-6 8v6l-4 2v-8z",
+  eye: "M2 12s4-8 10-8 10 8 10 8-4 8-10 8-10-8-10-8zM12 15a3 3 0 100-6 3 3 0 000 6z",
+  shield: "M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z",
 } as const;
 
 export type RouteMeta = { title: string; sub: string };
@@ -80,6 +83,7 @@ export const NAV: Record<Persona, NavItem[]> = {
     { label: "Community", icon: ICON.users, href: "/community" },
     { label: "Reviews", icon: ICON.check, href: "/reviews" },
     { label: "Members", icon: ICON.user, href: "/students" },
+    { label: "Badges & Certs", icon: ICON.award, href: "/badges" },
     { label: "Events", icon: ICON.calendar, href: "/events" },
     { label: "Opportunities", icon: ICON.bag, href: "/opportunities" },
     { label: "My Profile", icon: ICON.user, href: "/profile" },
@@ -89,6 +93,7 @@ export const NAV: Record<Persona, NavItem[]> = {
     { label: "Applications", icon: ICON.inbox, href: "/applications" },
     { label: "Reviews", icon: ICON.check, href: "/reviews" },
     { label: "Members", icon: ICON.users, href: "/students" },
+    { label: "Badges & Certs", icon: ICON.award, href: "/badges" },
     { label: "Curriculum", icon: ICON.edit, href: "/curriculum" },
     { label: "Cohorts", icon: ICON.book, href: "/cohorts" },
     { label: "Events", icon: ICON.calendar, href: "/events" },

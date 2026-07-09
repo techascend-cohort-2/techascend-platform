@@ -73,13 +73,15 @@ export default function PlatformShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const DYNAMIC_ROUTE_META: { prefix: string; title: string; sub: string }[] = [
+    { prefix: "/learning/", title: "Lesson", sub: "My Learning" },
+    { prefix: "/projects/", title: "Submit Project", sub: "Projects" },
+    { prefix: "/students/", title: "Member Profile", sub: "Members" },
+  ];
   const meta =
     ROUTES[pathname] ??
-    (pathname.startsWith("/learning/")
-      ? { title: "Lesson", sub: "My Learning" }
-      : pathname.startsWith("/projects/")
-        ? { title: "Submit Project", sub: "Projects" }
-        : ROUTES[PERSONA_HOME[user.persona]] ?? { title: "TechAscend", sub: "" });
+    DYNAMIC_ROUTE_META.find((r) => pathname.startsWith(r.prefix)) ??
+    ROUTES[PERSONA_HOME[user.persona]] ?? { title: "TechAscend", sub: "" };
   const persona = user.persona;
   const nav = NAV[persona];
   const mobileNav =

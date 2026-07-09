@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
 // The core AI Tutor engine prompt (from the TechAscend platform spec §4).
 export const TUTOR_SYSTEM_PROMPT = `You are TechAscend AI Tutor, a world-class software engineering and entrepreneurship mentor focused on African women in technology.
@@ -26,81 +28,86 @@ Output style:
 - Include examples
 - Always end with a "Next Action".`;
 
-export function aiEnabled(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
-}
-
-let client: Anthropic | null = null;
-function getClient(): Anthropic | null {
-  if (!aiEnabled()) return null;
-  if (!client) client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  return client;
-}
-
-export type TutorTurn = { role: "user" | "assistant"; content: string };
-
-// A graceful, useful reply when no API key is configured (keeps the app usable
-// as a demo without a live model).
-function fallbackTutorReply(message: string): string {
-  return `**AI Tutor (demo mode)**
-
-Thanks for your question:
-
-> ${message.slice(0, 240)}
-
-I'm running without a live model right now. To turn me on, add an \`ANTHROPIC_API_KEY\` to your environment and I'll give full, step-by-step answers with real examples.
-
-**Next Action:** Set \`ANTHROPIC_API_KEY\` in \`.env.local\`, then restart the dev server.`;
-}
-
 function buildSystemPrompt(lessonContext?: string): string {
   if (!lessonContext) return TUTOR_SYSTEM_PROMPT;
   return `${TUTOR_SYSTEM_PROMPT}\n\nCURRENT LESSON CONTEXT (use this to make help specific):\n${lessonContext}`;
 }
 
+// ---------------------------------------------------------------------------
+// AI Tutor — runs on each student's own Gemini API key (BYOK). The platform
+// pays for nothing here; students bring their own free-tier Gemini key.
+// ---------------------------------------------------------------------------
+
+export type TutorTurn = { role: "user" | "assistant"; content: string };
+
+export class TutorKeyError extends Error {}
+
 /**
- * Stream a tutor reply as plain-text chunks. Yields the fallback text as a
- * single chunk when no API key is present.
+ * Stream a tutor reply as plain-text chunks using the student's own Gemini
+ * API key. Throws TutorKeyError with a user-facing message if the key is
+ * missing/invalid so the caller can show a clear "fix your key" prompt
+ * instead of a silent/garbled failure.
  */
 export async function* streamTutorReply(
+  apiKey: string,
   message: string,
   history: TutorTurn[] = [],
   lessonContext?: string,
 ): AsyncGenerator<string> {
-  const anthropic = getClient();
-  if (!anthropic) {
-    yield fallbackTutorReply(message);
-    return;
+  let genAI: GoogleGenerativeAI;
+  try {
+    genAI = new GoogleGenerativeAI(apiKey);
+  } catch {
+    throw new TutorKeyError("That Gemini API key looks invalid. Check it in your profile and try again.");
   }
 
-  const messages: Anthropic.MessageParam[] = [
-    ...history.slice(-10).map((t) => ({ role: t.role, content: t.content })),
-    { role: "user" as const, content: message },
-  ];
-
-  const stream = anthropic.messages.stream({
-    model: MODEL,
-    max_tokens: 1024,
-    system: buildSystemPrompt(lessonContext),
-    messages,
+  const model = genAI.getGenerativeModel({
+    model: GEMINI_MODEL,
+    systemInstruction: buildSystemPrompt(lessonContext),
   });
 
-  for await (const event of stream) {
-    if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-      yield event.delta.text;
+  // Gemini requires history to start with a "user" turn and alternate roles.
+  const trimmed = history.slice(-10);
+  const firstUserIdx = trimmed.findIndex((t) => t.role === "user");
+  const geminiHistory = (firstUserIdx === -1 ? [] : trimmed.slice(firstUserIdx)).map((t) => ({
+    role: t.role === "assistant" ? ("model" as const) : ("user" as const),
+    parts: [{ text: t.content }],
+  }));
+
+  try {
+    const chat = model.startChat({ history: geminiHistory });
+    const result = await chat.sendMessageStream(message);
+    for await (const chunk of result.stream) {
+      const text = chunk.text();
+      if (text) yield text;
     }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/api key not valid|API_KEY_INVALID|PERMISSION_DENIED/i.test(msg)) {
+      throw new TutorKeyError("Your Gemini API key was rejected. Double-check it in your profile.");
+    }
+    if (/quota|RESOURCE_EXHAUSTED|rate limit/i.test(msg)) {
+      throw new TutorKeyError("Your Gemini key has hit its rate/quota limit. Try again in a moment.");
+    }
+    throw new TutorKeyError("The AI Tutor couldn't reach Gemini just now. Please try again.");
   }
 }
 
-/** Non-streaming tutor reply (used for logging / server-side callers). */
-export async function tutorReply(
-  message: string,
-  history: TutorTurn[] = [],
-  lessonContext?: string,
-): Promise<string> {
-  let out = "";
-  for await (const chunk of streamTutorReply(message, history, lessonContext)) out += chunk;
-  return out;
+// ---------------------------------------------------------------------------
+// Project evaluation — runs on the platform's own Anthropic key. Every
+// student's capstone submission is scored the same way regardless of
+// whether they've set up a personal tutor key.
+// ---------------------------------------------------------------------------
+
+export function evaluationEnabled(): boolean {
+  return Boolean(process.env.ANTHROPIC_API_KEY);
+}
+
+let anthropicClient: Anthropic | null = null;
+function getAnthropicClient(): Anthropic | null {
+  if (!evaluationEnabled()) return null;
+  if (!anthropicClient) anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return anthropicClient;
 }
 
 export type Evaluation = {
@@ -117,8 +124,8 @@ function fallbackEvaluation(): Evaluation {
     aiScore: 0,
     rubric: RUBRIC_LABELS.map((label) => ({ label, score: 0 })),
     feedback:
-      "AI evaluation is in demo mode. Add an ANTHROPIC_API_KEY to score submissions automatically. A mentor can still review your work.",
-    monetizationSuggestion: "Connect a live model to get tailored income suggestions.",
+      "AI evaluation is offline right now (the platform's AI key isn't configured). A mentor will still review your work.",
+    monetizationSuggestion: "Ask a mentor for tailored income suggestions once AI evaluation is back online.",
   };
 }
 
@@ -132,7 +139,7 @@ export async function evaluateSubmission(input: {
   submissionLink?: string | null;
   notes?: string | null;
 }): Promise<Evaluation> {
-  const anthropic = getClient();
+  const anthropic = getAnthropicClient();
   if (!anthropic) return fallbackEvaluation();
 
   const prompt = `Evaluate this student project submission for the TechAscend program.
@@ -152,14 +159,13 @@ Reply ONLY with a JSON object of this exact shape:
 
   try {
     const res = await anthropic.messages.create({
-      model: MODEL,
+      model: ANTHROPIC_MODEL,
       max_tokens: 700,
       system: TUTOR_SYSTEM_PROMPT,
       messages: [{ role: "user", content: prompt }],
     });
-    const text = res.content.find((b) => b.type === "text")?.type === "text"
-      ? (res.content[0] as { text: string }).text
-      : "";
+    const textBlock = res.content.find((b): b is Anthropic.TextBlock => b.type === "text");
+    const text = textBlock?.text ?? "";
     const json = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
     const parsed = JSON.parse(json) as Omit<Evaluation, "aiScore">;
     const rubric = Array.isArray(parsed.rubric) && parsed.rubric.length

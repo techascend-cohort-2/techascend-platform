@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { tutorChips } from "@/lib/platformData";
 
 type Msg = { role: "bot" | "user"; text: string };
@@ -10,11 +11,13 @@ export default function TutorChat({
   chatHistory,
   lessonId,
   lessonTitle,
+  hasGeminiKey,
 }: {
   initialMessages: Msg[];
   chatHistory: string[];
   lessonId: string | null;
   lessonTitle: string | null;
+  hasGeminiKey: boolean;
 }) {
   const [messages, setMessages] = useState<Msg[]>(initialMessages);
   const [input, setInput] = useState("");
@@ -45,6 +48,18 @@ export default function TutorChat({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text, lessonId, history }),
       });
+      if (res.status === 412) {
+        const body = await res.json().catch(() => null);
+        setMessages((m) => {
+          const copy = [...m];
+          copy[copy.length - 1] = {
+            role: "bot",
+            text: body?.message ?? "Add your Gemini API key in My Profile to start using the AI Tutor.",
+          };
+          return copy;
+        });
+        return;
+      }
       if (!res.ok || !res.body) {
         throw new Error(await res.text().catch(() => "Request failed"));
       }
@@ -118,6 +133,32 @@ export default function TutorChat({
               </div>
             </div>
           </div>
+
+          {!hasGeminiKey ? (
+            <div
+              style={{
+                margin: "0 18px",
+                marginTop: 14,
+                padding: "12px 14px",
+                borderRadius: 10,
+                background: "var(--warnbg)",
+                color: "var(--warn)",
+                fontSize: 12.5,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <span style={{ flex: 1, minWidth: 200 }}>
+                Add your free Gemini API key in your profile to start using the AI Tutor — it&apos;s your own key, so
+                your chats are never rate-limited by other students.
+              </span>
+              <Link href="/profile" className="pf-btn-grad" style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12 }}>
+                Set up in My Profile →
+              </Link>
+            </div>
+          ) : null}
 
           <div className="pf-msgs" ref={scrollRef}>
             {messages.map((m, i) => {

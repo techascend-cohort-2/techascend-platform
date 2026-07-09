@@ -6,7 +6,7 @@ export default async function ReviewsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { visibility, submissions } = await getReviewQueues();
+  const { visibility, submissions, stats } = await getReviewQueues();
 
   return (
     <ReviewsScreen
@@ -32,6 +32,7 @@ export default async function ReviewsPage() {
         user: s.user,
         project: { title: s.project.title },
       }))}
+      stats={stats}
     />
   );
 }

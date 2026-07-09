@@ -4,7 +4,9 @@ import type { NextAuthConfig } from "next-auth";
 // Route access groups (paths live in the app/(platform) route group).
 // ---------------------------------------------------------------------------
 const ADMIN_ONLY = ["/admin", "/applications", "/curriculum", "/cohorts", "/partners", "/revenue"];
-const STAFF_PATHS = ["/reviews", "/students"]; // admin + manager
+// /badges is dual-purpose: students see their own badges, staff see every
+// recipient — so it's allowed for both groups below.
+const STAFF_PATHS = ["/reviews", "/students", "/badges"]; // admin + manager
 const STUDENT_ONLY = ["/dashboard", "/learning", "/tutor", "/projects", "/earn", "/badges"];
 const PARTNER_ONLY = ["/partner", "/talent-pool", "/hiring-pipeline", "/impact"];
 const APPLICANT_ONLY = ["/welcome"];

@@ -19,6 +19,7 @@ export default async function CohortsPage() {
         startDate: c.startDate?.toISOString() ?? null,
         endDate: c.endDate?.toISOString() ?? null,
         members: c._count.users,
+        applicationsOpen: c.applicationsOpen,
       }))}
     />
   );

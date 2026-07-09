@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/queries";
+import { decryptSecret, maskSecret } from "@/lib/crypto";
 import ProfileScreen, { type ProfileUser, type VisibilityInfo } from "@/components/platform/screens/ProfileScreen";
 
 export default async function ProfilePage() {
@@ -8,6 +9,8 @@ export default async function ProfilePage() {
   if (!user) redirect("/login");
 
   const vs = await prisma.visibilitySubmission.findUnique({ where: { userId: user.id } });
+
+  const geminiKeyPlain = user.geminiApiKeyEnc ? decryptSecret(user.geminiApiKeyEnc) : null;
 
   const profileUser: ProfileUser = {
     name: user.name,
@@ -25,6 +28,7 @@ export default async function ProfilePage() {
     kaggleUrl: user.kaggleUrl,
     talentVisible: user.talentVisible,
     mustChangePassword: user.mustChangePassword,
+    geminiKeyMasked: geminiKeyPlain ? maskSecret(geminiKeyPlain) : null,
   };
 
   const visibility: VisibilityInfo = vs

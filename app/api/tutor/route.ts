@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { streamTutorReply, type TutorTurn } from "@/lib/ai";
+import { streamTutorReply, TutorKeyError, type TutorTurn } from "@/lib/ai";
+import { decryptSecret } from "@/lib/crypto";
 import { tutorMessageSchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
@@ -17,6 +18,19 @@ export async function POST(req: Request) {
     return new Response(parsed.error.issues[0]?.message ?? "Invalid request", { status: 400 });
   }
   const { message, lessonId, history } = parsed.data;
+
+  const userId = session.user.id;
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { geminiApiKeyEnc: true } });
+  const apiKey = user?.geminiApiKeyEnc ? decryptSecret(user.geminiApiKeyEnc) : null;
+  if (!apiKey) {
+    return Response.json(
+      {
+        code: "no_key",
+        message: "Add your Gemini API key in My Profile to start using the AI Tutor.",
+      },
+      { status: 412 },
+    );
+  }
 
   // Pull lesson context for context-aware answers.
   let lessonContext: string | undefined;
@@ -37,7 +51,6 @@ export async function POST(req: Request) {
     }
   }
 
-  const userId = session.user.id;
   const turns: TutorTurn[] = (history ?? []) as TutorTurn[];
 
   const encoder = new TextEncoder();
@@ -46,12 +59,15 @@ export async function POST(req: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        for await (const chunk of streamTutorReply(message, turns, lessonContext)) {
+        for await (const chunk of streamTutorReply(apiKey, message, turns, lessonContext)) {
           full += chunk;
           controller.enqueue(encoder.encode(chunk));
         }
-      } catch {
-        const msg = "\n\n_Sorry — I hit an error. Please try again._";
+      } catch (err) {
+        const msg =
+          err instanceof TutorKeyError
+            ? `\n\n_${err.message}_`
+            : "\n\n_Sorry — I hit an error. Please try again._";
         full += msg;
         controller.enqueue(encoder.encode(msg));
       } finally {

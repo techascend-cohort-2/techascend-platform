@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { isStaff } from "@/lib/constants";
 import { postSchema, eventSchema, opportunitySchema, profileSchema } from "@/lib/validation";
 import { notify } from "@/lib/progress";
+import { encryptSecret } from "@/lib/crypto";
 
 export type ActionState = { ok?: boolean; error?: string };
 
@@ -250,5 +251,26 @@ export async function updateProfileAction(_prev: ActionState, formData: FormData
     },
   });
   revalidatePath("/profile");
+  return { ok: true };
+}
+
+// ---------------- AI Tutor: personal Gemini key (BYOK) ----------------
+
+export async function saveGeminiKeyAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await requireUser();
+  const raw = String(formData.get("geminiApiKey") ?? "").trim();
+  if (!raw) return { error: "Paste your Gemini API key first." };
+  if (raw.length < 15) return { error: "That doesn't look like a valid Gemini API key." };
+  await prisma.user.update({ where: { id: user.id }, data: { geminiApiKeyEnc: encryptSecret(raw) } });
+  revalidatePath("/profile");
+  revalidatePath("/tutor");
+  return { ok: true };
+}
+
+export async function removeGeminiKeyAction(): Promise<ActionState> {
+  const user = await requireUser();
+  await prisma.user.update({ where: { id: user.id }, data: { geminiApiKeyEnc: null } });
+  revalidatePath("/profile");
+  revalidatePath("/tutor");
   return { ok: true };
 }

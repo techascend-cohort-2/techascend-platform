@@ -165,6 +165,7 @@ export const cohortSchema = z.object({
   hub: z.string().optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
+  applicationsOpen: z.boolean().default(false),
 });
 
 export const lessonEditSchema = z.object({

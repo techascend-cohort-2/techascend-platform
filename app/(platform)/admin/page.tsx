@@ -23,8 +23,8 @@ export default async function AdminPage() {
     { label: "Applications", value: `${kpis.pendingApps}`, href: "/applications", sub: "awaiting decision", hot: kpis.pendingApps > 0 },
     { label: "Reviews pending", value: `${kpis.pendingReviews}`, href: "/reviews", sub: "visibility + projects", hot: kpis.pendingReviews > 0 },
     { label: "Average progress", value: `${kpis.avgProgress}%`, href: "/students", sub: "across all students" },
-    { label: "Badges awarded", value: `${kpis.badgesAwarded}`, href: "/students", sub: "auto-issued" },
-    { label: "Certificates", value: `${kpis.certsIssued}`, href: "/students", sub: "auto-issued" },
+    { label: "Badges awarded", value: `${kpis.badgesAwarded}`, href: "/badges", sub: "auto-issued — view recipients" },
+    { label: "Certificates", value: `${kpis.certsIssued}`, href: "/badges", sub: "auto-issued — view recipients" },
     { label: "Income recorded", value: formatFcfa(kpis.income), href: "/revenue", sub: "sponsorship + revenue" },
     { label: "Paid to students", value: formatFcfa(kpis.paidOut), href: "/revenue", sub: "payouts" },
   ];

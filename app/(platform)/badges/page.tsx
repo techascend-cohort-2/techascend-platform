@@ -1,14 +1,38 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import Icon from "@/components/Icon";
-import { getCurrentUser, getBadgesData } from "@/lib/queries";
+import { getCurrentUser, getBadgesData, getBadgesAdmin } from "@/lib/queries";
 import { ICON } from "@/lib/platformData";
+import { isStaff } from "@/lib/constants";
+import AdminBadgesScreen from "@/components/platform/screens/AdminBadgesScreen";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 export default async function BadgesPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  if (isStaff(user.role)) {
+    const { userBadges, certificates } = await getBadgesAdmin();
+    return (
+      <AdminBadgesScreen
+        badges={userBadges.map((ub) => ({
+          id: ub.id,
+          badgeName: ub.badge.name,
+          phaseName: ub.badge.phase?.name ?? null,
+          earnedAt: ub.earnedAt.toISOString(),
+          user: ub.user,
+        }))}
+        certificates={certificates.map((c) => ({
+          id: c.id,
+          code: c.code,
+          title: c.title,
+          issuedAt: c.issuedAt.toISOString(),
+          user: c.user,
+        }))}
+      />
+    );
+  }
 
   const { earned, locked, certificates } = await getBadgesData(user.id);
 

@@ -62,6 +62,11 @@ model User {
   // set when an account is created by staff with a temporary password
   mustChangePassword Boolean @default(false)
 
+  // Student's own Gemini API key for the AI Tutor (encrypted at rest — see
+  // lib/crypto.ts). The platform's own AI key is reserved for project
+  // evaluation only; each student brings their own key for tutor chat.
+  geminiApiKeyEnc String?
+
   cohortId String?
   cohort   Cohort? @relation(fields: [cohortId], references: [id])
 
@@ -132,15 +137,19 @@ model VerificationToken {
 // ------------------------------------------------------------------
 
 model Cohort {
-  id        String    @id @default(cuid())
-  name      String
+  id               String    @id @default(cuid())
+  name             String
   // track: "ALL" | "A" | "B"
-  track     String    @default("ALL")
-  status    String    @default("Active") // Active | Onboarding | Completed
-  hub       String?
-  startDate DateTime?
-  endDate   DateTime?
-  users     User[]
+  track            String    @default("ALL")
+  status           String    @default("Active") // Active | Onboarding | Completed
+  hub              String?
+  startDate        DateTime?
+  endDate          DateTime?
+  // Whether this cohort currently accepts new applications. The public
+  // apply page shows/hides its "applications open" state based on whichever
+  // cohort has applicationsOpen=true and the latest startDate.
+  applicationsOpen Boolean   @default(false)
+  users            User[]
 
   createdAt DateTime @default(now())
 }

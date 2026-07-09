@@ -14,7 +14,13 @@ const partnerTypes = ["Funding / sponsorship", "Hiring partner", "Technology par
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function ApplyForm() {
+export default function ApplyForm({
+  cohortOpen,
+  cohortName,
+}: {
+  cohortOpen: boolean;
+  cohortName: string | null;
+}) {
   const params = useSearchParams();
   const initialRole: Role = params.get("role") === "partner" ? "partner" : "learner";
 
@@ -98,9 +104,13 @@ export default function ApplyForm() {
         <p className={styles.successText}>
           {role === "learner" ? (
             <>
-              Thanks {values.name?.split(" ")[0] || "there"}! Your application for{" "}
-              <b>Cohort 01</b> is in. We&apos;ll email <b>{values.email}</b> with next
-              steps within a few days.
+              Thanks {values.name?.split(" ")[0] || "there"}! Your application
+              {cohortName ? (
+                <>
+                  {" "}for <b>{cohortName}</b>
+                </>
+              ) : null}{" "}
+              is in. We&apos;ll email <b>{values.email}</b> with next steps within a few days.
             </>
           ) : (
             <>
@@ -136,6 +146,27 @@ export default function ApplyForm() {
           : "Sponsor a cohort, hire AI-native talent, or supply tools and infrastructure. Tell us how you'd like to work together."}
       </p>
 
+      {role === "learner" && !cohortOpen ? (
+        <div className={styles.card}>
+          <div
+            style={{
+              background: "#fdecef",
+              border: "1px solid #f6c9d3",
+              color: "#b3243f",
+              fontSize: 13.5,
+              lineHeight: 1.6,
+              padding: "14px 16px",
+              borderRadius: 10,
+            }}
+          >
+            Applications are closed right now — the current cohort has already started. Check back soon, or{" "}
+            <a href="mailto:hello@tech-ascend.com" style={{ color: "inherit", fontWeight: 700 }}>
+              email us
+            </a>{" "}
+            to be notified when the next cohort opens.
+          </div>
+        </div>
+      ) : (
       <form className={styles.card} onSubmit={onSubmit} noValidate>
         {role === "partner" ? (
           <div className={styles.field}>
@@ -214,6 +245,7 @@ export default function ApplyForm() {
         </button>
         <div className={styles.note}>Free to apply · We never share your details.</div>
       </form>
+      )}
     </>
   );
 }

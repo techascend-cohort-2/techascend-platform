@@ -14,6 +14,7 @@ export default async function TutorPage() {
       chatHistory={data.chatHistory}
       lessonId={data.currentLessonId}
       lessonTitle={data.currentLessonTitle}
+      hasGeminiKey={Boolean(user.geminiApiKeyEnc)}
     />
   );
 }
