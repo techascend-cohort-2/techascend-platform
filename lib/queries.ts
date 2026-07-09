@@ -102,6 +102,31 @@ export async function getLessonForUser(lessonId: string, userId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Build streak: consecutive calendar days (Africa/Douala) with any learning
+// activity (lesson completed, project submitted, or AI Tutor used), counted
+// backward from today with a one-day grace period so it doesn't reset just
+// because "today" has no activity logged yet.
+// ---------------------------------------------------------------------------
+
+function dayKey(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Douala" }).format(d);
+}
+
+function computeStreak(dates: Date[]): number {
+  if (dates.length === 0) return 0;
+  const days = new Set(dates.map(dayKey));
+  const oneDay = 86_400_000;
+  let cursor = new Date();
+  if (!days.has(dayKey(cursor))) cursor = new Date(cursor.getTime() - oneDay);
+  let streak = 0;
+  while (days.has(dayKey(cursor))) {
+    streak++;
+    cursor = new Date(cursor.getTime() - oneDay);
+  }
+  return streak;
+}
+
+// ---------------------------------------------------------------------------
 // Student dashboard
 // ---------------------------------------------------------------------------
 
@@ -109,19 +134,46 @@ export async function getStudentDashboard(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId }, include: { cohort: true } });
   if (!user) throw new Error("User not found");
 
-  const [{ tree, current }, badgeCount, certCount, payoutAgg, upcomingEvents, openOpps] =
-    await Promise.all([
-      getLearningTree(userId, user.track),
-      prisma.userBadge.count({ where: { userId } }),
-      prisma.certificate.count({ where: { userId } }),
-      prisma.ledgerEntry.aggregate({ where: { userId, kind: "payout" }, _sum: { amount: true } }),
-      prisma.event.findMany({
-        where: { startsAt: { gte: new Date() }, audience: { in: ["all", "students"] } },
-        orderBy: { startsAt: "asc" },
-        take: 4,
-      }),
-      prisma.opportunity.count({ where: { status: "open" } }),
-    ]);
+  const [
+    { tree, current },
+    badgeCount,
+    certCount,
+    payoutAgg,
+    upcomingEvents,
+    openOpps,
+    projectsSubmitted,
+    recentPosts,
+    openOpportunities,
+    lessonDates,
+    submissionDates,
+    tutorDates,
+  ] = await Promise.all([
+    getLearningTree(userId, user.track),
+    prisma.userBadge.count({ where: { userId } }),
+    prisma.certificate.count({ where: { userId } }),
+    prisma.ledgerEntry.aggregate({ where: { userId, kind: "payout" }, _sum: { amount: true } }),
+    prisma.event.findMany({
+      where: { startsAt: { gte: new Date() }, audience: { in: ["all", "students"] } },
+      orderBy: { startsAt: "asc" },
+      take: 4,
+    }),
+    prisma.opportunity.count({ where: { status: "open" } }),
+    prisma.submission.count({ where: { userId } }),
+    prisma.post.findMany({
+      include: { author: { select: { id: true, name: true, initials: true, avatarBg: true, role: true } } },
+      orderBy: [{ pinned: "desc" }, { createdAt: "desc" }],
+      take: 3,
+    }),
+    prisma.opportunity.findMany({
+      where: { status: "open" },
+      include: { partner: true },
+      orderBy: { createdAt: "desc" },
+      take: 3,
+    }),
+    prisma.lessonProgress.findMany({ where: { userId }, select: { completedAt: true } }),
+    prisma.submission.findMany({ where: { userId }, select: { createdAt: true } }),
+    prisma.aiTutorLog.findMany({ where: { userId }, select: { createdAt: true } }),
+  ]);
 
   const totalLessons = tree.reduce((s, t) => s + t.totalLessons, 0);
   const doneLessons = tree.reduce((s, t) => s + t.completedLessons, 0);
@@ -131,6 +183,27 @@ export async function getStudentDashboard(userId: string) {
   const currentLesson = current
     ? await prisma.lesson.findUnique({ where: { id: current.lessonId }, include: { module: true } })
     : null;
+
+  const currentPhaseLessons = currentPhase
+    ? currentPhase.phase.modules.flatMap((m) =>
+        m.lessons.map((l) => ({
+          id: l.id,
+          title: l.title,
+          duration: l.duration,
+          status: currentPhase.doneSet.has(l.id)
+            ? ("done" as const)
+            : current?.lessonId === l.id
+              ? ("current" as const)
+              : ("upcoming" as const),
+        })),
+      )
+    : [];
+
+  const streak = computeStreak([
+    ...lessonDates.map((d) => d.completedAt),
+    ...submissionDates.map((d) => d.createdAt),
+    ...tutorDates.map((d) => d.createdAt),
+  ]);
 
   return {
     user,
@@ -143,10 +216,15 @@ export async function getStudentDashboard(userId: string) {
       earned,
       earnedLabel: formatFcfa(earned),
       openOpportunities: openOpps,
+      projectsSubmitted,
+      streak,
     },
     currentPhase,
+    currentPhaseLessons,
     currentLesson,
     upcomingEvents,
+    recentPosts,
+    openOpportunities,
     trackLabel: user.track ? TRACK_LABELS[user.track] : "—",
   };
 }

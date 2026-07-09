@@ -626,11 +626,57 @@
 
 .pf-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }
 .pf-stat { padding: 16px 18px; }
+
+.pf-datebadge {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #f1eafc;
+  color: var(--brand1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1.1;
+}
+.pf-datebadge b { font-size: 15px; font-weight: 800; }
+.pf-datebadge span { font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+
+.pf-keepgoing {
+  border-radius: var(--radius);
+  background:
+    linear-gradient(120deg, rgba(16, 37, 31, 0.95), rgba(49, 92, 77, 0.94)),
+    linear-gradient(90deg, var(--brand1), var(--brand2));
+  color: #fff;
+  padding: 22px 26px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  box-shadow: 0 20px 44px -28px rgba(16, 37, 31, 0.7);
+}
+.pf-keepgoing-title { font-family: var(--font-sora); font-weight: 800; font-size: 19px; }
+.pf-keepgoing-sub { font-size: 12.5px; opacity: 0.85; margin-top: 2px; }
+.pf-keepgoing-stats { display: flex; gap: 26px; flex-wrap: wrap; }
+.pf-keepgoing-stat b { display: block; font-family: var(--font-sora); font-weight: 800; font-size: 20px; }
+.pf-keepgoing-stat span { font-size: 11px; opacity: 0.8; font-weight: 600; }
+.pf-keepgoing-cta {
+  margin-left: auto;
+  background: #fff;
+  color: var(--brand1);
+  font-weight: 700;
+  font-size: 13.5px;
+  padding: 11px 18px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  white-space: nowrap;
+}
 .pf-stat-icon {
   width: 34px;
   height: 34px;
@@ -1913,6 +1959,8 @@
   .pf-community-hero { align-items: flex-start; flex-direction: column; padding: 18px; }
   .pf-community-stats { width: 100%; }
   .pf-community-stats > div { flex: 1; }
+  .pf-keepgoing { flex-direction: column; align-items: flex-start; padding: 20px; margin-bottom: 50px; }
+  .pf-keepgoing-cta { margin-left: 0; width: 100%; text-align: center; }
 }
 
 /* ---------- header search + notifications ---------- */

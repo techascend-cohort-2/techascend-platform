@@ -6,24 +6,77 @@ import { ICON } from "@/lib/platformData";
 
 const eventFmt = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
-  day: "numeric",
-  month: "short",
   hour: "2-digit",
   minute: "2-digit",
   timeZone: "Africa/Douala",
 });
+const dayFmt = new Intl.DateTimeFormat("en-GB", { day: "2-digit", timeZone: "Africa/Douala" });
+const monthFmt = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "Africa/Douala" });
+
+function timeAgo(iso: Date): string {
+  const ms = Date.now() - iso.getTime();
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+const EVENT_KIND_LABEL: Record<string, string> = {
+  live_session: "Live session",
+  workshop: "Workshop",
+  deadline: "Deadline",
+  ceremony: "Ceremony",
+  community: "Community",
+};
+
+const OPP_TYPE_STYLE: Record<string, { fg: string; bg: string; label: string }> = {
+  freelance: { fg: "#7C3AED", bg: "#F1EAFC", label: "Freelance" },
+  job: { fg: "#1F9D6B", bg: "#E6F6EF", label: "Job" },
+  internship: { fg: "#2D6FD9", bg: "#E6F0FC", label: "Internship" },
+  studio: { fg: "#D6336C", bg: "#FCE7F0", label: "Studio" },
+  sme: { fg: "#C97A0E", bg: "#FCF1DE", label: "SME" },
+};
+
+function DateBadge({ d }: { d: Date }) {
+  return (
+    <div className="pf-datebadge">
+      <b>{dayFmt.format(d)}</b>
+      <span>{monthFmt.format(d)}</span>
+    </div>
+  );
+}
 
 export default async function DashboardPage() {
   const sessionUser = await getCurrentUser();
   if (!sessionUser) redirect("/login");
 
-  const { user, progressPct, stats, currentPhase, currentLesson, upcomingEvents, trackLabel } =
-    await getStudentDashboard(sessionUser.id);
+  const {
+    user,
+    progressPct,
+    stats,
+    currentPhase,
+    currentPhaseLessons,
+    currentLesson,
+    upcomingEvents,
+    recentPosts,
+    openOpportunities,
+    trackLabel,
+  } = await getStudentDashboard(sessionUser.id);
 
   const firstName = user.name.split(" ")[0];
   const continueHref = currentLesson ? `/learning/${currentLesson.id}` : "/learning";
 
   const statCards = [
+    {
+      label: "Build streak",
+      value: `${stats.streak}${stats.streak === 1 ? " day" : " days"}`,
+      caption: stats.streak > 0 ? "keep it up" : "start today",
+      iconPath: ICON.zap,
+      tint: "#C97A0E",
+      tintBg: "#FCF1DE",
+    },
     {
       label: "Lessons completed",
       value: `${stats.lessonsDone}/${stats.lessonsTotal}`,
@@ -140,12 +193,12 @@ export default async function DashboardPage() {
       {/* main grid */}
       <div className="pf-dash-grid">
         <div className="pf-col">
-          {/* continue learning */}
+          {/* phase progress */}
           <div className="pf-card pf-pad">
             <div className="pf-section-head">
               <div>
                 <div className="pf-eyebrow">Today</div>
-                <div className="pf-h">Continue learning</div>
+                <div className="pf-h">Phase progress</div>
               </div>
               <Link href="/learning" className="pf-link">View curriculum →</Link>
             </div>
@@ -155,6 +208,9 @@ export default async function DashboardPage() {
                 <div style={{ fontSize: 11.5, color: "var(--brand1)", fontWeight: 700, letterSpacing: 0.3 }}>
                   {currentPhase.phase.name.toUpperCase()}
                 </div>
+                <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4, lineHeight: 1.5 }}>
+                  {currentPhase.phase.description}
+                </div>
                 <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
                   <div className="pf-progress">
                     <div style={{ width: `${currentPhase.pct}%` }} />
@@ -163,84 +219,210 @@ export default async function DashboardPage() {
                     {currentPhase.completedLessons}/{currentPhase.totalLessons} lessons · {currentPhase.pct}%
                   </span>
                 </div>
+
+                {currentPhaseLessons.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 14 }}>
+                    {currentPhaseLessons.map((l, i) => (
+                      <Link
+                        key={l.id}
+                        href={`/learning/${l.id}`}
+                        className={`pf-lesson-row ${l.status === "done" ? "pf-lesson-done" : ""} ${l.status === "current" ? "pf-lesson-current" : ""}`}
+                      >
+                        <span
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: "50%",
+                            display: "grid",
+                            placeItems: "center",
+                            flexShrink: 0,
+                            background: l.status === "done" ? "var(--pos)" : "#EFEBF7",
+                            color: l.status === "done" ? "#fff" : "var(--faint)",
+                            fontSize: 10.5,
+                            fontWeight: 800,
+                          }}
+                        >
+                          {l.status === "done" ? "✓" : i + 1}
+                        </span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, opacity: l.status === "done" ? 0.7 : 1 }}>
+                          {l.title}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 10.5,
+                            fontWeight: 800,
+                            color: l.status === "done" ? "var(--pos)" : l.status === "current" ? "var(--brand1)" : "var(--faint)",
+                            background: l.status === "done" ? "var(--posbg)" : l.status === "current" ? "#F1EAFC" : "#F3F1F8",
+                            padding: "2px 8px",
+                            borderRadius: 20,
+                          }}
+                        >
+                          {l.status === "done" ? "Completed" : l.status === "current" ? "In progress" : "Upcoming"}
+                        </span>
+                        {l.duration ? (
+                          <span style={{ fontSize: 11.5, color: "var(--faint)", width: 40, textAlign: "right" }}>{l.duration}</span>
+                        ) : null}
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
               </>
             ) : (
               <div style={{ fontSize: 12.5, color: "var(--muted)" }}>
                 Your curriculum will appear here once it&apos;s published.
               </div>
             )}
-
-            {currentLesson ? (
-              <div className="pf-next-card">
-                <div className="pf-stat-icon" style={{ background: "#f1eafc", color: "var(--brand1)", flexShrink: 0 }}>
-                  <Icon path={ICON.book} size={17} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: "var(--font-sora)", fontWeight: 700, fontSize: 14.5 }}>
-                    {currentLesson.title}
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--muted)" }}>
-                    {currentLesson.module.title}
-                    {currentLesson.duration ? ` · ${currentLesson.duration}` : ""}
-                  </div>
-                </div>
-                <Link
-                  href={`/learning/${currentLesson.id}`}
-                  className="pf-btn-grad"
-                  style={{ fontSize: 12.5, padding: "8px 14px", borderRadius: 9 }}
-                >
-                  Resume
-                </Link>
-              </div>
-            ) : (
-              <div style={{ marginTop: 14, fontSize: 12.5, color: "var(--muted)" }}>
-                Every lesson is complete —{" "}
-                <Link href="/learning" className="pf-link">revisit the curriculum →</Link>
-              </div>
-            )}
           </div>
 
-          {/* open opportunities */}
+          {/* next lesson */}
+          {currentLesson ? (
+            <div className="pf-card pf-pad">
+              <div className="pf-eyebrow">Next lesson</div>
+              <div style={{ fontFamily: "var(--font-sora)", fontWeight: 700, fontSize: 16, marginTop: 4 }}>
+                {currentLesson.title}
+              </div>
+              <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4 }}>
+                {currentLesson.module.title}
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                {currentLesson.duration ? (
+                  <span className="pf-badge pf-badge-neutral">{currentLesson.duration}</span>
+                ) : null}
+                <span className="pf-badge pf-badge-brand" style={{ textTransform: "capitalize" }}>
+                  {currentLesson.type}
+                </span>
+              </div>
+              <Link
+                href={`/learning/${currentLesson.id}`}
+                className="pf-btn-grad"
+                style={{ display: "inline-block", marginTop: 14, fontSize: 13, padding: "10px 18px", borderRadius: 10 }}
+              >
+                Continue lesson →
+              </Link>
+            </div>
+          ) : null}
+
+          {/* community activity */}
           <div className="pf-card pf-pad">
-            <div className="pf-section-head" style={{ marginBottom: 6 }}>
+            <div className="pf-section-head" style={{ marginBottom: 4 }}>
               <div>
-                <div className="pf-eyebrow">Career</div>
-                <div className="pf-h">Open opportunities</div>
+                <div className="pf-eyebrow">Connect</div>
+                <div className="pf-h">Community activity</div>
               </div>
-              <span style={{ fontSize: 11.5, color: "var(--muted)" }}>Earn while you learn</span>
+              <Link href="/community" className="pf-link">View all →</Link>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ flex: 1, fontSize: 13.5, fontWeight: 700 }}>
-                {stats.openOpportunities} open {stats.openOpportunities === 1 ? "opportunity" : "opportunities"}
+            {recentPosts.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {recentPosts.map((p) => (
+                  <div key={p.id} style={{ display: "flex", gap: 10, padding: "12px 0", borderTop: "1px solid var(--line)" }}>
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        flexShrink: 0,
+                        display: "grid",
+                        placeItems: "center",
+                        color: "#fff",
+                        fontWeight: 800,
+                        fontSize: 12,
+                        background: p.author.avatarBg ?? "linear-gradient(135deg,#7C3AED,#D6336C)",
+                      }}
+                    >
+                      {p.author.initials ?? "?"}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>
+                        {p.author.name}
+                        <span style={{ fontWeight: 500, color: "var(--faint)", marginLeft: 6, fontSize: 11.5 }}>
+                          {timeAgo(p.createdAt)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2, lineHeight: 1.5 }}>
+                        {p.body}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <Link href="/earn" className="pf-link">Browse the Earn Hub →</Link>
-            </div>
+            ) : (
+              <div style={{ fontSize: 12.5, color: "var(--muted)" }}>
+                No posts yet — be the first to share something in Community.
+              </div>
+            )}
           </div>
         </div>
 
         <div className="pf-col">
+          {/* opportunities */}
+          <div className="pf-card pf-pad">
+            <div className="pf-section-head" style={{ marginBottom: 4 }}>
+              <div>
+                <div className="pf-eyebrow">Career</div>
+                <div className="pf-h">Opportunities</div>
+              </div>
+              <Link href="/earn" className="pf-link">All →</Link>
+            </div>
+            {openOpportunities.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {openOpportunities.map((o) => {
+                  const ts = OPP_TYPE_STYLE[o.type] ?? { fg: "var(--brand1)", bg: "#F1EAFC", label: o.type };
+                  return (
+                    <Link
+                      key={o.id}
+                      href="/earn"
+                      style={{
+                        display: "block",
+                        padding: "10px 12px",
+                        border: "1px solid var(--line)",
+                        borderRadius: 10,
+                        color: "inherit",
+                        textDecoration: "none",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>{o.title}</span>
+                        <span style={{ fontSize: 10.5, fontWeight: 800, color: ts.fg, background: ts.bg, padding: "2px 8px", borderRadius: 20 }}>
+                          {ts.label}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 3 }}>
+                        {o.partner?.name ?? "TechAscend"}
+                        {o.location ? ` · ${o.location}` : ""}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12.5, color: "var(--muted)" }}>
+                No open opportunities right now — check back soon.
+              </div>
+            )}
+          </div>
+
           {/* upcoming events */}
           <div className="pf-card pf-pad">
             <div className="pf-eyebrow">Calendar</div>
             <div className="pf-h" style={{ marginBottom: 14 }}>Upcoming events</div>
             {upcomingEvents.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {upcomingEvents.map((e) => (
-                  <Link key={e.id} href="/events" className="pf-ms-row">
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                      <div
-                        className="pf-ms-dot"
-                        style={{ background: "var(--brand2)", border: "3px solid #f1eafc" }}
-                      />
-                      <div className="pf-ms-line" />
-                    </div>
-                    <div style={{ paddingBottom: 14 }}>
+                  <Link
+                    key={e.id}
+                    href="/events"
+                    style={{ display: "flex", alignItems: "center", gap: 12, color: "inherit", textDecoration: "none" }}
+                  >
+                    <DateBadge d={e.startsAt} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 700 }}>{e.title}</div>
                       <div style={{ fontSize: 12, color: "var(--muted)" }}>
-                        {eventFmt.format(e.startsAt)}
-                        {e.location ? ` · ${e.location}` : ""}
+                        {eventFmt.format(e.startsAt)} WAT{e.location ? ` · ${e.location}` : ""}
                       </div>
                     </div>
+                    <span className="pf-badge pf-badge-neutral" style={{ flexShrink: 0 }}>
+                      {EVENT_KIND_LABEL[e.kind] ?? e.kind}
+                    </span>
                   </Link>
                 ))}
               </div>
@@ -250,26 +432,32 @@ export default async function DashboardPage() {
               </div>
             )}
           </div>
+        </div>
+      </div>
 
-          {/* your journey */}
-          <div className="pf-card pf-pad">
-            <div className="pf-eyebrow">Proof</div>
-            <div className="pf-h" style={{ marginBottom: 14 }}>Your journey</div>
-            <div className="pf-pf-stats">
-              <div className="pf-pf-stat">
-                <div className="pf-pf-stat-v">{stats.badges}</div>
-                <div className="pf-pf-stat-l">Badges earned</div>
-              </div>
-              <div className="pf-pf-stat">
-                <div className="pf-pf-stat-v">{stats.certificates}</div>
-                <div className="pf-pf-stat-l">Certificates</div>
-              </div>
-            </div>
-            <Link href="/badges" className="pf-soft-btn" style={{ display: "block", textAlign: "center" }}>
-              View badges &amp; certificates →
-            </Link>
+      {/* keep going banner */}
+      <div className="pf-keepgoing" style={{ marginTop: 16 }}>
+        <div>
+          <div className="pf-keepgoing-title">Keep going, {firstName}!</div>
+          <div className="pf-keepgoing-sub">You&apos;re building real momentum — here&apos;s your proof of work so far.</div>
+        </div>
+        <div className="pf-keepgoing-stats">
+          <div className="pf-keepgoing-stat">
+            <b>{stats.lessonsDone}</b>
+            <span>Lessons completed</span>
+          </div>
+          <div className="pf-keepgoing-stat">
+            <b>{stats.projectsSubmitted}</b>
+            <span>Projects submitted</span>
+          </div>
+          <div className="pf-keepgoing-stat">
+            <b>{stats.badges}</b>
+            <span>Badges earned</span>
           </div>
         </div>
+        <Link href="/learning" className="pf-keepgoing-cta">
+          View my progress →
+        </Link>
       </div>
     </div>
   );
