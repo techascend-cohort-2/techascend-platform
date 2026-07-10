@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { streamTutorReply, TutorKeyError, type TutorTurn } from "@/lib/ai";
+import { streamTutorReply, TutorKeyError, type TutorKey, type TutorTurn } from "@/lib/ai";
 import { decryptSecret } from "@/lib/crypto";
 import { tutorMessageSchema } from "@/lib/validation";
 
@@ -20,13 +20,26 @@ export async function POST(req: Request) {
   const { message, lessonId, history } = parsed.data;
 
   const userId = session.user.id;
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { geminiApiKeyEnc: true } });
-  const apiKey = user?.geminiApiKeyEnc ? decryptSecret(user.geminiApiKeyEnc) : null;
-  if (!apiKey) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { geminiApiKeyEnc: true, anthropicApiKeyEnc: true, openaiApiKeyEnc: true },
+  });
+
+  // Fallback order: Gemini (free) first, then Claude, then OpenAI.
+  const keys: TutorKey[] = [];
+  const gemini = user?.geminiApiKeyEnc ? decryptSecret(user.geminiApiKeyEnc) : null;
+  if (gemini) keys.push({ provider: "gemini", apiKey: gemini });
+  const anthropic = user?.anthropicApiKeyEnc ? decryptSecret(user.anthropicApiKeyEnc) : null;
+  if (anthropic) keys.push({ provider: "anthropic", apiKey: anthropic });
+  const openai = user?.openaiApiKeyEnc ? decryptSecret(user.openaiApiKeyEnc) : null;
+  if (openai) keys.push({ provider: "openai", apiKey: openai });
+
+  if (keys.length === 0) {
     return Response.json(
       {
         code: "no_key",
-        message: "Add your Gemini API key in My Profile to start using the AI Tutor.",
+        message:
+          "Add an AI API key in My Profile to start using the AI Tutor — the Gemini key is free and takes about a minute to get.",
       },
       { status: 412 },
     );
@@ -59,7 +72,7 @@ export async function POST(req: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        for await (const chunk of streamTutorReply(apiKey, message, turns, lessonContext)) {
+        for await (const chunk of streamTutorReply(keys, message, turns, lessonContext)) {
           full += chunk;
           controller.enqueue(encoder.encode(chunk));
         }

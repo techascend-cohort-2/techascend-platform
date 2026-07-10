@@ -3,12 +3,13 @@
 import { useActionState, useState, useTransition } from "react";
 import {
   updateProfileAction,
-  saveGeminiKeyAction,
-  removeGeminiKeyAction,
+  saveAiKeyAction,
+  removeAiKeyAction,
   type ActionState,
 } from "@/lib/actions/community";
 import { submitVisibilityAction } from "@/lib/actions/program";
 import { changePasswordAction, type FormState } from "@/lib/actions/auth";
+import { AI_PROVIDERS, type AiProviderId, type AiProviderMeta } from "@/lib/aiProviderMeta";
 
 const input: React.CSSProperties = {
   width: "100%",
@@ -69,6 +70,78 @@ function RevealField({ id, name, placeholder }: { id: string; name: string; plac
   );
 }
 
+function ProviderKeyBlock({ meta, masked }: { meta: AiProviderMeta; masked: string | null }) {
+  const [state, action, pending] = useActionState<ActionState, FormData>(saveAiKeyAction, {});
+  const [removing, startRemove] = useTransition();
+  const [removeError, setRemoveError] = useState<string | null>(null);
+
+  return (
+    <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14, marginTop: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 13.5, fontWeight: 800 }}>{meta.label}</span>
+        <span
+          style={{
+            fontSize: 10.5,
+            fontWeight: 800,
+            padding: "2px 8px",
+            borderRadius: 20,
+            color: meta.free ? "var(--pos)" : "#7A4C08",
+            background: meta.free ? "var(--posbg)" : "#FCF1DE",
+          }}
+        >
+          {meta.free ? "Free" : "Paid"}
+        </span>
+        {masked ? (
+          <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--pos)" }}>✓ Key saved</span>
+        ) : null}
+      </div>
+      <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 5, lineHeight: 1.6 }}>
+        Get your key at{" "}
+        <a href={meta.getKeyUrl} target="_blank" rel="noreferrer" className="pf-link">
+          {meta.getKeyLabel} ↗
+        </a>
+        . {meta.howTo}
+      </div>
+
+      {masked ? (
+        <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12.5, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>{masked}</span>
+          <button
+            type="button"
+            className="pf-btn-soft"
+            style={{ fontSize: 12, color: "var(--danger)" }}
+            disabled={removing}
+            onClick={() => {
+              setRemoveError(null);
+              startRemove(async () => {
+                const res = await removeAiKeyAction(meta.id);
+                if (!res.ok) setRemoveError(res.error ?? "Could not remove the key.");
+              });
+            }}
+          >
+            {removing ? "Removing…" : "Remove key"}
+          </button>
+          {removeError ? <span style={{ fontSize: 12, color: "var(--danger)" }}>{removeError}</span> : null}
+        </div>
+      ) : null}
+
+      <form action={action} style={{ marginTop: 10, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+        <input type="hidden" name="provider" value={meta.id} />
+        <div style={{ flex: "1 1 260px" }}>
+          <label style={label} htmlFor={`aiKey-${meta.id}`}>
+            {masked ? "Replace your key" : `Paste your ${meta.label} API key`}
+          </label>
+          <RevealField id={`aiKey-${meta.id}`} name="apiKey" placeholder={meta.placeholder} />
+        </div>
+        <button className="pf-btn-grad" style={{ padding: "11px 20px", borderRadius: 11, fontSize: 13 }} disabled={pending}>
+          {pending ? "Saving…" : "Save key"}
+        </button>
+      </form>
+      <Msg state={state} okText="Key saved — your AI Tutor is ready." />
+    </div>
+  );
+}
+
 function Msg({ state, okText }: { state: { ok?: boolean; error?: string }; okText: string }) {
   if (state.error)
     return <div style={{ marginTop: 10, fontSize: 12.5, color: "#B3243F", background: "#FDECEF", borderRadius: 9, padding: "8px 12px" }}>{state.error}</div>;
@@ -93,7 +166,7 @@ export type ProfileUser = {
   kaggleUrl: string | null;
   talentVisible: boolean;
   mustChangePassword: boolean;
-  geminiKeyMasked: string | null;
+  aiKeysMasked: Record<AiProviderId, string | null>;
 };
 
 export type VisibilityInfo = {
@@ -120,9 +193,6 @@ export default function ProfileScreen({ user, visibility }: { user: ProfileUser;
   const [pState, pAction, pPending] = useActionState<ActionState, FormData>(updateProfileAction, {});
   const [vState, vAction, vPending] = useActionState<ActionState, FormData>(submitVisibilityAction, {});
   const [wState, wAction, wPending] = useActionState<FormState, FormData>(changePasswordAction, {});
-  const [gState, gAction, gPending] = useActionState<ActionState, FormData>(saveGeminiKeyAction, {});
-  const [removing, startRemove] = useTransition();
-  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const isStudent = user.role === "student";
 
@@ -237,56 +307,20 @@ export default function ProfileScreen({ user, visibility }: { user: ProfileUser;
         <Msg state={pState} okText="Profile saved." />
       </form>
 
-      {/* AI Tutor — personal Gemini key */}
+      {/* AI Tutor — personal API keys */}
       {isStudent ? (
-        <div className="pf-card" style={{ padding: 24, marginBottom: 16 }}>
-          <div className="pf-h">AI Tutor — your Gemini API key</div>
+        <div id="ai-keys" className="pf-card" style={{ padding: 24, marginBottom: 16 }}>
+          <div className="pf-h">AI Tutor — your API keys</div>
           <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4, lineHeight: 1.6 }}>
-            The AI Tutor runs on your own free Gemini API key, so your chats are never limited by other students&apos;
-            usage. Get a free key from{" "}
-            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="pf-link">
-              Google AI Studio
-            </a>{" "}
-            — it takes about a minute, no card required.
+            The AI Tutor runs on your own API key, so your chats are never limited by other students&apos; usage.
+            Add at least one key — <b>the Gemini key is free</b>. If you add more than one, the tutor uses them in
+            order (Gemini → Claude → OpenAI) and automatically switches to your next key whenever one runs out or
+            hits its limit.
           </div>
 
-          {user.geminiKeyMasked ? (
-            <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--pos)" }}>✓ Key saved</span>
-              <span style={{ fontSize: 12.5, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
-                {user.geminiKeyMasked}
-              </span>
-              <button
-                type="button"
-                className="pf-btn-soft"
-                style={{ fontSize: 12, color: "var(--danger)" }}
-                disabled={removing}
-                onClick={() => {
-                  setRemoveError(null);
-                  startRemove(async () => {
-                    const res = await removeGeminiKeyAction();
-                    if (!res.ok) setRemoveError(res.error ?? "Could not remove the key.");
-                  });
-                }}
-              >
-                {removing ? "Removing…" : "Remove key"}
-              </button>
-              {removeError ? <span style={{ fontSize: 12, color: "var(--danger)" }}>{removeError}</span> : null}
-            </div>
-          ) : null}
-
-          <form action={gAction} style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
-            <div style={{ flex: "1 1 260px" }}>
-              <label style={label} htmlFor="geminiApiKey">
-                {user.geminiKeyMasked ? "Replace your key" : "Paste your Gemini API key"}
-              </label>
-              <RevealField id="geminiApiKey" name="geminiApiKey" placeholder="AIza…" />
-            </div>
-            <button className="pf-btn-grad" style={{ padding: "11px 20px", borderRadius: 11, fontSize: 13 }} disabled={gPending}>
-              {gPending ? "Saving…" : "Save key"}
-            </button>
-          </form>
-          <Msg state={gState} okText="Key saved — your AI Tutor is ready." />
+          {AI_PROVIDERS.map((meta) => (
+            <ProviderKeyBlock key={meta.id} meta={meta} masked={user.aiKeysMasked[meta.id]} />
+          ))}
         </div>
       ) : null}
 

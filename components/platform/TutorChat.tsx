@@ -11,13 +11,13 @@ export default function TutorChat({
   chatHistory,
   lessonId,
   lessonTitle,
-  hasGeminiKey,
+  hasAiKey,
 }: {
   initialMessages: Msg[];
   chatHistory: string[];
   lessonId: string | null;
   lessonTitle: string | null;
-  hasGeminiKey: boolean;
+  hasAiKey: boolean;
 }) {
   const [messages, setMessages] = useState<Msg[]>(initialMessages);
   const [input, setInput] = useState("");
@@ -54,7 +54,7 @@ export default function TutorChat({
           const copy = [...m];
           copy[copy.length - 1] = {
             role: "bot",
-            text: body?.message ?? "Add your Gemini API key in My Profile to start using the AI Tutor.",
+            text: body?.message ?? "Add an AI API key in My Profile to start using the AI Tutor — the Gemini key is free.",
           };
           return copy;
         });
@@ -134,28 +134,29 @@ export default function TutorChat({
             </div>
           </div>
 
-          {!hasGeminiKey ? (
+          {!hasAiKey ? (
             <div
               style={{
                 margin: "0 18px",
                 marginTop: 14,
-                padding: "12px 14px",
-                borderRadius: 10,
+                padding: "14px 16px",
+                borderRadius: 12,
                 background: "var(--warnbg)",
-                color: "var(--warn)",
+                border: "1px solid #F2DBB4",
+                color: "#7A4C08",
                 fontSize: 12.5,
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                flexWrap: "wrap",
               }}
             >
-              <span style={{ flex: 1, minWidth: 200 }}>
-                Add your free Gemini API key in your profile to start using the AI Tutor — it&apos;s your own key, so
-                your chats are never rate-limited by other students.
-              </span>
-              <Link href="/profile" className="pf-btn-grad" style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12 }}>
-                Set up in My Profile →
+              <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 4 }}>
+                One quick step before your first chat: add your AI key
+              </div>
+              <div style={{ lineHeight: 1.6, marginBottom: 10 }}>
+                The AI Tutor runs on your own API key, so your chats are never rate-limited by other students. The{" "}
+                <b>Gemini key is free</b> (about a minute to get, no card needed) — you can also add Claude or OpenAI
+                keys, and the tutor automatically switches keys if one runs out.
+              </div>
+              <Link href="/profile#ai-keys" className="pf-btn-grad" style={{ padding: "8px 16px", borderRadius: 9, fontSize: 12.5 }}>
+                Add your key in My Profile →
               </Link>
             </div>
           ) : null}

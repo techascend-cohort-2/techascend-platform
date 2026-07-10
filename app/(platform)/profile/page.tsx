@@ -10,7 +10,10 @@ export default async function ProfilePage() {
 
   const vs = await prisma.visibilitySubmission.findUnique({ where: { userId: user.id } });
 
-  const geminiKeyPlain = user.geminiApiKeyEnc ? decryptSecret(user.geminiApiKeyEnc) : null;
+  const mask = (enc: string | null) => {
+    const plain = enc ? decryptSecret(enc) : null;
+    return plain ? maskSecret(plain) : null;
+  };
 
   const profileUser: ProfileUser = {
     name: user.name,
@@ -28,7 +31,11 @@ export default async function ProfilePage() {
     kaggleUrl: user.kaggleUrl,
     talentVisible: user.talentVisible,
     mustChangePassword: user.mustChangePassword,
-    geminiKeyMasked: geminiKeyPlain ? maskSecret(geminiKeyPlain) : null,
+    aiKeysMasked: {
+      gemini: mask(user.geminiApiKeyEnc),
+      anthropic: mask(user.anthropicApiKeyEnc),
+      openai: mask(user.openaiApiKeyEnc),
+    },
   };
 
   const visibility: VisibilityInfo = vs

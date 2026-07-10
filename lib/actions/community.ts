@@ -7,6 +7,7 @@ import { isStaff } from "@/lib/constants";
 import { postSchema, eventSchema, opportunitySchema, profileSchema } from "@/lib/validation";
 import { notify } from "@/lib/progress";
 import { encryptSecret } from "@/lib/crypto";
+import { isAiProviderId, type AiProviderId } from "@/lib/aiProviderMeta";
 
 export type ActionState = { ok?: boolean; error?: string };
 
@@ -254,22 +255,31 @@ export async function updateProfileAction(_prev: ActionState, formData: FormData
   return { ok: true };
 }
 
-// ---------------- AI Tutor: personal Gemini key (BYOK) ----------------
+// ---------------- AI Tutor: personal API keys (BYOK) ----------------
 
-export async function saveGeminiKeyAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+const AI_KEY_FIELD: Record<AiProviderId, "geminiApiKeyEnc" | "anthropicApiKeyEnc" | "openaiApiKeyEnc"> = {
+  gemini: "geminiApiKeyEnc",
+  anthropic: "anthropicApiKeyEnc",
+  openai: "openaiApiKeyEnc",
+};
+
+export async function saveAiKeyAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireUser();
-  const raw = String(formData.get("geminiApiKey") ?? "").trim();
-  if (!raw) return { error: "Paste your Gemini API key first." };
-  if (raw.length < 15) return { error: "That doesn't look like a valid Gemini API key." };
-  await prisma.user.update({ where: { id: user.id }, data: { geminiApiKeyEnc: encryptSecret(raw) } });
+  const provider = String(formData.get("provider") ?? "");
+  if (!isAiProviderId(provider)) return { error: "Unknown AI provider." };
+  const raw = String(formData.get("apiKey") ?? "").trim();
+  if (!raw) return { error: "Paste your API key first." };
+  if (raw.length < 15) return { error: "That doesn't look like a valid API key." };
+  await prisma.user.update({ where: { id: user.id }, data: { [AI_KEY_FIELD[provider]]: encryptSecret(raw) } });
   revalidatePath("/profile");
   revalidatePath("/tutor");
   return { ok: true };
 }
 
-export async function removeGeminiKeyAction(): Promise<ActionState> {
+export async function removeAiKeyAction(provider: string): Promise<ActionState> {
   const user = await requireUser();
-  await prisma.user.update({ where: { id: user.id }, data: { geminiApiKeyEnc: null } });
+  if (!isAiProviderId(provider)) return { error: "Unknown AI provider." };
+  await prisma.user.update({ where: { id: user.id }, data: { [AI_KEY_FIELD[provider]]: null } });
   revalidatePath("/profile");
   revalidatePath("/tutor");
   return { ok: true };

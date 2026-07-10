@@ -1,8 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import type { AiProviderId } from "@/lib/aiProviderMeta";
 
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
 // The core AI Tutor engine prompt (from the TechAscend platform spec §4).
 export const TUTOR_SYSTEM_PROMPT = `You are TechAscend AI Tutor, a world-class software engineering and entrepreneurship mentor focused on African women in technology.
@@ -34,33 +37,30 @@ function buildSystemPrompt(lessonContext?: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// AI Tutor — runs on each student's own Gemini API key (BYOK). The platform
-// pays for nothing here; students bring their own free-tier Gemini key.
+// AI Tutor — runs on each student's own API key(s) (BYOK). The platform pays
+// for nothing here. A student can save keys for several providers; the tutor
+// tries them in order and falls back to the next one when a key is exhausted
+// or rejected, so one dead key never blocks a chat.
 // ---------------------------------------------------------------------------
 
 export type TutorTurn = { role: "user" | "assistant"; content: string };
+export type TutorKey = { provider: AiProviderId; apiKey: string };
 
 export class TutorKeyError extends Error {}
 
-/**
- * Stream a tutor reply as plain-text chunks using the student's own Gemini
- * API key. Throws TutorKeyError with a user-facing message if the key is
- * missing/invalid so the caller can show a clear "fix your key" prompt
- * instead of a silent/garbled failure.
- */
-export async function* streamTutorReply(
+const PROVIDER_LABEL: Record<AiProviderId, string> = {
+  gemini: "Gemini",
+  anthropic: "Claude",
+  openai: "OpenAI",
+};
+
+async function* streamGemini(
   apiKey: string,
   message: string,
-  history: TutorTurn[] = [],
+  history: TutorTurn[],
   lessonContext?: string,
 ): AsyncGenerator<string> {
-  let genAI: GoogleGenerativeAI;
-  try {
-    genAI = new GoogleGenerativeAI(apiKey);
-  } catch {
-    throw new TutorKeyError("That Gemini API key looks invalid. Check it in your profile and try again.");
-  }
-
+  const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: GEMINI_MODEL,
     systemInstruction: buildSystemPrompt(lessonContext),
@@ -84,13 +84,130 @@ export async function* streamTutorReply(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (/api key not valid|API_KEY_INVALID|PERMISSION_DENIED/i.test(msg)) {
-      throw new TutorKeyError("Your Gemini API key was rejected. Double-check it in your profile.");
+      throw new TutorKeyError("your Gemini key was rejected — double-check it in your profile");
     }
     if (/quota|RESOURCE_EXHAUSTED|rate limit/i.test(msg)) {
-      throw new TutorKeyError("Your Gemini key has hit its rate/quota limit. Try again in a moment.");
+      throw new TutorKeyError("your Gemini key hit its rate/quota limit");
     }
-    throw new TutorKeyError("The AI Tutor couldn't reach Gemini just now. Please try again.");
+    throw new TutorKeyError("Gemini couldn't be reached");
   }
+}
+
+async function* streamAnthropic(
+  apiKey: string,
+  message: string,
+  history: TutorTurn[],
+  lessonContext?: string,
+): AsyncGenerator<string> {
+  const client = new Anthropic({ apiKey });
+  try {
+    const stream = client.messages.stream({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 1024,
+      system: buildSystemPrompt(lessonContext),
+      messages: [...history.slice(-10), { role: "user" as const, content: message }],
+    });
+    for await (const event of stream) {
+      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+        yield event.delta.text;
+      }
+    }
+  } catch (err) {
+    if (err instanceof Anthropic.APIError) {
+      if (err.status === 401 || err.status === 403) {
+        throw new TutorKeyError("your Claude key was rejected — double-check it in your profile");
+      }
+      if (err.status === 429 || /credit balance/i.test(err.message)) {
+        throw new TutorKeyError("your Claude key is out of credits or rate-limited");
+      }
+    }
+    throw new TutorKeyError("Claude couldn't be reached");
+  }
+}
+
+async function* streamOpenAI(
+  apiKey: string,
+  message: string,
+  history: TutorTurn[],
+  lessonContext?: string,
+): AsyncGenerator<string> {
+  const client = new OpenAI({ apiKey });
+  try {
+    const stream = await client.chat.completions.create({
+      model: OPENAI_MODEL,
+      stream: true,
+      messages: [
+        { role: "system" as const, content: buildSystemPrompt(lessonContext) },
+        ...history.slice(-10),
+        { role: "user" as const, content: message },
+      ],
+    });
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content;
+      if (text) yield text;
+    }
+  } catch (err) {
+    if (err instanceof OpenAI.APIError) {
+      if (err.status === 401 || err.status === 403) {
+        throw new TutorKeyError("your OpenAI key was rejected — double-check it in your profile");
+      }
+      if (err.status === 429) {
+        throw new TutorKeyError("your OpenAI key is out of credits or rate-limited");
+      }
+    }
+    throw new TutorKeyError("OpenAI couldn't be reached");
+  }
+}
+
+const PROVIDER_STREAMS: Record<
+  AiProviderId,
+  (apiKey: string, message: string, history: TutorTurn[], lessonContext?: string) => AsyncGenerator<string>
+> = {
+  gemini: streamGemini,
+  anthropic: streamAnthropic,
+  openai: streamOpenAI,
+};
+
+/**
+ * Stream a tutor reply as plain-text chunks using the student's own keys.
+ * Tries each key in order; if a provider fails before producing any text
+ * (bad key, quota exhausted, unreachable), silently falls back to the next.
+ * Throws TutorKeyError with a user-facing message only when every key failed.
+ */
+export async function* streamTutorReply(
+  keys: TutorKey[],
+  message: string,
+  history: TutorTurn[] = [],
+  lessonContext?: string,
+): AsyncGenerator<string> {
+  const failures: string[] = [];
+
+  for (const { provider, apiKey } of keys) {
+    let yielded = false;
+    try {
+      for await (const chunk of PROVIDER_STREAMS[provider](apiKey, message, history, lessonContext)) {
+        yielded = true;
+        yield chunk;
+      }
+      return;
+    } catch (err) {
+      const reason = err instanceof TutorKeyError ? err.message : `${PROVIDER_LABEL[provider]} failed`;
+      // Once text has been streamed we can't cleanly restart on another
+      // provider — surface the interruption instead of a confusing mid-answer
+      // model switch.
+      if (yielded) {
+        throw new TutorKeyError(`The reply was interrupted: ${reason}. Please ask again.`);
+      }
+      failures.push(reason);
+    }
+  }
+
+  const detail = failures.join("; ");
+  throw new TutorKeyError(
+    failures.length > 1
+      ? `None of your AI keys worked just now: ${detail}. Check them in your profile.`
+      : `The AI Tutor couldn't answer: ${detail}.`,
+  );
 }
 
 // ---------------------------------------------------------------------------
