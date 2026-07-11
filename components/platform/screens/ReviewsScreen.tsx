@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Icon from "@/components/Icon";
 import { ICON } from "@/lib/platformData";
-import { reviewVisibilityAction, mentorReviewAction, reopenSubmissionAction } from "@/lib/actions/program";
+import {
+  reviewVisibilityAction,
+  mentorReviewAction,
+  reopenSubmissionAction,
+  reopenVisibilityAction,
+} from "@/lib/actions/program";
 
 type VisItem = {
   id: string;
@@ -38,6 +43,13 @@ type DecidedItem = {
   mentorScore: number | null;
   user: { id: string; name: string; email: string; track: string | null; initials: string | null; avatarBg: string | null };
   project: { title: string };
+};
+
+type DecidedVisItem = {
+  id: string;
+  reviewedAt: string;
+  status: string; // "approved" | "changes_requested"
+  user: { id: string; name: string; email: string; track: string | null; initials: string | null; avatarBg: string | null };
 };
 
 export type ReviewStats = {
@@ -98,11 +110,13 @@ const TRACK_OPTIONS = [
 export default function ReviewsScreen({
   visibility,
   submissions,
+  recentlyDecidedVisibility,
   recentlyDecided,
   stats,
 }: {
   visibility: VisItem[];
   submissions: SubItem[];
+  recentlyDecidedVisibility: DecidedVisItem[];
   recentlyDecided: DecidedItem[];
   stats: ReviewStats;
 }) {
@@ -141,6 +155,15 @@ export default function ReviewsScreen({
     setError("");
     start(async () => {
       const res = await reopenSubmissionAction(id);
+      if (res.error) setError(res.error);
+      else router.refresh();
+    });
+  }
+
+  function reopenVis(id: string) {
+    setError("");
+    start(async () => {
+      const res = await reopenVisibilityAction(id);
       if (res.error) setError(res.error);
       else router.refresh();
     });
@@ -303,6 +326,49 @@ export default function ReviewsScreen({
           </div>
         )}
       </div>
+
+      {/* Recently decided visibility — undo a mistaken decision */}
+      {recentlyDecidedVisibility.length > 0 ? (
+        <div className="pf-card" style={{ padding: 22, marginBottom: 16 }}>
+          <div className="pf-h" style={{ marginBottom: 4 }}>Recently decided visibility submissions</div>
+          <div style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 14 }}>
+            Approved or sent back by mistake? Undo returns it to the queue above. Undoing an approval also pauses the
+            phase badge &amp; certificate until it&apos;s approved again.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {recentlyDecidedVisibility.map((v) => (
+              <div
+                key={v.id}
+                style={{ display: "flex", alignItems: "center", gap: 11, flexWrap: "wrap", border: "1px solid var(--line)", borderRadius: 12, padding: "12px 14px" }}
+              >
+                <Avatar initials={v.user.initials} bg={v.user.avatarBg} />
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <Link href={`/students/${v.user.id}`} className="pf-link" style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>
+                    {v.user.name}
+                  </Link>
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                    {v.user.email}{v.user.track ? ` · Track ${v.user.track}` : ""} · {dateTimeFmt.format(new Date(v.reviewedAt))}
+                  </div>
+                </div>
+                <span
+                  className={`pf-badge ${v.status === "approved" ? "pf-badge-pos" : "pf-badge-neutral"}`}
+                  style={{ flexShrink: 0 }}
+                >
+                  {v.status === "approved" ? "Approved" : "Changes requested"}
+                </span>
+                <button
+                  className="pf-btn-soft"
+                  style={{ padding: "8px 14px", borderRadius: 9, fontSize: 12.5, cursor: "pointer", flexShrink: 0 }}
+                  disabled={pending}
+                  onClick={() => reopenVis(v.id)}
+                >
+                  Undo
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {/* Project submissions queue */}
       <div className="pf-card" style={{ padding: 22, marginBottom: 16 }}>

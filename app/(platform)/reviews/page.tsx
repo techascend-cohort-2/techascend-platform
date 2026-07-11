@@ -6,7 +6,8 @@ export default async function ReviewsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { visibility, submissions, recentlyDecidedSubmissions, stats } = await getReviewQueues();
+  const { visibility, submissions, recentlyDecidedVisibility, recentlyDecidedSubmissions, stats } =
+    await getReviewQueues();
 
   return (
     <ReviewsScreen
@@ -31,6 +32,12 @@ export default async function ReviewsPage() {
         status: s.status,
         user: s.user,
         project: { title: s.project.title },
+      }))}
+      recentlyDecidedVisibility={recentlyDecidedVisibility.map((v) => ({
+        id: v.id,
+        reviewedAt: (v.reviewedAt ?? v.submittedAt).toISOString(),
+        status: v.status,
+        user: v.user,
       }))}
       recentlyDecided={recentlyDecidedSubmissions.map((s) => ({
         id: s.id,

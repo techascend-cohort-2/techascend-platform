@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { setLessonComplete, runAwardChecks, notify } from "@/lib/progress";
+import { setLessonComplete, runAwardChecks, revokeVisibilityAwards, notify } from "@/lib/progress";
 import { visibilitySchema } from "@/lib/validation";
 import { isStaff } from "@/lib/constants";
 
@@ -92,6 +92,43 @@ export async function reviewVisibilityAction(
   if (decision === "approved") await runAwardChecks(sub.userId);
 
   revalidatePath("/reviews");
+  return { ok: true };
+}
+
+/**
+ * Undo a visibility decision — returns the student's six profile links to the
+ * review queue so a mistaken approval (or requested-changes) can be corrected.
+ * If it was approved, any phase badge + certificate the approval auto-issued is
+ * revoked too, so nothing is awarded until it's re-approved.
+ */
+export async function reopenVisibilityAction(submissionId: string): Promise<ActionState> {
+  const user = await requireUser();
+  if (!isStaff(user.role)) return { error: "Staff only." };
+
+  const existing = await prisma.visibilitySubmission.findUnique({ where: { id: submissionId } });
+  if (!existing) return { error: "Submission not found." };
+  if (existing.status === "pending") return { error: "This submission is already in the review queue." };
+
+  const wasApproved = existing.status === "approved";
+  const sub = await prisma.visibilitySubmission.update({
+    where: { id: submissionId },
+    data: { status: "pending", reviewNote: null, reviewerId: null, reviewedAt: null },
+  });
+
+  if (wasApproved) await revokeVisibilityAwards(sub.userId);
+
+  await notify(
+    sub.userId,
+    "Your Visibility submission is back under review",
+    "/profile",
+    wasApproved
+      ? "A reviewer reopened your six profile links — the phase badge and certificate are paused until it's approved again."
+      : "A reviewer reopened your six profile links to take another look.",
+  );
+
+  revalidatePath("/reviews");
+  revalidatePath("/profile");
+  revalidatePath("/badges");
   return { ok: true };
 }
 

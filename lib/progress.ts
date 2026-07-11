@@ -182,6 +182,32 @@ export async function runAwardChecks(userId: string) {
   await recomputeUserProgress(user.id);
 }
 
+/**
+ * Revoke the awards that a visibility approval unlocked. Called when a staff
+ * member undoes a mistaken visibility approval: it removes the badge +
+ * certificate for every phase that requires visibility approval, plus the
+ * program-level graduate badge + certificate (which depend on every phase
+ * being complete), so nothing outlives the approval that earned it.
+ */
+export async function revokeVisibilityAwards(userId: string) {
+  const phases = await prisma.phase.findMany({
+    where: { requiresVisibilityApproval: true },
+    include: { badge: true },
+  });
+  for (const phase of phases) {
+    if (phase.badge) {
+      await prisma.userBadge.deleteMany({ where: { userId, badgeId: phase.badge.id } });
+    }
+    await prisma.certificate.deleteMany({ where: { userId, phaseId: phase.id } });
+  }
+  // The program certificate + Graduate badge require every phase complete, so
+  // they can't survive an un-approved phase either.
+  await prisma.certificate.deleteMany({ where: { userId, phaseId: null } });
+  const grad = await prisma.badge.findUnique({ where: { name: "TechAscend Graduate" } });
+  if (grad) await prisma.userBadge.deleteMany({ where: { userId, badgeId: grad.id } });
+  await recomputeUserProgress(userId);
+}
+
 /** Mark a lesson complete (or un-complete) and run award checks. */
 export async function setLessonComplete(userId: string, lessonId: string, complete: boolean) {
   if (complete) {

@@ -509,9 +509,11 @@ export async function getReviewQueues() {
       }),
     ]);
 
-  const recentlyReviewed = await prisma.visibilitySubmission.findMany({
+  // Recently-decided visibility submissions, so a mistaken approval / requested-
+  // changes can be undone (once decided they drop out of the pending queue).
+  const recentlyDecidedVisibility = await prisma.visibilitySubmission.findMany({
     where: { status: { not: "pending" } },
-    include: { user: { select: { name: true } } },
+    include: { user: { select: { id: true, name: true, email: true, track: true, initials: true, avatarBg: true } } },
     orderBy: { reviewedAt: "desc" },
     take: 8,
   });
@@ -538,7 +540,7 @@ export async function getReviewQueues() {
   return {
     visibility,
     submissions,
-    recentlyReviewed,
+    recentlyDecidedVisibility,
     recentlyDecidedSubmissions,
     stats: {
       pendingVisibility: visibility.length,
