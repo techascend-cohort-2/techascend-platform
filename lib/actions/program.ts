@@ -128,6 +128,47 @@ export async function mentorReviewAction(
   return { ok: true };
 }
 
+/**
+ * Undo a project decision — sends an already-decided submission back into the
+ * mentor review queue so a mistaken approval (or requested-changes) can be
+ * corrected. The submission still counts as a valid submission while it sits
+ * in the queue, so a badge the student legitimately earned (all lessons done
+ * + a submission) is retained; only the mentor's score/feedback is cleared.
+ */
+export async function reopenSubmissionAction(submissionId: string): Promise<ActionState> {
+  const user = await requireUser();
+  if (!isStaff(user.role)) return { error: "Staff only." };
+
+  const existing = await prisma.submission.findUnique({ where: { id: submissionId } });
+  if (!existing) return { error: "Submission not found." };
+  if (existing.status !== "approved" && existing.status !== "changes_requested") {
+    return { error: "This submission is already in the review queue." };
+  }
+
+  // Back to the queue: keep the AI-reviewed marker if it had one, else plain
+  // submitted. Clear the mentor decision so the reviewer starts fresh.
+  const sub = await prisma.submission.update({
+    where: { id: submissionId },
+    data: {
+      status: existing.aiScore != null ? "ai_reviewed" : "submitted",
+      mentorScore: null,
+      mentorFeedback: null,
+    },
+    include: { project: true },
+  });
+
+  await runAwardChecks(sub.userId);
+  await notify(
+    sub.userId,
+    `“${sub.project.title}” is back in review`,
+    "/projects",
+    "A reviewer reopened your submission to take another look.",
+  );
+
+  revalidatePath("/reviews");
+  return { ok: true };
+}
+
 // ---------------- Notifications ----------------
 
 export async function markNotificationsReadAction(): Promise<ActionState> {

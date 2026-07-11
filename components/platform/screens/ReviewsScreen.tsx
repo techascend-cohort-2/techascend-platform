@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Icon from "@/components/Icon";
 import { ICON } from "@/lib/platformData";
-import { reviewVisibilityAction, mentorReviewAction } from "@/lib/actions/program";
+import { reviewVisibilityAction, mentorReviewAction, reopenSubmissionAction } from "@/lib/actions/program";
 
 type VisItem = {
   id: string;
@@ -28,6 +28,15 @@ type SubItem = {
   aiFeedback: string | null;
   status: string;
   user: { name: string; email: string; track: string | null; initials: string | null; avatarBg: string | null };
+  project: { title: string };
+};
+
+type DecidedItem = {
+  id: string;
+  updatedAt: string;
+  status: string; // "approved" | "changes_requested"
+  mentorScore: number | null;
+  user: { id: string; name: string; email: string; track: string | null; initials: string | null; avatarBg: string | null };
   project: { title: string };
 };
 
@@ -89,10 +98,12 @@ const TRACK_OPTIONS = [
 export default function ReviewsScreen({
   visibility,
   submissions,
+  recentlyDecided,
   stats,
 }: {
   visibility: VisItem[];
   submissions: SubItem[];
+  recentlyDecided: DecidedItem[];
   stats: ReviewStats;
 }) {
   const router = useRouter();
@@ -121,6 +132,15 @@ export default function ReviewsScreen({
     const mentorScore = raw ? Math.max(0, Math.min(100, parseInt(raw, 10) || 0)) : undefined;
     start(async () => {
       const res = await mentorReviewAction(id, { mentorScore, mentorFeedback: notes[`s-${id}`] || undefined, status });
+      if (res.error) setError(res.error);
+      else router.refresh();
+    });
+  }
+
+  function reopenSub(id: string) {
+    setError("");
+    start(async () => {
+      const res = await reopenSubmissionAction(id);
       if (res.error) setError(res.error);
       else router.refresh();
     });
@@ -361,6 +381,49 @@ export default function ReviewsScreen({
           </div>
         )}
       </div>
+
+      {/* Recently decided — undo a mistaken decision */}
+      {recentlyDecided.length > 0 ? (
+        <div className="pf-card" style={{ padding: 22, marginBottom: 16 }}>
+          <div className="pf-h" style={{ marginBottom: 4 }}>Recently decided projects</div>
+          <div style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 14 }}>
+            Approved or sent back by mistake? Undo puts the project back in the queue above so you can review it again.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {recentlyDecided.map((s) => (
+              <div
+                key={s.id}
+                style={{ display: "flex", alignItems: "center", gap: 11, flexWrap: "wrap", border: "1px solid var(--line)", borderRadius: 12, padding: "12px 14px" }}
+              >
+                <Avatar initials={s.user.initials} bg={s.user.avatarBg} />
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>
+                    {s.project.title} <span style={{ color: "var(--faint)", fontWeight: 600 }}>— {s.user.name}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                    {dateTimeFmt.format(new Date(s.updatedAt))}
+                    {s.mentorScore != null ? ` · mentor score ${s.mentorScore}/100` : ""}
+                  </div>
+                </div>
+                <span
+                  className={`pf-badge ${s.status === "approved" ? "pf-badge-pos" : "pf-badge-neutral"}`}
+                  style={{ flexShrink: 0 }}
+                >
+                  {s.status === "approved" ? "Approved" : "Changes requested"}
+                </span>
+                <button
+                  className="pf-btn-soft"
+                  style={{ padding: "8px 14px", borderRadius: 9, fontSize: 12.5, cursor: "pointer", flexShrink: 0 }}
+                  disabled={pending}
+                  onClick={() => reopenSub(s.id)}
+                >
+                  Undo
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {/* Review tips */}
       <div className="pf-proj-banner" style={{ flexDirection: "column", alignItems: "stretch" }}>

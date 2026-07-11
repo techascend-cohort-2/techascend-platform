@@ -516,6 +516,18 @@ export async function getReviewQueues() {
     take: 8,
   });
 
+  // Recently-decided project submissions, so a mistaken approval / requested-
+  // changes can be undone (once decided they drop out of the pending queue).
+  const recentlyDecidedSubmissions = await prisma.submission.findMany({
+    where: { status: { in: ["approved", "changes_requested"] } },
+    include: {
+      user: { select: { id: true, name: true, email: true, track: true, initials: true, avatarBg: true } },
+      project: true,
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 8,
+  });
+
   const reviewDurations = reviewedVisThisMonth
     .filter((v): v is { submittedAt: Date; reviewedAt: Date } => v.reviewedAt !== null)
     .map((v) => v.reviewedAt.getTime() - v.submittedAt.getTime());
@@ -527,6 +539,7 @@ export async function getReviewQueues() {
     visibility,
     submissions,
     recentlyReviewed,
+    recentlyDecidedSubmissions,
     stats: {
       pendingVisibility: visibility.length,
       pendingProjects: submissions.length,
