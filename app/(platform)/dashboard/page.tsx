@@ -131,43 +131,24 @@ export default async function DashboardPage() {
 
   return (
     <div className="pf-screen pf-w1180">
-      {/* review status — evident at login */}
+      {/* review status — bold, so it's caught at a glance on login */}
       {notices.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 18 }}>
           {notices.map((n, i) => {
             const action = n.kind === "action";
             return (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  flexWrap: "wrap",
-                  padding: "13px 16px",
-                  borderRadius: 12,
-                  background: action ? "#FCF1DE" : "#eef2fb",
-                  border: `1px solid ${action ? "#F2DBB4" : "#cfdcf5"}`,
-                }}
-              >
-                <div
-                  style={{
-                    width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                    display: "grid", placeItems: "center",
-                    background: "#fff", color: action ? "#B77400" : "#2D6FD9",
-                  }}
-                >
-                  <Icon path={action ? ICON.zap : ICON.clock} size={16} />
+              <div key={i} className={`pf-alert ${action ? "pf-alert-action" : "pf-alert-review"}`}>
+                <div className="pf-alert-icon">
+                  <Icon path={action ? ICON.zap : ICON.clock} size={19} strokeWidth={2.2} />
                 </div>
-                <div style={{ flex: 1, minWidth: 200, fontSize: 13, color: action ? "#7A4C08" : "#1F3E73", lineHeight: 1.5 }}>
-                  {action ? <b>Action needed. </b> : <b>Under review. </b>}
-                  {n.text}
+                <div className="pf-alert-body">
+                  <div className="pf-alert-title">
+                    {action ? <span className="pf-alert-dot" /> : null}
+                    {action ? "Action needed" : "Under review"}
+                  </div>
+                  <div className="pf-alert-text">{n.text}</div>
                 </div>
-                <Link
-                  href={n.href}
-                  className={action ? "pf-btn-grad" : "pf-btn-soft"}
-                  style={{ fontSize: 12.5, padding: "8px 15px", borderRadius: 9, whiteSpace: "nowrap" }}
-                >
+                <Link href={n.href} className="pf-alert-cta">
                   {n.cta} →
                 </Link>
               </div>
