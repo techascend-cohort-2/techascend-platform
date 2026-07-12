@@ -485,7 +485,7 @@ export async function getReviewQueues() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [visibility, submissions, activeReviewers, approvedVis, approvedSubs] =
+  const [visibility, submissions, activeReviewers, respondedVis, respondedSubs] =
     await Promise.all([
       prisma.visibilitySubmission.findMany({
         where: { status: "pending" },
@@ -501,16 +501,17 @@ export async function getReviewQueues() {
         orderBy: { createdAt: "asc" },
       }),
       prisma.user.count({ where: { role: { in: ["admin", "manager"] } } }),
-      // Only *approved* submissions feed "approved this month" and the average
-      // review time. A "changes requested" decision is not a finished review,
-      // so it must not inflate the turnaround metric.
+      // "Avg review time" = time to first response: from submission to the
+      // reviewer's first decision (approve OR request changes). Both count, so
+      // a prompt "request changes" registers as a fast review. "Approved this
+      // month" is derived from the same rows but counts approvals only.
       prisma.visibilitySubmission.findMany({
-        where: { status: "approved", reviewedAt: { gte: monthStart } },
-        select: { submittedAt: true, reviewedAt: true },
+        where: { status: { not: "pending" }, reviewedAt: { gte: monthStart } },
+        select: { status: true, submittedAt: true, reviewedAt: true },
       }),
       prisma.submission.findMany({
-        where: { status: "approved", updatedAt: { gte: monthStart } },
-        select: { createdAt: true, updatedAt: true },
+        where: { status: { in: ["approved", "changes_requested", "mentor_reviewed"] }, updatedAt: { gte: monthStart } },
+        select: { status: true, createdAt: true, updatedAt: true },
       }),
     ]);
 
@@ -535,13 +536,13 @@ export async function getReviewQueues() {
     take: 8,
   });
 
-  // Turnaround = submission → approval, across both queues. Only approvals
-  // count, so requesting changes never moves this number.
+  // Time to first response: submission → the reviewer's first decision, across
+  // both queues. A prompt "request changes" counts as a fast review.
   const reviewDurations = [
-    ...approvedVis
-      .filter((v): v is { submittedAt: Date; reviewedAt: Date } => v.reviewedAt !== null)
-      .map((v) => v.reviewedAt.getTime() - v.submittedAt.getTime()),
-    ...approvedSubs.map((s) => s.updatedAt.getTime() - s.createdAt.getTime()),
+    ...respondedVis
+      .filter((v) => v.reviewedAt !== null)
+      .map((v) => v.reviewedAt!.getTime() - v.submittedAt.getTime()),
+    ...respondedSubs.map((s) => s.updatedAt.getTime() - s.createdAt.getTime()),
   ];
   const avgReviewDays = reviewDurations.length
     ? Math.round((reviewDurations.reduce((a, b) => a + b, 0) / reviewDurations.length / 86_400_000) * 10) / 10
@@ -555,7 +556,9 @@ export async function getReviewQueues() {
     stats: {
       pendingVisibility: visibility.length,
       pendingProjects: submissions.length,
-      approvedThisMonth: approvedVis.length + approvedSubs.length,
+      approvedThisMonth:
+        respondedVis.filter((v) => v.status === "approved").length +
+        respondedSubs.filter((s) => s.status === "approved").length,
       avgReviewDays,
       activeReviewers,
     },
