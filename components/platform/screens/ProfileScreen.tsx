@@ -194,6 +194,14 @@ const VIS_EVENT_META: Record<string, { label: string; fg: string; bg: string }> 
   reopened: { label: "Reopened for review", fg: "#7A4C08", bg: "#FCF1DE" },
 };
 
+// Note background follows the decision: green when approved, red only when
+// changes are requested, neutral otherwise.
+function noteColors(status: string): { bg: string; fg: string } {
+  if (status === "approved") return { bg: "var(--posbg)", fg: "#14543A" };
+  if (status === "changes_requested") return { bg: "#FDECEF", fg: "#B3243F" };
+  return { bg: "var(--bg)", fg: "var(--ink)" };
+}
+
 const visFmt = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
@@ -255,8 +263,8 @@ export default function ProfileScreen({
           <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4 }}>
             Submit all six profile links. The community team reviews them — approval (plus completing the Phase 1 lessons) earns your Visibility Badge and certificate automatically.
           </div>
-          {visibility?.status === "changes_requested" && visibility.reviewNote ? (
-            <div style={{ marginTop: 10, fontSize: 12.5, background: "#FDECEF", color: "#B3243F", borderRadius: 9, padding: "9px 12px" }}>
+          {visibility?.reviewNote ? (
+            <div style={{ marginTop: 10, fontSize: 12.5, background: noteColors(visibility.status).bg, color: noteColors(visibility.status).fg, borderRadius: 9, padding: "9px 12px" }}>
               Reviewer note: {visibility.reviewNote}
             </div>
           ) : null}
@@ -307,7 +315,9 @@ export default function ProfileScreen({
                     </span>
                   </div>
                   {ev.note ? (
-                    <div style={{ fontSize: 12.5, color: "var(--ink)", marginTop: 8, lineHeight: 1.5 }}>{ev.note}</div>
+                    <div style={{ fontSize: 12.5, background: noteColors(ev.decision).bg, color: noteColors(ev.decision).fg, borderRadius: 8, padding: "8px 11px", marginTop: 8, lineHeight: 1.5 }}>
+                      {ev.note}
+                    </div>
                   ) : null}
                 </div>
               );

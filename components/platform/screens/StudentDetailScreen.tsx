@@ -89,6 +89,14 @@ const VIS_EVENT: Record<string, { label: string; badgeClass: string }> = {
   reopened: { label: "Reopened", badgeClass: "pf-badge-warn" },
 };
 
+// Note background follows the decision: green when approved (positive),
+// red only when changes are requested, neutral otherwise.
+function noteColors(status: string): { bg: string; fg: string } {
+  if (status === "approved") return { bg: "var(--posbg)", fg: "#14543A" };
+  if (status === "changes_requested") return { bg: "var(--dangerbg)", fg: "var(--danger)" };
+  return { bg: "var(--bg)", fg: "var(--ink)" };
+}
+
 export default function StudentDetailScreen({ student, backHref }: { student: StudentDetailUser; backHref: string }) {
   const trackLabel = student.track ? TRACK_LABELS[student.track] ?? student.track : "No track";
 
@@ -173,7 +181,7 @@ export default function StudentDetailScreen({ student, backHref }: { student: St
             </span>
           </div>
           {student.visibility.reviewNote ? (
-            <div style={{ fontSize: 12.5, background: "var(--dangerbg)", color: "var(--danger)", borderRadius: 9, padding: "9px 12px", marginBottom: 10 }}>
+            <div style={{ fontSize: 12.5, background: noteColors(student.visibility.status).bg, color: noteColors(student.visibility.status).fg, borderRadius: 9, padding: "9px 12px", marginBottom: 10 }}>
               Reviewer note: {student.visibility.reviewNote}
             </div>
           ) : null}
@@ -201,7 +209,11 @@ export default function StudentDetailScreen({ student, backHref }: { student: St
                           {ev.reviewerName ? `${ev.reviewerName} · ` : ""}{dateFmt.format(new Date(ev.createdAt))}
                         </span>
                       </div>
-                      {ev.note ? <div style={{ color: "var(--ink)", marginTop: 4, lineHeight: 1.5 }}>{ev.note}</div> : null}
+                      {ev.note ? (
+                        <div style={{ background: noteColors(ev.decision).bg, color: noteColors(ev.decision).fg, borderRadius: 8, padding: "7px 10px", marginTop: 5, lineHeight: 1.5 }}>
+                          {ev.note}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}
