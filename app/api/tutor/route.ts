@@ -25,22 +25,34 @@ export async function POST(req: Request) {
     select: { geminiApiKeyEnc: true, anthropicApiKeyEnc: true, openaiApiKeyEnc: true },
   });
 
-  // Fallback order: Gemini (free) first, then Claude, then OpenAI.
+  // Fallback order: Gemini (free) first, then Claude, then OpenAI. A stored
+  // key that fails to decrypt (e.g. AUTH_SECRET was rotated) is tracked
+  // separately so we can tell the student to re-enter it, not "add one".
   const keys: TutorKey[] = [];
-  const gemini = user?.geminiApiKeyEnc ? decryptSecret(user.geminiApiKeyEnc) : null;
-  if (gemini) keys.push({ provider: "gemini", apiKey: gemini });
-  const anthropic = user?.anthropicApiKeyEnc ? decryptSecret(user.anthropicApiKeyEnc) : null;
-  if (anthropic) keys.push({ provider: "anthropic", apiKey: anthropic });
-  const openai = user?.openaiApiKeyEnc ? decryptSecret(user.openaiApiKeyEnc) : null;
-  if (openai) keys.push({ provider: "openai", apiKey: openai });
+  let hadUnreadable = false;
+  const addKey = (enc: string | null | undefined, provider: TutorKey["provider"]) => {
+    if (!enc) return;
+    const plain = decryptSecret(enc);
+    if (plain === null) hadUnreadable = true;
+    else keys.push({ provider, apiKey: plain });
+  };
+  addKey(user?.geminiApiKeyEnc, "gemini");
+  addKey(user?.anthropicApiKeyEnc, "anthropic");
+  addKey(user?.openaiApiKeyEnc, "openai");
 
   if (keys.length === 0) {
     return Response.json(
-      {
-        code: "no_key",
-        message:
-          "Add an AI API key in My Profile to start using the AI Tutor — the Gemini key is free and takes about a minute to get.",
-      },
+      hadUnreadable
+        ? {
+            code: "unreadable_key",
+            message:
+              "Your saved AI key couldn't be read after a security update. Please re-enter it in My Profile to reconnect your AI Tutor.",
+          }
+        : {
+            code: "no_key",
+            message:
+              "Add an AI API key in My Profile to start using the AI Tutor — the Gemini key is free and takes about a minute to get.",
+          },
       { status: 412 },
     );
   }

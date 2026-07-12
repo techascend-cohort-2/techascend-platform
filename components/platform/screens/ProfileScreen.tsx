@@ -70,10 +70,11 @@ function RevealField({ id, name, placeholder }: { id: string; name: string; plac
   );
 }
 
-function ProviderKeyBlock({ meta, masked }: { meta: AiProviderMeta; masked: string | null }) {
+function ProviderKeyBlock({ meta, state: keyState }: { meta: AiProviderMeta; state: { masked: string | null; unreadable: boolean } }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(saveAiKeyAction, {});
   const [removing, startRemove] = useTransition();
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const { masked, unreadable } = keyState;
 
   return (
     <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14, marginTop: 14 }}>
@@ -93,6 +94,8 @@ function ProviderKeyBlock({ meta, masked }: { meta: AiProviderMeta; masked: stri
         </span>
         {masked ? (
           <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--pos)" }}>✓ Key saved</span>
+        ) : unreadable ? (
+          <span style={{ fontSize: 11.5, fontWeight: 800, color: "#B3243F" }}>⚠ Needs re-entry</span>
         ) : null}
       </div>
       <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 5, lineHeight: 1.6 }}>
@@ -102,6 +105,13 @@ function ProviderKeyBlock({ meta, masked }: { meta: AiProviderMeta; masked: stri
         </a>
         . {meta.howTo}
       </div>
+
+      {unreadable ? (
+        <div style={{ marginTop: 10, fontSize: 12.5, background: "#FDECEF", color: "#B3243F", borderRadius: 9, padding: "9px 12px", lineHeight: 1.5 }}>
+          We couldn&apos;t read your saved {meta.label} key (the platform&apos;s security key changed). Please paste it
+          again below to reconnect your AI Tutor.
+        </div>
+      ) : null}
 
       {masked ? (
         <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -129,7 +139,7 @@ function ProviderKeyBlock({ meta, masked }: { meta: AiProviderMeta; masked: stri
         <input type="hidden" name="provider" value={meta.id} />
         <div style={{ flex: "1 1 260px" }}>
           <label style={label} htmlFor={`aiKey-${meta.id}`}>
-            {masked ? "Replace your key" : `Paste your ${meta.label} API key`}
+            {masked ? "Replace your key" : unreadable ? `Re-enter your ${meta.label} API key` : `Paste your ${meta.label} API key`}
           </label>
           <RevealField id={`aiKey-${meta.id}`} name="apiKey" placeholder={meta.placeholder} />
         </div>
@@ -166,7 +176,7 @@ export type ProfileUser = {
   kaggleUrl: string | null;
   talentVisible: boolean;
   mustChangePassword: boolean;
-  aiKeysMasked: Record<AiProviderId, string | null>;
+  aiKeys: Record<AiProviderId, { masked: string | null; unreadable: boolean }>;
 };
 
 export type VisibilityInfo = {
@@ -391,7 +401,7 @@ export default function ProfileScreen({
           </div>
 
           {AI_PROVIDERS.map((meta) => (
-            <ProviderKeyBlock key={meta.id} meta={meta} masked={user.aiKeysMasked[meta.id]} />
+            <ProviderKeyBlock key={meta.id} meta={meta} state={user.aiKeys[meta.id]} />
           ))}
         </div>
       ) : null}

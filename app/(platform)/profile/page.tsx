@@ -13,9 +13,14 @@ export default async function ProfilePage() {
     user.role === "student" ? getVisibilityHistory(user.id) : Promise.resolve([]),
   ]);
 
-  const mask = (enc: string | null) => {
-    const plain = enc ? decryptSecret(enc) : null;
-    return plain ? maskSecret(plain) : null;
+  // A stored key can be present but undecryptable (e.g. AUTH_SECRET was
+  // rotated). Distinguish that from "not set" so the student is asked to
+  // re-enter it rather than seeing a silent failure.
+  const keyState = (enc: string | null): { masked: string | null; unreadable: boolean } => {
+    if (!enc) return { masked: null, unreadable: false };
+    const plain = decryptSecret(enc);
+    if (plain === null) return { masked: null, unreadable: true };
+    return { masked: maskSecret(plain), unreadable: false };
   };
 
   const profileUser: ProfileUser = {
@@ -34,10 +39,10 @@ export default async function ProfilePage() {
     kaggleUrl: user.kaggleUrl,
     talentVisible: user.talentVisible,
     mustChangePassword: user.mustChangePassword,
-    aiKeysMasked: {
-      gemini: mask(user.geminiApiKeyEnc),
-      anthropic: mask(user.anthropicApiKeyEnc),
-      openai: mask(user.openaiApiKeyEnc),
+    aiKeys: {
+      gemini: keyState(user.geminiApiKeyEnc),
+      anthropic: keyState(user.anthropicApiKeyEnc),
+      openai: keyState(user.openaiApiKeyEnc),
     },
   };
 
