@@ -386,6 +386,17 @@ export async function getBadgesAdmin() {
   return { userBadges, certificates };
 }
 
+// Public: a single earned badge for its shareable page + social card image.
+export async function getSharedBadge(id: string) {
+  return prisma.userBadge.findUnique({
+    where: { id },
+    include: {
+      badge: { include: { phase: true } },
+      user: { select: { name: true, track: true } },
+    },
+  });
+}
+
 export async function getCertificateByCode(code: string) {
   return prisma.certificate.findUnique({
     where: { code },

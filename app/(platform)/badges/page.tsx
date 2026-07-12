@@ -42,7 +42,8 @@ export default async function BadgesPage() {
       <div className="pf-card pf-pad" style={{ marginBottom: 16 }}>
         <div className="pf-h" style={{ marginBottom: 4 }}>Earned badges</div>
         <div style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 16 }}>
-          Badges issue automatically when you complete each phase. Share them on LinkedIn and X.
+          Badges issue automatically when you complete each phase. Tap <b>Share &amp; download</b> to post yours to
+          LinkedIn, X, WhatsApp or Facebook — with a ready-made image and caption.
         </div>
         {earned.length === 0 ? (
           <div style={{ fontSize: 13.5, color: "var(--muted)" }}>
@@ -53,7 +54,7 @@ export default async function BadgesPage() {
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 12 }}>
             {earned.map((ub) => (
-              <div key={ub.id} style={{ border: "1px solid var(--line)", borderRadius: 14, padding: 18, textAlign: "center" }}>
+              <div key={ub.id} style={{ border: "1px solid var(--line)", borderRadius: 14, padding: 18, textAlign: "center", display: "flex", flexDirection: "column" }}>
                 <div
                   style={{
                     width: 54, height: 54, margin: "0 auto 10px", borderRadius: 16,
@@ -64,9 +65,21 @@ export default async function BadgesPage() {
                   <Icon path={ub.badge.iconPath ?? ICON.award} size={26} strokeWidth={2} />
                 </div>
                 <div style={{ fontFamily: "var(--font-sora)", fontWeight: 800, fontSize: 14 }}>{ub.badge.name}</div>
-                <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 3 }}>
+                <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 3, flex: 1 }}>
                   {ub.badge.phase?.name ?? "Program"} · {dateFmt.format(ub.earnedAt)}
                 </div>
+                <Link
+                  href={`/badge/${ub.id}`}
+                  target="_blank"
+                  className="pf-btn-grad"
+                  style={{ marginTop: 12, padding: "8px 12px", borderRadius: 9, fontSize: 12, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                    <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+                  </svg>
+                  Share &amp; download
+                </Link>
               </div>
             ))}
           </div>
