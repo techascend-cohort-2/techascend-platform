@@ -149,6 +149,7 @@ export async function getStudentDashboard(userId: string) {
     tutorDates,
     projectsAwaitingReview,
     projectsNeedingChanges,
+    uncelebratedApprovals,
   ] = await Promise.all([
     getLearningTree(userId, user.track),
     prisma.userBadge.count({ where: { userId } }),
@@ -177,6 +178,13 @@ export async function getStudentDashboard(userId: string) {
     prisma.aiTutorLog.findMany({ where: { userId }, select: { createdAt: true } }),
     prisma.submission.count({ where: { userId, status: { in: ["submitted", "ai_reviewed"] } } }),
     prisma.submission.count({ where: { userId, status: "changes_requested" } }),
+    // Approved projects the student hasn't been congratulated for yet → drives
+    // the one-time "project passed" celebration on the dashboard.
+    prisma.submission.findMany({
+      where: { userId, status: "approved", celebratedAt: null },
+      include: { project: { select: { title: true } } },
+      orderBy: { updatedAt: "desc" },
+    }),
   ]);
 
   const totalLessons = tree.reduce((s, t) => s + t.totalLessons, 0);
@@ -219,10 +227,17 @@ export async function getStudentDashboard(userId: string) {
     projectsNeedingChanges,
   };
 
+  const celebrations = uncelebratedApprovals.map((s) => ({
+    id: s.id,
+    projectTitle: s.project.title,
+    mentorScore: s.mentorScore,
+  }));
+
   return {
     user,
     progressPct: user.progressPercentage,
     reviewStatus,
+    celebrations,
     stats: {
       lessonsDone: doneLessons,
       lessonsTotal: totalLessons,

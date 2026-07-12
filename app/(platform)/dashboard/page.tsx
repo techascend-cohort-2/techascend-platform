@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Icon from "@/components/Icon";
 import { getCurrentUser, getStudentDashboard } from "@/lib/queries";
 import { ICON } from "@/lib/platformData";
+import ProjectCelebration from "@/components/platform/ProjectCelebration";
 
 const eventFmt = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
@@ -57,6 +58,7 @@ export default async function DashboardPage() {
     progressPct,
     stats,
     reviewStatus,
+    celebrations,
     currentPhase,
     currentPhaseLessons,
     currentLesson,
@@ -131,6 +133,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="pf-screen pf-w1180">
+      <ProjectCelebration celebrations={celebrations} />
+
       {/* review status — bold, so it's caught at a glance on login */}
       {notices.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 18 }}>

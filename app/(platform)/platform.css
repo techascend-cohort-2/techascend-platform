@@ -677,6 +677,14 @@
   text-decoration: none;
   white-space: nowrap;
 }
+/* ---------- project-passed celebration ---------- */
+@keyframes pf-celebrate-pop {
+  0% { opacity: 0; transform: scale(0.85) translateY(10px); }
+  60% { transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.pf-celebrate-card { animation: pf-celebrate-pop 0.4s cubic-bezier(0.2, 0.8, 0.3, 1.1) both; }
+
 /* ---------- review-status alert (dashboard) ---------- */
 @keyframes pf-alert-in {
   from { opacity: 0; transform: translateY(-8px); }

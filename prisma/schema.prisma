@@ -261,6 +261,9 @@ model Submission {
   monetizationSuggestion String?
   // status: "submitted" | "ai_reviewed" | "mentor_reviewed" | "approved" | "changes_requested"
   status                 String  @default("submitted")
+  // set the first time the student has seen the "project passed" celebration,
+  // so it only ever fires once per approved submission.
+  celebratedAt           DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

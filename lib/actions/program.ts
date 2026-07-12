@@ -219,6 +219,20 @@ export async function reopenSubmissionAction(submissionId: string): Promise<Acti
   return { ok: true };
 }
 
+/**
+ * Mark approved submissions as celebrated so the "project passed" confetti
+ * only ever fires once. Scoped to the caller's own submissions.
+ */
+export async function markProjectsCelebratedAction(submissionIds: string[]): Promise<ActionState> {
+  const user = await requireUser();
+  if (submissionIds.length === 0) return { ok: true };
+  await prisma.submission.updateMany({
+    where: { id: { in: submissionIds }, userId: user.id, celebratedAt: null },
+    data: { celebratedAt: new Date() },
+  });
+  return { ok: true };
+}
+
 // ---------------- Notifications ----------------
 
 export async function markNotificationsReadAction(): Promise<ActionState> {
