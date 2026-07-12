@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { markProjectsCelebratedAction } from "@/lib/actions/program";
+import { markProjectsCelebratedAction, markVisibilityCelebratedAction } from "@/lib/actions/program";
 
-export type Celebration = { id: string; projectTitle: string; mentorScore: number | null };
+export type Celebration =
+  | { kind: "visibility"; id: string }
+  | { kind: "project"; id: string; title: string; score: number | null };
 
 const COLORS = ["#7C3AED", "#1F9D6B", "#F59E0B", "#2D6FD9", "#D6336C", "#22C55E"];
 
@@ -89,7 +91,9 @@ export default function ProjectCelebration({ celebrations }: { celebrations: Cel
   useEffect(() => {
     if (!mounted || celebrations.length === 0) return;
     // Mark seen immediately so it only ever fires once, however they leave.
-    void markProjectsCelebratedAction(celebrations.map((c) => c.id));
+    const projectIds = celebrations.filter((c) => c.kind === "project").map((c) => c.id);
+    if (projectIds.length) void markProjectsCelebratedAction(projectIds);
+    for (const c of celebrations) if (c.kind === "visibility") void markVisibilityCelebratedAction(c.id);
     const cleanup = canvasRef.current ? launchConfetti(canvasRef.current) : undefined;
     return cleanup;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,10 +101,19 @@ export default function ProjectCelebration({ celebrations }: { celebrations: Cel
 
   if (!mounted || !open || celebrations.length === 0) return null;
 
-  const multiple = celebrations.length > 1;
-  const first = celebrations[0];
-  const scored = celebrations.filter((c) => c.mentorScore != null);
-  const bestScore = scored.length ? Math.max(...scored.map((c) => c.mentorScore as number)) : null;
+  const hasVisibility = celebrations.some((c) => c.kind === "visibility");
+  const wins = celebrations.map((c) =>
+    c.kind === "visibility"
+      ? { emoji: "🏅", title: "Visibility phase approved", sub: "You've earned your Visibility Badge and certificate." }
+      : {
+          emoji: "🚀",
+          title: `“${c.title}” passed review`,
+          sub: c.score != null ? `Approved with a mentor score of ${c.score}/100.` : "Approved by a mentor.",
+        },
+  );
+  const cta = hasVisibility
+    ? { href: "/badges", label: "See my badges →" }
+    : { href: "/projects", label: "See feedback →" };
 
   return createPortal(
     <div
@@ -139,41 +152,34 @@ export default function ProjectCelebration({ celebrations }: { celebrations: Cel
           Congratulations!
         </div>
         <div style={{ fontSize: 14.5, color: "var(--muted)", lineHeight: 1.6, marginTop: 8 }}>
-          {multiple ? (
-            <>
-              <b style={{ color: "var(--ink)" }}>{celebrations.length} of your projects</b> passed review. Amazing work —
-              your capstones are approved!
-            </>
-          ) : (
-            <>
-              Your project <b style={{ color: "var(--ink)" }}>&ldquo;{first.projectTitle}&rdquo;</b> passed review.
-              Amazing work — it&apos;s officially approved!
-            </>
-          )}
+          {wins.length > 1 ? "Great news while you were away — here's what got approved:" : "Amazing work — here's what just got approved:"}
         </div>
 
-        {bestScore != null ? (
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              marginTop: 16,
-              padding: "8px 16px",
-              borderRadius: 999,
-              background: "var(--posbg)",
-              color: "#14543A",
-              fontWeight: 800,
-              fontSize: 13.5,
-            }}
-          >
-            ⭐ Mentor score {bestScore}/100
-          </div>
-        ) : null}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 18, textAlign: "left" }}>
+          {wins.map((w, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: "var(--posbg)",
+              }}
+            >
+              <span style={{ fontSize: 24, lineHeight: 1, flexShrink: 0 }}>{w.emoji}</span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: "#14543A" }}>{w.title}</div>
+                <div style={{ fontSize: 12.5, color: "#2C6A4F", lineHeight: 1.45 }}>{w.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
 
         <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 24 }}>
-          <Link href="/projects" className="pf-btn-grad" style={{ padding: "11px 20px", borderRadius: 11, fontSize: 13.5 }}>
-            See feedback →
+          <Link href={cta.href} className="pf-btn-grad" style={{ padding: "11px 20px", borderRadius: 11, fontSize: 13.5 }}>
+            {cta.label}
           </Link>
           <button
             className="pf-btn-soft"

@@ -227,11 +227,18 @@ export async function getStudentDashboard(userId: string) {
     projectsNeedingChanges,
   };
 
-  const celebrations = uncelebratedApprovals.map((s) => ({
-    id: s.id,
-    projectTitle: s.project.title,
-    mentorScore: s.mentorScore,
-  }));
+  // Milestones to celebrate on this visit — an approved visibility phase and/or
+  // approved projects the student hasn't been congratulated for yet.
+  const celebrations: (
+    | { kind: "visibility"; id: string }
+    | { kind: "project"; id: string; title: string; score: number | null }
+  )[] = [];
+  if (visibility && visibility.status === "approved" && !visibility.celebratedAt) {
+    celebrations.push({ kind: "visibility", id: visibility.id });
+  }
+  for (const s of uncelebratedApprovals) {
+    celebrations.push({ kind: "project", id: s.id, title: s.project.title, score: s.mentorScore });
+  }
 
   return {
     user,

@@ -290,6 +290,8 @@ model VisibilitySubmission {
   reviewer       User?     @relation("VisibilityReviewer", fields: [reviewerId], references: [id])
   submittedAt    DateTime  @default(now())
   reviewedAt     DateTime?
+  // set the first time the student has seen the "phase approved" celebration.
+  celebratedAt   DateTime?
 }
 
 // One row per review decision on a student's visibility submission. The

@@ -55,7 +55,7 @@ export async function submitVisibilityAction(_prev: ActionState, formData: FormD
       // Reset submittedAt on resubmit so "avg review time" measures the
       // reviewer's turnaround on the new version — not the whole
       // request-changes round-trip (which includes the student's fix time).
-      update: { ...d, status: "pending", reviewNote: null, reviewedAt: null, reviewerId: null, submittedAt: new Date() },
+      update: { ...d, status: "pending", reviewNote: null, reviewedAt: null, reviewerId: null, submittedAt: new Date(), celebratedAt: null },
     }),
     prisma.user.update({ where: { id: user.id }, data: { ...d } }),
   ]);
@@ -121,7 +121,9 @@ export async function reopenVisibilityAction(submissionId: string): Promise<Acti
   const wasApproved = existing.status === "approved";
   const sub = await prisma.visibilitySubmission.update({
     where: { id: submissionId },
-    data: { status: "pending", reviewNote: null, reviewerId: null, reviewedAt: null },
+    // Clear celebratedAt too: if it's genuinely re-approved later, the student
+    // should get the celebration again for that real approval.
+    data: { status: "pending", reviewNote: null, reviewerId: null, reviewedAt: null, celebratedAt: null },
   });
 
   if (wasApproved) await revokeVisibilityAwards(sub.userId);
@@ -228,6 +230,16 @@ export async function markProjectsCelebratedAction(submissionIds: string[]): Pro
   if (submissionIds.length === 0) return { ok: true };
   await prisma.submission.updateMany({
     where: { id: { in: submissionIds }, userId: user.id, celebratedAt: null },
+    data: { celebratedAt: new Date() },
+  });
+  return { ok: true };
+}
+
+/** Mark the visibility phase approval as celebrated (fires the confetti once). */
+export async function markVisibilityCelebratedAction(visibilityId: string): Promise<ActionState> {
+  const user = await requireUser();
+  await prisma.visibilitySubmission.updateMany({
+    where: { id: visibilityId, userId: user.id, celebratedAt: null },
     data: { celebratedAt: new Date() },
   });
   return { ok: true };
