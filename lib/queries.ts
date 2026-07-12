@@ -135,7 +135,7 @@ export async function getStudentDashboard(userId: string) {
   if (!user) throw new Error("User not found");
 
   const [
-    { tree, current },
+    { tree, current, visibility },
     badgeCount,
     certCount,
     payoutAgg,
@@ -147,6 +147,8 @@ export async function getStudentDashboard(userId: string) {
     lessonDates,
     submissionDates,
     tutorDates,
+    projectsAwaitingReview,
+    projectsNeedingChanges,
   ] = await Promise.all([
     getLearningTree(userId, user.track),
     prisma.userBadge.count({ where: { userId } }),
@@ -173,6 +175,8 @@ export async function getStudentDashboard(userId: string) {
     prisma.lessonProgress.findMany({ where: { userId }, select: { completedAt: true } }),
     prisma.submission.findMany({ where: { userId }, select: { createdAt: true } }),
     prisma.aiTutorLog.findMany({ where: { userId }, select: { createdAt: true } }),
+    prisma.submission.count({ where: { userId, status: { in: ["submitted", "ai_reviewed"] } } }),
+    prisma.submission.count({ where: { userId, status: "changes_requested" } }),
   ]);
 
   const totalLessons = tree.reduce((s, t) => s + t.totalLessons, 0);
@@ -205,9 +209,20 @@ export async function getStudentDashboard(userId: string) {
     ...tutorDates.map((d) => d.createdAt),
   ]);
 
+  // What's waiting on review (or waiting on the student) — surfaced on the
+  // dashboard so it's obvious at login without opening the profile.
+  const reviewStatus = {
+    // "pending" (with review team) | "changes_requested" (student must act) |
+    // "approved" | "none" (not submitted yet)
+    visibility: (visibility?.status ?? "none") as "pending" | "changes_requested" | "approved" | "none",
+    projectsAwaitingReview,
+    projectsNeedingChanges,
+  };
+
   return {
     user,
     progressPct: user.progressPercentage,
+    reviewStatus,
     stats: {
       lessonsDone: doneLessons,
       lessonsTotal: totalLessons,

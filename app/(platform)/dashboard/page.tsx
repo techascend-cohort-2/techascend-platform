@@ -56,6 +56,7 @@ export default async function DashboardPage() {
     user,
     progressPct,
     stats,
+    reviewStatus,
     currentPhase,
     currentPhaseLessons,
     currentLesson,
@@ -67,6 +68,23 @@ export default async function DashboardPage() {
 
   const firstName = user.name.split(" ")[0];
   const continueHref = currentLesson ? `/learning/${currentLesson.id}` : "/learning";
+
+  // Review notices — action-needed (amber) first, then under-review (neutral),
+  // so a pending review is obvious at login without opening the profile.
+  type Notice = { kind: "action" | "review"; text: string; href: string; cta: string };
+  const notices: Notice[] = [];
+  if (reviewStatus.visibility === "changes_requested") {
+    notices.push({ kind: "action", text: "Changes were requested on your visibility submission. Update your six links to move forward.", href: "/profile", cta: "Fix in My Profile" });
+  }
+  if (reviewStatus.projectsNeedingChanges > 0) {
+    notices.push({ kind: "action", text: `Changes were requested on ${reviewStatus.projectsNeedingChanges} project submission${reviewStatus.projectsNeedingChanges === 1 ? "" : "s"}. Read the feedback and resubmit.`, href: "/projects", cta: "View projects" });
+  }
+  if (reviewStatus.visibility === "pending") {
+    notices.push({ kind: "review", text: "Your visibility submission is under review. We'll notify you the moment it's decided.", href: "/profile", cta: "View submission" });
+  }
+  if (reviewStatus.projectsAwaitingReview > 0) {
+    notices.push({ kind: "review", text: `${reviewStatus.projectsAwaitingReview} project submission${reviewStatus.projectsAwaitingReview === 1 ? " is" : "s are"} awaiting mentor review.`, href: "/projects", cta: "View projects" });
+  }
 
   const statCards = [
     {
@@ -113,6 +131,51 @@ export default async function DashboardPage() {
 
   return (
     <div className="pf-screen pf-w1180">
+      {/* review status — evident at login */}
+      {notices.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+          {notices.map((n, i) => {
+            const action = n.kind === "action";
+            return (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  padding: "13px 16px",
+                  borderRadius: 12,
+                  background: action ? "#FCF1DE" : "#eef2fb",
+                  border: `1px solid ${action ? "#F2DBB4" : "#cfdcf5"}`,
+                }}
+              >
+                <div
+                  style={{
+                    width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+                    display: "grid", placeItems: "center",
+                    background: "#fff", color: action ? "#B77400" : "#2D6FD9",
+                  }}
+                >
+                  <Icon path={action ? ICON.zap : ICON.clock} size={16} />
+                </div>
+                <div style={{ flex: 1, minWidth: 200, fontSize: 13, color: action ? "#7A4C08" : "#1F3E73", lineHeight: 1.5 }}>
+                  {action ? <b>Action needed. </b> : <b>Under review. </b>}
+                  {n.text}
+                </div>
+                <Link
+                  href={n.href}
+                  className={action ? "pf-btn-grad" : "pf-btn-soft"}
+                  style={{ fontSize: 12.5, padding: "8px 15px", borderRadius: 9, whiteSpace: "nowrap" }}
+                >
+                  {n.cta} →
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
       {/* welcome + ring */}
       <div className="pf-dash-top">
         <div className="pf-welcome">
