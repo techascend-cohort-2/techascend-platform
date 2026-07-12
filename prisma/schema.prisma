@@ -255,7 +255,8 @@ model Submission {
   notes                  String?
   aiScore                Int?
   mentorScore            Int?
-  rubric                 Json? // [{ label, score }]
+  rubric                 Json? // AI per-criterion scores: [{ key, label, score }]
+  mentorRubric           Json? // mentor per-criterion scores: [{ key, score }]
   aiFeedback             String?
   mentorFeedback         String?
   monetizationSuggestion String?

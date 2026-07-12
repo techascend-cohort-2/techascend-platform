@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { setLessonComplete, runAwardChecks, revokeVisibilityAwards, notify } from "@/lib/progress";
 import { visibilitySchema } from "@/lib/validation";
 import { isStaff } from "@/lib/constants";
+import { evaluateRubric, PASS_OVERALL } from "@/lib/rubric";
 
 export type ActionState = { ok?: boolean; error?: string };
 
@@ -151,15 +152,35 @@ export async function reopenVisibilityAction(submissionId: string): Promise<Acti
 
 export async function mentorReviewAction(
   submissionId: string,
-  data: { mentorScore?: number; mentorFeedback?: string; status: "approved" | "changes_requested" | "mentor_reviewed" },
+  data: {
+    rubric?: { key: string; score: number }[];
+    mentorFeedback?: string;
+    status: "approved" | "changes_requested" | "mentor_reviewed";
+  },
 ): Promise<ActionState> {
   const user = await requireUser();
   if (!isStaff(user.role)) return { error: "Staff only." };
 
+  const rubric = (data.rubric ?? []).map((r) => ({ key: String(r.key), score: r.score }));
+  const verdict = rubric.length ? evaluateRubric(rubric) : null;
+
+  // Enforce the pass bar server-side: a project can only be approved if it
+  // meets the rubric (≥70% overall and no criterion below 50%).
+  if (data.status === "approved") {
+    if (!verdict) return { error: "Score each rubric criterion before approving." };
+    if (!verdict.passed) {
+      const why = verdict.failedCriteria.length
+        ? `${verdict.failedCriteria.join(", ")} ${verdict.failedCriteria.length === 1 ? "is" : "are"} below 50%`
+        : `the overall score is ${verdict.overall}/100 (needs ${PASS_OVERALL})`;
+      return { error: `This doesn't meet the pass bar — ${why}. Request changes instead.` };
+    }
+  }
+
   const sub = await prisma.submission.update({
     where: { id: submissionId },
     data: {
-      mentorScore: data.mentorScore ?? null,
+      mentorScore: verdict ? verdict.overall : null,
+      mentorRubric: rubric.length ? rubric : undefined,
       mentorFeedback: data.mentorFeedback ?? null,
       status: data.status,
     },

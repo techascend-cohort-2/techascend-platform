@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { AiProviderId } from "@/lib/aiProviderMeta";
+import { PROJECT_RUBRIC, PASS_OVERALL, PASS_MIN_PER_CRITERION, overallScore } from "@/lib/rubric";
 
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
@@ -229,17 +230,15 @@ function getAnthropicClient(): Anthropic | null {
 
 export type Evaluation = {
   aiScore: number;
-  rubric: { label: string; score: number }[];
+  rubric: { key: string; label: string; score: number }[];
   feedback: string;
   monetizationSuggestion: string;
 };
 
-const RUBRIC_LABELS = ["Functionality", "Code quality", "Documentation", "Monetization potential"];
-
 function fallbackEvaluation(): Evaluation {
   return {
     aiScore: 0,
-    rubric: RUBRIC_LABELS.map((label) => ({ label, score: 0 })),
+    rubric: PROJECT_RUBRIC.map((c) => ({ key: c.key, label: c.label, score: 0 })),
     feedback:
       "AI evaluation is offline right now (the platform's AI key isn't configured). A mentor will still review your work.",
     monetizationSuggestion: "Ask a mentor for tailored income suggestions once AI evaluation is back online.",
@@ -247,8 +246,8 @@ function fallbackEvaluation(): Evaluation {
 }
 
 /**
- * Evaluate a project submission and return rubric scores + feedback.
- * Uses the Claude tool/JSON pattern; falls back gracefully without a key.
+ * Evaluate a project submission against the TechAscend project rubric and return
+ * per-criterion scores + feedback. Falls back gracefully without a key.
  */
 export async function evaluateSubmission(input: {
   projectTitle: string;
@@ -259,17 +258,25 @@ export async function evaluateSubmission(input: {
   const anthropic = getAnthropicClient();
   if (!anthropic) return fallbackEvaluation();
 
-  const prompt = `Evaluate this student project submission for the TechAscend program.
+  const criteriaText = PROJECT_RUBRIC.map(
+    (c) => `- ${c.key} — ${c.label} (${c.weight}%): ${c.description}`,
+  ).join("\n");
+  const shape = PROJECT_RUBRIC.map((c) => `{"key": "${c.key}", "score": 0}`).join(", ");
+
+  const prompt = `Evaluate this student project submission for the TechAscend program (AI-native builders in Central Africa).
 
 PROJECT: ${input.projectTitle}
 DESCRIPTION: ${input.projectDescription ?? "n/a"}
 SUBMISSION LINK: ${input.submissionLink ?? "n/a"}
 STUDENT NOTES: ${input.notes ?? "n/a"}
 
-Score each rubric category from 0-100: Functionality, Code quality, Documentation, Monetization potential.
+Score EACH rubric criterion from 0-100 using these weighted criteria:
+${criteriaText}
+
+A submission passes when the weighted total is at least ${PASS_OVERALL}/100 AND no criterion scores below ${PASS_MIN_PER_CRITERION}. Be fair but hold the bar to real, working, income-ready work.
 Reply ONLY with a JSON object of this exact shape:
 {
-  "rubric": [{"label": "Functionality", "score": 0}, {"label": "Code quality", "score": 0}, {"label": "Documentation", "score": 0}, {"label": "Monetization potential", "score": 0}],
+  "rubric": [${shape}],
   "feedback": "2-4 sentences of specific, encouraging feedback ending with a Next Action",
   "monetizationSuggestion": "one concrete way she could earn income from this work in the Cameroon/Africa context"
 }`;
@@ -284,11 +291,15 @@ Reply ONLY with a JSON object of this exact shape:
     const textBlock = res.content.find((b): b is Anthropic.TextBlock => b.type === "text");
     const text = textBlock?.text ?? "";
     const json = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
-    const parsed = JSON.parse(json) as Omit<Evaluation, "aiScore">;
-    const rubric = Array.isArray(parsed.rubric) && parsed.rubric.length
-      ? parsed.rubric.map((r) => ({ label: String(r.label), score: clamp(Number(r.score)) }))
-      : RUBRIC_LABELS.map((label) => ({ label, score: 0 }));
-    const aiScore = Math.round(rubric.reduce((s, r) => s + r.score, 0) / rubric.length);
+    const parsed = JSON.parse(json) as {
+      rubric?: { key?: string; score?: number }[];
+      feedback?: string;
+      monetizationSuggestion?: string;
+    };
+    const byKey = new Map((parsed.rubric ?? []).map((r) => [String(r.key), clamp(Number(r.score))]));
+    const scored = PROJECT_RUBRIC.map((c) => ({ key: c.key, score: byKey.get(c.key) ?? 0 }));
+    const rubric = PROJECT_RUBRIC.map((c) => ({ key: c.key, label: c.label, score: byKey.get(c.key) ?? 0 }));
+    const aiScore = overallScore(scored);
     return {
       aiScore,
       rubric,

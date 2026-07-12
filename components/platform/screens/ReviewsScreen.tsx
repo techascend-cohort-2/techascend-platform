@@ -11,6 +11,7 @@ import {
   reopenSubmissionAction,
   reopenVisibilityAction,
 } from "@/lib/actions/program";
+import { PROJECT_RUBRIC, PASS_OVERALL, PASS_MIN_PER_CRITERION, overallScore, evaluateRubric } from "@/lib/rubric";
 
 type VisItem = {
   id: string;
@@ -31,6 +32,7 @@ type SubItem = {
   notes: string | null;
   aiScore: number | null;
   aiFeedback: string | null;
+  aiRubric: { key?: string; label?: string; score?: number }[] | null;
   status: string;
   user: { name: string; email: string; track: string | null; initials: string | null; avatarBg: string | null };
   project: { title: string };
@@ -123,8 +125,27 @@ export default function ReviewsScreen({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [notes, setNotes] = useState<Record<string, string>>({});
-  const [scores, setScores] = useState<Record<string, string>>({});
+  // submissionId → { criterionKey → mentor score 0-100 }
+  const [rubricScores, setRubricScores] = useState<Record<string, Record<string, number>>>({});
   const [error, setError] = useState("");
+
+  function aiScoreOf(sub: SubItem, key: string): number {
+    const r = sub.aiRubric?.find((x) => x.key === key);
+    const n = r?.score;
+    return typeof n === "number" ? Math.max(0, Math.min(100, Math.round(n))) : 0;
+  }
+  // Mentor's current score for a criterion — defaults to the AI's suggestion.
+  function scoreOf(sub: SubItem, key: string): number {
+    const override = rubricScores[sub.id]?.[key];
+    return typeof override === "number" ? override : aiScoreOf(sub, key);
+  }
+  function setCriterion(subId: string, key: string, value: number) {
+    const v = Math.max(0, Math.min(100, Math.round(Number.isNaN(value) ? 0 : value)));
+    setRubricScores((prev) => ({ ...prev, [subId]: { ...prev[subId], [key]: v } }));
+  }
+  function subRubric(sub: SubItem) {
+    return PROJECT_RUBRIC.map((c) => ({ key: c.key, score: scoreOf(sub, c.key) }));
+  }
   const [trackFilter, setTrackFilter] = useState<"all" | "A" | "B">("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [newestFirst, setNewestFirst] = useState(true);
@@ -142,10 +163,10 @@ export default function ReviewsScreen({
 
   function decideSub(id: string, status: "approved" | "changes_requested") {
     setError("");
-    const raw = scores[id];
-    const mentorScore = raw ? Math.max(0, Math.min(100, parseInt(raw, 10) || 0)) : undefined;
+    const sub = submissions.find((s) => s.id === id);
+    const rubric = sub ? subRubric(sub) : [];
     start(async () => {
-      const res = await mentorReviewAction(id, { mentorScore, mentorFeedback: notes[`s-${id}`] || undefined, status });
+      const res = await mentorReviewAction(id, { rubric, mentorFeedback: notes[`s-${id}`] || undefined, status });
       if (res.error) setError(res.error);
       else router.refresh();
     });
@@ -414,34 +435,96 @@ export default function ReviewsScreen({
                     <b>AI:</b> {s.aiFeedback}
                   </div>
                 ) : null}
-                <div style={{ display: "flex", gap: 9, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    placeholder="Score /100"
-                    value={scores[s.id] ?? ""}
-                    onChange={(e) => setScores((x) => ({ ...x, [s.id]: e.target.value }))}
-                    style={{ width: 110, border: "1px solid var(--line)", borderRadius: 9, padding: "9px 12px", fontSize: 12.5 }}
-                  />
-                  <input
-                    placeholder="Mentor feedback…"
-                    value={notes[`s-${s.id}`] ?? ""}
-                    onChange={(e) => setNotes((n) => ({ ...n, [`s-${s.id}`]: e.target.value }))}
-                    style={{ flex: 1, minWidth: 200, border: "1px solid var(--line)", borderRadius: 9, padding: "9px 12px", fontSize: 12.5 }}
-                  />
-                  <button className="pf-btn-grad" style={{ padding: "9px 16px", borderRadius: 9, fontSize: 12.5 }} disabled={pending} onClick={() => decideSub(s.id, "approved")}>
-                    Approve ✓
-                  </button>
-                  <button
-                    className="pf-btn-soft"
-                    style={{ padding: "9px 16px", borderRadius: 9, fontSize: 12.5, cursor: "pointer" }}
-                    disabled={pending}
-                    onClick={() => decideSub(s.id, "changes_requested")}
-                  >
-                    Request changes
-                  </button>
-                </div>
+                {(() => {
+                  const verdict = evaluateRubric(subRubric(s));
+                  return (
+                    <>
+                      {/* rubric scoring */}
+                      <div style={{ marginTop: 14, border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 13px", background: "var(--bg)", flexWrap: "wrap", gap: 8 }}>
+                          <span style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: 0.3, color: "var(--faint)" }}>
+                            RUBRIC — score each 0–100 (AI suggestions prefilled)
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 12, fontWeight: 800, padding: "3px 10px", borderRadius: 20,
+                              color: verdict.passed ? "var(--pos)" : "#B3243F",
+                              background: verdict.passed ? "var(--posbg)" : "#FDECEF",
+                            }}
+                          >
+                            {verdict.overall}/100 · {verdict.passed ? "Meets the bar ✓" : "Below the bar"}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          {PROJECT_RUBRIC.map((c) => {
+                            const val = scoreOf(s, c.key);
+                            const low = val < PASS_MIN_PER_CRITERION;
+                            return (
+                              <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 13px", borderTop: "1px solid var(--line)", flexWrap: "wrap" }}>
+                                <div style={{ flex: 1, minWidth: 180 }}>
+                                  <div style={{ fontSize: 12.5, fontWeight: 700 }}>
+                                    {c.label} <span style={{ color: "var(--faint)", fontWeight: 600 }}>· {c.weight}%</span>
+                                  </div>
+                                  <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{c.description}</div>
+                                </div>
+                                <input
+                                  type="range"
+                                  min={0}
+                                  max={100}
+                                  value={val}
+                                  onChange={(e) => setCriterion(s.id, c.key, Number(e.target.value))}
+                                  style={{ flex: "1 1 140px", accentColor: low ? "#B3243F" : "var(--brand2)" }}
+                                />
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={val}
+                                  onChange={(e) => setCriterion(s.id, c.key, Number(e.target.value))}
+                                  style={{ width: 62, border: `1px solid ${low ? "#F0B7C2" : "var(--line)"}`, borderRadius: 8, padding: "7px 8px", fontSize: 12.5, textAlign: "center", color: low ? "#B3243F" : "var(--ink)", fontWeight: 700 }}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <input
+                        placeholder="Mentor feedback to the student…"
+                        value={notes[`s-${s.id}`] ?? ""}
+                        onChange={(e) => setNotes((n) => ({ ...n, [`s-${s.id}`]: e.target.value }))}
+                        style={{ width: "100%", border: "1px solid var(--line)", borderRadius: 9, padding: "9px 12px", fontSize: 12.5, marginTop: 12 }}
+                      />
+
+                      <div style={{ display: "flex", gap: 9, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
+                        <button
+                          className="pf-btn-grad"
+                          style={{ padding: "9px 16px", borderRadius: 9, fontSize: 12.5, opacity: verdict.passed ? 1 : 0.5, cursor: verdict.passed ? "pointer" : "not-allowed" }}
+                          disabled={pending || !verdict.passed}
+                          title={verdict.passed ? "Approve this submission" : `Needs ≥${PASS_OVERALL}/100 overall and every criterion ≥${PASS_MIN_PER_CRITERION}`}
+                          onClick={() => decideSub(s.id, "approved")}
+                        >
+                          Approve ✓
+                        </button>
+                        <button
+                          className="pf-btn-soft"
+                          style={{ padding: "9px 16px", borderRadius: 9, fontSize: 12.5, cursor: "pointer" }}
+                          disabled={pending}
+                          onClick={() => decideSub(s.id, "changes_requested")}
+                        >
+                          Request changes
+                        </button>
+                        {!verdict.passed ? (
+                          <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
+                            {verdict.failedCriteria.length
+                              ? `${verdict.failedCriteria.join(", ")} below ${PASS_MIN_PER_CRITERION}%`
+                              : `Needs ≥${PASS_OVERALL}/100 to pass`}
+                          </span>
+                        ) : null}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -518,8 +601,10 @@ export default function ReviewsScreen({
             photo, completed bio, TechAscend mentioned on LinkedIn, intro post published. Approval triggers the
             badge + certificate automatically once her lessons are complete.
             <br />
-            <b>Project submissions:</b> the AI evaluator has already scored these — add a mentor score and specific
-            feedback, then approve or request changes.
+            <b>Project submissions:</b> score each project against the four rubric criteria (Functionality,
+            Code &amp; build quality, Documentation &amp; communication, Real-world &amp; income potential). The AI&apos;s
+            scores are prefilled — adjust them. A project can be approved only when it reaches{" "}
+            <b>≥{PASS_OVERALL}/100 overall with no criterion below {PASS_MIN_PER_CRITERION}%</b>; otherwise request changes.
           </div>
         ) : null}
       </div>

@@ -29,6 +29,7 @@ export default async function ReviewsPage() {
         notes: s.notes,
         aiScore: s.aiScore,
         aiFeedback: s.aiFeedback,
+        aiRubric: (s.rubric as { key?: string; label?: string; score?: number }[] | null) ?? null,
         status: s.status,
         user: s.user,
         project: { title: s.project.title },
