@@ -63,6 +63,16 @@ export type StudentDetailUser = {
     aiScore: number | null;
     mentorScore: number | null;
     submissionLink: string | null;
+    notes: string | null;
+    aiFeedback: string | null;
+    mentorFeedback: string | null;
+    createdAt: string;
+  }[];
+  visibilityHistory: {
+    id: string;
+    decision: string;
+    note: string | null;
+    reviewerName: string | null;
     createdAt: string;
   }[];
   badges: { id: string; name: string; tint: string | null; earnedAt: string }[];
@@ -71,6 +81,12 @@ export type StudentDetailUser = {
   tutorCount: number;
   lastTutorAt: string | null;
   lastLessonAt: string | null;
+};
+
+const VIS_EVENT: Record<string, { label: string; badgeClass: string }> = {
+  approved: { label: "Approved ✓", badgeClass: "pf-badge-pos" },
+  changes_requested: { label: "Changes requested", badgeClass: "pf-badge-danger" },
+  reopened: { label: "Reopened", badgeClass: "pf-badge-warn" },
 };
 
 export default function StudentDetailScreen({ student, backHref }: { student: StudentDetailUser; backHref: string }) {
@@ -170,6 +186,28 @@ export default function StudentDetailScreen({ student, backHref }: { student: St
               ) : null,
             )}
           </div>
+
+          {student.visibilityHistory.length > 0 ? (
+            <div style={{ marginTop: 14, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: "var(--faint)", letterSpacing: 0.3, marginBottom: 8 }}>REVIEW HISTORY</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {student.visibilityHistory.map((ev) => {
+                  const meta = VIS_EVENT[ev.decision] ?? { label: ev.decision, badgeClass: "pf-badge-neutral" };
+                  return (
+                    <div key={ev.id} style={{ fontSize: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span className={`pf-badge ${meta.badgeClass}`}>{meta.label}</span>
+                        <span style={{ color: "var(--muted)" }}>
+                          {ev.reviewerName ? `${ev.reviewerName} · ` : ""}{dateFmt.format(new Date(ev.createdAt))}
+                        </span>
+                      </div>
+                      {ev.note ? <div style={{ color: "var(--ink)", marginTop: 4, lineHeight: 1.5 }}>{ev.note}</div> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -180,23 +218,38 @@ export default function StudentDetailScreen({ student, backHref }: { student: St
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {student.submissions.map((s) => (
-              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "var(--bg)", borderRadius: 10, flexWrap: "wrap" }}>
-                <div style={{ flex: "1 1 200px", minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>{s.projectTitle}</div>
-                  <div style={{ fontSize: 11.5, color: "var(--muted)" }}>
-                    Submitted {dateFmt.format(new Date(s.createdAt))}
-                    {s.aiScore !== null ? ` · AI score ${s.aiScore}` : ""}
-                    {s.mentorScore !== null ? ` · Mentor score ${s.mentorScore}` : ""}
+              <div key={s.id} style={{ padding: "12px 14px", background: "var(--bg)", borderRadius: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                  <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>{s.projectTitle}</div>
+                    <div style={{ fontSize: 11.5, color: "var(--muted)" }}>
+                      Submitted {dateFmt.format(new Date(s.createdAt))}
+                      {s.aiScore !== null ? ` · AI score ${s.aiScore}` : ""}
+                      {s.mentorScore !== null ? ` · Mentor score ${s.mentorScore}` : ""}
+                    </div>
                   </div>
+                  {s.submissionLink ? (
+                    <a href={s.submissionLink} target="_blank" rel="noreferrer" className="pf-chip">
+                      View ↗
+                    </a>
+                  ) : null}
+                  <span className={`pf-badge ${SUB_STATUS[s.status]?.badgeClass ?? "pf-badge-neutral"}`}>
+                    {SUB_STATUS[s.status]?.label ?? s.status}
+                  </span>
                 </div>
-                {s.submissionLink ? (
-                  <a href={s.submissionLink} target="_blank" rel="noreferrer" className="pf-chip">
-                    View ↗
-                  </a>
+                {s.notes ? (
+                  <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8, fontStyle: "italic" }}>“{s.notes}”</div>
                 ) : null}
-                <span className={`pf-badge ${SUB_STATUS[s.status]?.badgeClass ?? "pf-badge-neutral"}`}>
-                  {SUB_STATUS[s.status]?.label ?? s.status}
-                </span>
+                {s.aiFeedback ? (
+                  <div style={{ fontSize: 12, background: "#F8F5FE", borderRadius: 8, padding: "8px 11px", marginTop: 8, lineHeight: 1.5 }}>
+                    <b>AI:</b> {s.aiFeedback}
+                  </div>
+                ) : null}
+                {s.mentorFeedback ? (
+                  <div style={{ fontSize: 12, background: "var(--posbg)", color: "#14543A", borderRadius: 8, padding: "8px 11px", marginTop: 8, lineHeight: 1.5 }}>
+                    <b>Mentor:</b> {s.mentorFeedback}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

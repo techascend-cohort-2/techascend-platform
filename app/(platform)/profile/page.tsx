@@ -1,14 +1,17 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/queries";
+import { getCurrentUser, getVisibilityHistory } from "@/lib/queries";
 import { decryptSecret, maskSecret } from "@/lib/crypto";
-import ProfileScreen, { type ProfileUser, type VisibilityInfo } from "@/components/platform/screens/ProfileScreen";
+import ProfileScreen, { type ProfileUser, type VisibilityInfo, type VisibilityEvent } from "@/components/platform/screens/ProfileScreen";
 
 export default async function ProfilePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const vs = await prisma.visibilitySubmission.findUnique({ where: { userId: user.id } });
+  const [vs, history] = await Promise.all([
+    prisma.visibilitySubmission.findUnique({ where: { userId: user.id } }),
+    user.role === "student" ? getVisibilityHistory(user.id) : Promise.resolve([]),
+  ]);
 
   const mask = (enc: string | null) => {
     const plain = enc ? decryptSecret(enc) : null;
@@ -51,5 +54,13 @@ export default async function ProfilePage() {
       }
     : null;
 
-  return <ProfileScreen user={profileUser} visibility={visibility} />;
+  const visibilityHistory: VisibilityEvent[] = history.map((h) => ({
+    id: h.id,
+    decision: h.decision,
+    note: h.note,
+    reviewerName: h.reviewer?.name ?? null,
+    createdAt: h.createdAt.toISOString(),
+  }));
+
+  return <ProfileScreen user={profileUser} visibility={visibility} visibilityHistory={visibilityHistory} />;
 }

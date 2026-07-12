@@ -19,6 +19,34 @@ type Evaluation = {
   feedback: string;
   monetizationSuggestion: string;
 };
+export type SubmissionHistoryItem = {
+  id: string;
+  createdAt: string;
+  status: string;
+  submissionLink: string | null;
+  notes: string | null;
+  aiScore: number | null;
+  aiFeedback: string | null;
+  mentorScore: number | null;
+  mentorFeedback: string | null;
+};
+
+const HISTORY_STATUS: Record<string, { label: string; fg: string; bg: string }> = {
+  submitted: { label: "Submitted", fg: "var(--muted)", bg: "#eef1ee" },
+  ai_reviewed: { label: "AI reviewed", fg: "var(--brand1)", bg: "#f1eafc" },
+  mentor_reviewed: { label: "Mentor reviewed", fg: "#2D6FD9", bg: "#e6f0fc" },
+  approved: { label: "Approved", fg: "var(--pos)", bg: "var(--posbg)" },
+  changes_requested: { label: "Changes requested", fg: "var(--warn)", bg: "var(--warnbg)" },
+};
+
+const histFmt = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Africa/Douala",
+});
 
 export default function ProjectSubmit({
   projectId,
@@ -26,12 +54,14 @@ export default function ProjectSubmit({
   moduleLabel,
   deliverables,
   initialEvaluation,
+  history = [],
 }: {
   projectId: string;
   projectTitle: string;
   moduleLabel: string;
   deliverables: Deliverable[];
   initialEvaluation: Evaluation | null;
+  history?: SubmissionHistoryItem[];
 }) {
   const toast = useToast();
   const [extra, setExtra] = useState<string[]>([]);
@@ -218,6 +248,54 @@ export default function ProjectSubmit({
           ) : null}
         </div>
       </div>
+
+      {history.length > 0 ? (
+        <div className="pf-card" style={{ padding: 22, marginTop: 16 }}>
+          <div style={{ fontFamily: "var(--font-sora)", fontWeight: 700, fontSize: 16 }}>Your submission history</div>
+          <div style={{ fontSize: 12.5, color: "var(--muted)", margin: "3px 0 16px" }}>
+            Every time you submit this project it&apos;s saved here with the AI score and any mentor feedback.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {history.map((h, i) => {
+              const st = HISTORY_STATUS[h.status] ?? HISTORY_STATUS.submitted;
+              return (
+                <div key={h.id} style={{ border: "1px solid var(--line)", borderRadius: 12, padding: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>
+                      {i === 0 ? "Latest attempt" : `Attempt ${history.length - i}`}
+                    </span>
+                    <span style={{ fontSize: 10.5, fontWeight: 800, color: st.fg, background: st.bg, padding: "2px 8px", borderRadius: 20 }}>
+                      {st.label}
+                    </span>
+                    <span style={{ flex: 1 }} />
+                    <span style={{ fontSize: 11.5, color: "var(--muted)" }}>{histFmt.format(new Date(h.createdAt))}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 8, fontSize: 12 }}>
+                    {h.aiScore != null ? <span><b>AI:</b> {h.aiScore}/100</span> : null}
+                    {h.mentorScore != null ? <span><b>Mentor:</b> {h.mentorScore}/100</span> : null}
+                    {h.submissionLink ? (
+                      <a href={h.submissionLink} target="_blank" rel="noreferrer" className="pf-link">Open submission ↗</a>
+                    ) : null}
+                  </div>
+                  {h.notes ? (
+                    <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 8, fontStyle: "italic" }}>“{h.notes}”</div>
+                  ) : null}
+                  {h.aiFeedback ? (
+                    <div style={{ fontSize: 12.5, background: "#F8F5FE", borderRadius: 9, padding: "9px 12px", marginTop: 8, lineHeight: 1.5 }}>
+                      <b>AI feedback:</b> {h.aiFeedback}
+                    </div>
+                  ) : null}
+                  {h.mentorFeedback ? (
+                    <div style={{ fontSize: 12.5, background: "var(--posbg)", color: "#14543A", borderRadius: 9, padding: "9px 12px", marginTop: 8, lineHeight: 1.5 }}>
+                      <b>Mentor feedback:</b> {h.mentorFeedback}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

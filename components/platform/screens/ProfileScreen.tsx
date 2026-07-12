@@ -180,6 +180,29 @@ export type VisibilityInfo = {
   kaggleUrl: string;
 } | null;
 
+export type VisibilityEvent = {
+  id: string;
+  decision: string; // "approved" | "changes_requested" | "reopened"
+  note: string | null;
+  reviewerName: string | null;
+  createdAt: string;
+};
+
+const VIS_EVENT_META: Record<string, { label: string; fg: string; bg: string }> = {
+  approved: { label: "Approved", fg: "var(--pos)", bg: "var(--posbg)" },
+  changes_requested: { label: "Changes requested", fg: "#B3243F", bg: "#FDECEF" },
+  reopened: { label: "Reopened for review", fg: "#7A4C08", bg: "#FCF1DE" },
+};
+
+const visFmt = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Africa/Douala",
+});
+
 const LINKS: { name: keyof ProfileUser & string; lbl: string; ph: string }[] = [
   { name: "githubUrl", lbl: "GitHub", ph: "https://github.com/you" },
   { name: "linkedinUrl", lbl: "LinkedIn", ph: "https://linkedin.com/in/you" },
@@ -189,7 +212,15 @@ const LINKS: { name: keyof ProfileUser & string; lbl: string; ph: string }[] = [
   { name: "kaggleUrl", lbl: "Kaggle", ph: "https://kaggle.com/you" },
 ];
 
-export default function ProfileScreen({ user, visibility }: { user: ProfileUser; visibility: VisibilityInfo }) {
+export default function ProfileScreen({
+  user,
+  visibility,
+  visibilityHistory = [],
+}: {
+  user: ProfileUser;
+  visibility: VisibilityInfo;
+  visibilityHistory?: VisibilityEvent[];
+}) {
   const [pState, pAction, pPending] = useActionState<ActionState, FormData>(updateProfileAction, {});
   const [vState, vAction, vPending] = useActionState<ActionState, FormData>(submitVisibilityAction, {});
   const [wState, wAction, wPending] = useActionState<FormState, FormData>(changePasswordAction, {});
@@ -252,6 +283,37 @@ export default function ProfileScreen({ user, visibility }: { user: ProfileUser;
           </div>
           <Msg state={vState} okText="Submitted! The community team has been notified." />
         </form>
+      ) : null}
+
+      {/* Visibility review history (students) */}
+      {isStudent && visibilityHistory.length > 0 ? (
+        <div className="pf-card" style={{ padding: 24, marginBottom: 16 }}>
+          <div className="pf-h">Review history</div>
+          <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4, marginBottom: 14 }}>
+            Every decision the review team has made on your six links, most recent first.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {visibilityHistory.map((ev) => {
+              const meta = VIS_EVENT_META[ev.decision] ?? { label: ev.decision, fg: "var(--muted)", bg: "#eef1ee" };
+              return (
+                <div key={ev.id} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: "11px 13px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 10.5, fontWeight: 800, color: meta.fg, background: meta.bg, padding: "2px 8px", borderRadius: 20 }}>
+                      {meta.label}
+                    </span>
+                    <span style={{ flex: 1 }} />
+                    <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
+                      {ev.reviewerName ? `${ev.reviewerName} · ` : ""}{visFmt.format(new Date(ev.createdAt))}
+                    </span>
+                  </div>
+                  {ev.note ? (
+                    <div style={{ fontSize: 12.5, color: "var(--ink)", marginTop: 8, lineHeight: 1.5 }}>{ev.note}</div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       ) : null}
 
       {/* Profile */}

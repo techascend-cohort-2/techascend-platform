@@ -23,7 +23,7 @@ export default async function ProjectDetailPage({
     where: { id: projectId },
     include: {
       module: { include: { phase: true } },
-      submissions: { where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 1 },
+      submissions: { where: { userId: user.id }, orderBy: { createdAt: "desc" } },
     },
   });
   if (!project) notFound();
@@ -39,6 +39,18 @@ export default async function ProjectDetailPage({
         }
       : null;
 
+  const history = project.submissions.map((s) => ({
+    id: s.id,
+    createdAt: s.createdAt.toISOString(),
+    status: s.status,
+    submissionLink: s.submissionLink,
+    notes: s.notes,
+    aiScore: s.aiScore,
+    aiFeedback: s.aiFeedback,
+    mentorScore: s.mentorScore,
+    mentorFeedback: s.mentorFeedback,
+  }));
+
   return (
     <ProjectSubmit
       projectId={project.id}
@@ -46,6 +58,7 @@ export default async function ProjectDetailPage({
       moduleLabel={`${project.module?.phase?.name ?? "Capstone"} · ${project.title}`}
       deliverables={(project.deliverables as { title: string; ext: string }[] | null) ?? []}
       initialEvaluation={initialEvaluation}
+      history={history}
     />
   );
 }

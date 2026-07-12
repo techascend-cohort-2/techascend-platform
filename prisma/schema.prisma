@@ -90,6 +90,8 @@ model User {
   events               Event[]              @relation("EventCreator")
   visibilitySubmission VisibilitySubmission?
   visibilityReviews    VisibilitySubmission[] @relation("VisibilityReviewer")
+  visibilityHistory    VisibilityReview[]     @relation("VisibilityReviewSubject")
+  visibilityReviewsGiven VisibilityReview[]   @relation("VisibilityReviewAuthor")
   opportunities        Opportunity[]        @relation("OpportunityPoster")
   interests            OpportunityInterest[]
   pipelineCards        PipelineCard[]
@@ -285,6 +287,24 @@ model VisibilitySubmission {
   reviewer       User?     @relation("VisibilityReviewer", fields: [reviewerId], references: [id])
   submittedAt    DateTime  @default(now())
   reviewedAt     DateTime?
+}
+
+// One row per review decision on a student's visibility submission. The
+// VisibilitySubmission itself is a single mutable row (reused across resubmits),
+// so this log is what preserves the full review history — every approval,
+// changes-requested note, and undo — for students and reviewers to look back on.
+model VisibilityReview {
+  id         String   @id @default(cuid())
+  userId     String // the student whose submission was reviewed
+  user       User     @relation("VisibilityReviewSubject", fields: [userId], references: [id], onDelete: Cascade)
+  // decision: "approved" | "changes_requested" | "reopened"
+  decision   String
+  note       String?
+  reviewerId String?
+  reviewer   User?    @relation("VisibilityReviewAuthor", fields: [reviewerId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // ------------------------------------------------------------------

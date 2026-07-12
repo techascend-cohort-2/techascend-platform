@@ -12,7 +12,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const detail = await getStudentDetail(id);
   if (!detail || detail.user.role !== "student") notFound();
 
-  const { user, phaseBreakdown, tutorCount, lastTutorAt, lastLessonAt } = detail;
+  const { user, phaseBreakdown, tutorCount, lastTutorAt, lastLessonAt, visibilityHistory } = detail;
 
   const links: Record<string, string> = {};
   if (user.visibilitySubmission) {
@@ -47,7 +47,17 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
       aiScore: s.aiScore,
       mentorScore: s.mentorScore,
       submissionLink: s.submissionLink,
+      notes: s.notes,
+      aiFeedback: s.aiFeedback,
+      mentorFeedback: s.mentorFeedback,
       createdAt: s.createdAt.toISOString(),
+    })),
+    visibilityHistory: visibilityHistory.map((h) => ({
+      id: h.id,
+      decision: h.decision,
+      note: h.note,
+      reviewerName: h.reviewer?.name ?? null,
+      createdAt: h.createdAt.toISOString(),
     })),
     badges: user.userBadges.map((ub) => ({
       id: ub.id,

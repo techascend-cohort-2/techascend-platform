@@ -52,7 +52,10 @@ export async function submitVisibilityAction(_prev: ActionState, formData: FormD
     prisma.visibilitySubmission.upsert({
       where: { userId: user.id },
       create: { userId: user.id, ...d, status: "pending" },
-      update: { ...d, status: "pending", reviewNote: null, reviewedAt: null, reviewerId: null },
+      // Reset submittedAt on resubmit so "avg review time" measures the
+      // reviewer's turnaround on the new version — not the whole
+      // request-changes round-trip (which includes the student's fix time).
+      update: { ...d, status: "pending", reviewNote: null, reviewedAt: null, reviewerId: null, submittedAt: new Date() },
     }),
     prisma.user.update({ where: { id: user.id }, data: { ...d } }),
   ]);
@@ -79,6 +82,12 @@ export async function reviewVisibilityAction(
   const sub = await prisma.visibilitySubmission.update({
     where: { id: submissionId },
     data: { status: decision, reviewNote: note ?? null, reviewerId: user.id, reviewedAt: new Date() },
+  });
+
+  // Preserve this decision in the history log (the submission row is reused on
+  // resubmit, so its own reviewNote would otherwise be overwritten).
+  await prisma.visibilityReview.create({
+    data: { userId: sub.userId, decision, note: note ?? null, reviewerId: user.id },
   });
 
   await notify(
@@ -116,6 +125,10 @@ export async function reopenVisibilityAction(submissionId: string): Promise<Acti
   });
 
   if (wasApproved) await revokeVisibilityAwards(sub.userId);
+
+  await prisma.visibilityReview.create({
+    data: { userId: sub.userId, decision: "reopened", reviewerId: user.id },
+  });
 
   await notify(
     sub.userId,

@@ -684,9 +684,14 @@ export async function getStudentDetail(userId: string) {
   });
   if (!user) return null;
 
-  const [tutorCount, lastTutor] = await Promise.all([
+  const [tutorCount, lastTutor, visibilityHistory] = await Promise.all([
     prisma.aiTutorLog.count({ where: { userId } }),
     prisma.aiTutorLog.findFirst({ where: { userId }, orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
+    prisma.visibilityReview.findMany({
+      where: { userId },
+      include: { reviewer: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   const phases = await prisma.phase.findMany({
@@ -711,7 +716,25 @@ export async function getStudentDetail(userId: string) {
     null,
   );
 
-  return { user, phaseBreakdown, tutorCount, lastTutorAt: lastTutor?.createdAt ?? null, lastLessonAt };
+  return { user, phaseBreakdown, tutorCount, lastTutorAt: lastTutor?.createdAt ?? null, lastLessonAt, visibilityHistory };
+}
+
+// A student's own visibility review history (for their profile page).
+export async function getVisibilityHistory(userId: string) {
+  return prisma.visibilityReview.findMany({
+    where: { userId },
+    include: { reviewer: { select: { name: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+// All of a student's submissions for one project, newest first — the full
+// submission history + reviews shown on the project detail page.
+export async function getProjectSubmissionHistory(userId: string, projectId: string) {
+  return prisma.submission.findMany({
+    where: { userId, projectId },
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 export async function getCurriculumAdmin() {
