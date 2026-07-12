@@ -485,7 +485,7 @@ export async function getReviewQueues() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [visibility, submissions, activeReviewers, approvedVisThisMonth, approvedSubsThisMonth, reviewedVisThisMonth] =
+  const [visibility, submissions, activeReviewers, approvedVis, approvedSubs] =
     await Promise.all([
       prisma.visibilitySubmission.findMany({
         where: { status: "pending" },
@@ -501,11 +501,16 @@ export async function getReviewQueues() {
         orderBy: { createdAt: "asc" },
       }),
       prisma.user.count({ where: { role: { in: ["admin", "manager"] } } }),
-      prisma.visibilitySubmission.count({ where: { status: "approved", reviewedAt: { gte: monthStart } } }),
-      prisma.submission.count({ where: { status: "approved", updatedAt: { gte: monthStart } } }),
+      // Only *approved* submissions feed "approved this month" and the average
+      // review time. A "changes requested" decision is not a finished review,
+      // so it must not inflate the turnaround metric.
       prisma.visibilitySubmission.findMany({
-        where: { status: { not: "pending" }, reviewedAt: { gte: monthStart } },
+        where: { status: "approved", reviewedAt: { gte: monthStart } },
         select: { submittedAt: true, reviewedAt: true },
+      }),
+      prisma.submission.findMany({
+        where: { status: "approved", updatedAt: { gte: monthStart } },
+        select: { createdAt: true, updatedAt: true },
       }),
     ]);
 
@@ -530,9 +535,14 @@ export async function getReviewQueues() {
     take: 8,
   });
 
-  const reviewDurations = reviewedVisThisMonth
-    .filter((v): v is { submittedAt: Date; reviewedAt: Date } => v.reviewedAt !== null)
-    .map((v) => v.reviewedAt.getTime() - v.submittedAt.getTime());
+  // Turnaround = submission → approval, across both queues. Only approvals
+  // count, so requesting changes never moves this number.
+  const reviewDurations = [
+    ...approvedVis
+      .filter((v): v is { submittedAt: Date; reviewedAt: Date } => v.reviewedAt !== null)
+      .map((v) => v.reviewedAt.getTime() - v.submittedAt.getTime()),
+    ...approvedSubs.map((s) => s.updatedAt.getTime() - s.createdAt.getTime()),
+  ];
   const avgReviewDays = reviewDurations.length
     ? Math.round((reviewDurations.reduce((a, b) => a + b, 0) / reviewDurations.length / 86_400_000) * 10) / 10
     : null;
@@ -545,7 +555,7 @@ export async function getReviewQueues() {
     stats: {
       pendingVisibility: visibility.length,
       pendingProjects: submissions.length,
-      approvedThisMonth: approvedVisThisMonth + approvedSubsThisMonth,
+      approvedThisMonth: approvedVis.length + approvedSubs.length,
       avgReviewDays,
       activeReviewers,
     },
