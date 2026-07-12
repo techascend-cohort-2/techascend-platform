@@ -40,6 +40,32 @@ const ICONS: Record<string, React.ReactNode> = {
   ),
 };
 
+// Self-contained styles so the panel looks right on standalone pages
+// (the /badge and /certificates routes don't load platform.css).
+const softBtn: React.CSSProperties = {
+  padding: "8px 14px",
+  borderRadius: 9,
+  fontSize: 12.5,
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "inherit",
+  color: "#4B4463",
+  background: "#fff",
+  border: "1px solid #E4DCF3",
+};
+const gradBtn: React.CSSProperties = {
+  padding: "8px 14px",
+  borderRadius: 9,
+  fontSize: 12.5,
+  fontWeight: 700,
+  color: "#fff",
+  background: "linear-gradient(135deg,#7C3AED,#9333EA)",
+  border: "none",
+  textDecoration: "none",
+  display: "inline-flex",
+  alignItems: "center",
+};
+
 const BTN: { key: string; label: string; color: string; href: (u: string, t: string) => string }[] = [
   { key: "linkedin", label: "LinkedIn", color: "#0A66C2", href: (u) => `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(u)}` },
   { key: "x", label: "X", color: "#000000", href: (u, t) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(t)}&url=${encodeURIComponent(u)}` },
@@ -98,27 +124,27 @@ export default function SharePanel({ sharePath, text, imagePath, downloadName }:
           onFocus={(e) => e.currentTarget.select()}
           style={{
             width: "100%",
-            border: "1px solid var(--line)",
+            border: "1px solid #E4DCF3",
             borderRadius: 10,
             padding: "10px 12px",
             fontSize: 12.5,
             fontFamily: "inherit",
             resize: "vertical",
             background: "#FBFAFF",
-            color: "var(--ink)",
+            color: "#2A2340",
           }}
         />
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button onClick={() => copy("link")} className="pf-btn-soft" style={{ padding: "8px 14px", borderRadius: 9, fontSize: 12.5, cursor: "pointer" }}>
+        <button onClick={() => copy("link")} style={softBtn}>
           {copied === "link" ? "Link copied ✓" : "Copy link"}
         </button>
-        <button onClick={() => copy("text")} className="pf-btn-soft" style={{ padding: "8px 14px", borderRadius: 9, fontSize: 12.5, cursor: "pointer" }}>
+        <button onClick={() => copy("text")} style={softBtn}>
           {copied === "text" ? "Copied ✓" : "Copy text + link"}
         </button>
         {imagePath ? (
-          <a href={imagePath} download={downloadName ?? "techascend-badge.png"} className="pf-btn-grad" style={{ padding: "8px 14px", borderRadius: 9, fontSize: 12.5 }}>
+          <a href={imagePath} download={downloadName ?? "techascend-badge.png"} style={gradBtn}>
             Download image ↓
           </a>
         ) : null}

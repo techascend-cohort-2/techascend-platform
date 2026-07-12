@@ -4,10 +4,27 @@ import { notFound } from "next/navigation";
 import { getCertificateByCode } from "@/lib/queries";
 import { TRACK_LABELS } from "@/lib/constants";
 import PrintClient from "./print-button";
-
-export const metadata: Metadata = { title: "Certificate · TechAscend" };
+import SharePanel from "@/components/platform/SharePanel";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" });
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.tech-ascend.com";
+
+export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
+  const { code } = await params;
+  const cert = await getCertificateByCode(code.toUpperCase()).catch(() => null);
+  if (!cert) return { title: "Certificate · TechAscend" };
+  const what = cert.phase ? cert.phase.name : "the TechAscend Fellowship";
+  const title = `${cert.user.name} — Certificate of Completion · TechAscend`;
+  const description = `A verified TechAscend certificate for completing ${what}.`;
+  return {
+    metadataBase: new URL(SITE_URL),
+    title,
+    description,
+    openGraph: { title, description, type: "website", url: `/certificates/${cert.code}` },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
 export default async function CertificatePage({
   params,
@@ -19,6 +36,8 @@ export default async function CertificatePage({
   if (!cert) notFound();
 
   const trackLabel = cert.track ? TRACK_LABELS[cert.track] : null;
+  const whatCompleted = cert.phase ? cert.phase.name : "the TechAscend AI-Native Fellowship";
+  const shareText = `I completed ${whatCompleted} and earned my verified TechAscend certificate! 🎓 TechAscend is the AI-Native Fellowship for builders in Central Africa.`;
 
   return (
     <main
@@ -104,6 +123,19 @@ export default async function CertificatePage({
           >
             About TechAscend
           </Link>
+        </div>
+
+        <div
+          className="cert-share"
+          style={{ background: "#fff", borderRadius: 16, border: "1px solid #E9E3F5", padding: "20px 22px", marginTop: 18, boxShadow: "0 20px 60px -40px rgba(60,30,110,.35)" }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#9C8FC0", letterSpacing: 1, marginBottom: 12 }}>SHARE THIS CERTIFICATE</div>
+          <SharePanel
+            sharePath={`/certificates/${cert.code}`}
+            text={shareText}
+            imagePath={`/certificates/${cert.code}/opengraph-image`}
+            downloadName={`techascend-certificate-${cert.code}.png`}
+          />
         </div>
       </div>
     </main>
