@@ -55,6 +55,12 @@ const PROVIDER_LABEL: Record<AiProviderId, string> = {
   openai: "OpenAI",
 };
 
+// A trimmed one-line snippet of a raw provider error, safe to show a student.
+function shortReason(msg: string): string {
+  const clean = msg.replace(/\s+/g, " ").trim();
+  return clean.length > 140 ? `${clean.slice(0, 137)}…` : clean;
+}
+
 async function* streamGemini(
   apiKey: string,
   message: string,
@@ -84,13 +90,23 @@ async function* streamGemini(
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    // Log the real Google error so it can be diagnosed from server logs — the
+    // student-facing message below is a friendly interpretation of it.
+    console.error("[tutor] Gemini error:", msg);
     if (/api key not valid|API_KEY_INVALID|PERMISSION_DENIED/i.test(msg)) {
       throw new TutorKeyError("your Gemini key was rejected — double-check it in your profile");
     }
-    if (/quota|RESOURCE_EXHAUSTED|rate limit/i.test(msg)) {
-      throw new TutorKeyError("your Gemini key hit its rate/quota limit");
+    if (/location is not supported|not available in your|user location|failed_precondition/i.test(msg)) {
+      throw new TutorKeyError(
+        "Gemini's free tier isn't available for your Google account's country yet. Add a Claude or OpenAI key in My Profile to use the tutor",
+      );
     }
-    throw new TutorKeyError("Gemini couldn't be reached");
+    if (/quota|RESOURCE_EXHAUSTED|rate limit|429/i.test(msg)) {
+      throw new TutorKeyError(
+        "your Gemini key has no available quota. If it has never worked, the free tier likely isn't enabled for your account/region — enable billing on your key, or add a Claude or OpenAI key in My Profile instead",
+      );
+    }
+    throw new TutorKeyError(`Gemini couldn't be reached (${shortReason(msg)})`);
   }
 }
 
@@ -114,15 +130,17 @@ async function* streamAnthropic(
       }
     }
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[tutor] Claude error:", msg);
     if (err instanceof Anthropic.APIError) {
       if (err.status === 401 || err.status === 403) {
         throw new TutorKeyError("your Claude key was rejected — double-check it in your profile");
       }
       if (err.status === 429 || /credit balance/i.test(err.message)) {
-        throw new TutorKeyError("your Claude key is out of credits or rate-limited");
+        throw new TutorKeyError("your Claude key is out of credits or rate-limited — add credit at console.anthropic.com");
       }
     }
-    throw new TutorKeyError("Claude couldn't be reached");
+    throw new TutorKeyError(`Claude couldn't be reached (${shortReason(msg)})`);
   }
 }
 
@@ -148,15 +166,17 @@ async function* streamOpenAI(
       if (text) yield text;
     }
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[tutor] OpenAI error:", msg);
     if (err instanceof OpenAI.APIError) {
       if (err.status === 401 || err.status === 403) {
         throw new TutorKeyError("your OpenAI key was rejected — double-check it in your profile");
       }
       if (err.status === 429) {
-        throw new TutorKeyError("your OpenAI key is out of credits or rate-limited");
+        throw new TutorKeyError("your OpenAI key is out of credits or rate-limited — add credit in platform.openai.com Billing");
       }
     }
-    throw new TutorKeyError("OpenAI couldn't be reached");
+    throw new TutorKeyError(`OpenAI couldn't be reached (${shortReason(msg)})`);
   }
 }
 
