@@ -7,12 +7,6 @@ import { PROJECT_RUBRIC, PASS_OVERALL, PASS_MIN_PER_CRITERION, overallScore } fr
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
-// TechAscend LCWAT gateway (browser-automated chat providers). See GATEWAY_CONTRACT.
-const LCWAT_GATEWAY_URL = (process.env.LCWAT_GATEWAY_URL || "").replace(/\/+$/, "");
-export const LCWAT_PLATFORM_KEY = process.env.LCWAT_API_KEY || "";
-export function lcwatPlatformEnabled(): boolean {
-  return Boolean(LCWAT_GATEWAY_URL && LCWAT_PLATFORM_KEY);
-}
 
 // The core AI Tutor engine prompt (from the TechAscend platform spec §4).
 export const TUTOR_SYSTEM_PROMPT = `You are TechAscend AI Tutor, a world-class software engineering and entrepreneurship mentor focused on African women in technology.
@@ -51,7 +45,8 @@ function buildSystemPrompt(lessonContext?: string): string {
 // ---------------------------------------------------------------------------
 
 export type TutorTurn = { role: "user" | "assistant"; content: string };
-export type TutorKey = { provider: AiProviderId; apiKey: string };
+// baseUrl is only used by the LCWAT provider (its gateway URL).
+export type TutorKey = { provider: AiProviderId; apiKey: string; baseUrl?: string };
 
 export class TutorKeyError extends Error {}
 
@@ -226,8 +221,10 @@ async function* streamLcwat(
   message: string,
   history: TutorTurn[],
   lessonContext?: string,
+  baseUrl?: string,
 ): AsyncGenerator<string> {
-  if (!LCWAT_GATEWAY_URL) throw new TutorKeyError("the TechAscend LCWAT gateway isn't configured");
+  const gateway = (baseUrl || "").replace(/\/+$/, "");
+  if (!gateway) throw new TutorKeyError("the TechAscend LCWAT gateway isn't configured");
 
   // LCWAT /v1/messages is stateless request/response with a single `prompt`,
   // so fold the system prompt + recent history into one prompt string.
@@ -245,7 +242,7 @@ async function* streamLcwat(
 
   let res: Response;
   try {
-    res = await fetch(`${LCWAT_GATEWAY_URL}/v1/messages`, {
+    res = await fetch(`${gateway}/v1/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
       body: JSON.stringify({ prompt, timeout_seconds: 180 }),
@@ -279,7 +276,7 @@ async function* streamLcwat(
 
 const PROVIDER_STREAMS: Record<
   AiProviderId,
-  (apiKey: string, message: string, history: TutorTurn[], lessonContext?: string) => AsyncGenerator<string>
+  (apiKey: string, message: string, history: TutorTurn[], lessonContext?: string, baseUrl?: string) => AsyncGenerator<string>
 > = {
   gemini: streamGemini,
   anthropic: streamAnthropic,
@@ -301,10 +298,10 @@ export async function* streamTutorReply(
 ): AsyncGenerator<string> {
   const failures: string[] = [];
 
-  for (const { provider, apiKey } of keys) {
+  for (const { provider, apiKey, baseUrl } of keys) {
     let yielded = false;
     try {
-      for await (const chunk of PROVIDER_STREAMS[provider](apiKey, message, history, lessonContext)) {
+      for await (const chunk of PROVIDER_STREAMS[provider](apiKey, message, history, lessonContext, baseUrl)) {
         yielded = true;
         yield chunk;
       }

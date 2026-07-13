@@ -302,6 +302,15 @@ model VisibilitySubmission {
 // VisibilitySubmission itself is a single mutable row (reused across resubmits),
 // so this log is what preserves the full review history — every approval,
 // changes-requested note, and undo — for students and reviewers to look back on.
+// Small operator-managed key/value config, editable from the admin UI so
+// things like the LCWAT gateway can change without a redeploy. Secret values
+// (e.g. the gateway API key) are stored encrypted (see lib/crypto.ts).
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 model VisibilityReview {
   id         String   @id @default(cuid())
   userId     String // the student whose submission was reviewed

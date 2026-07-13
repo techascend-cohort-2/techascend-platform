@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, getVisibilityHistory } from "@/lib/queries";
-import { lcwatPlatformEnabled } from "@/lib/ai";
+import { lcwatPlatformEnabled } from "@/lib/settings";
 import { decryptSecret, maskSecret } from "@/lib/crypto";
 import ProfileScreen, { type ProfileUser, type VisibilityInfo, type VisibilityEvent } from "@/components/platform/screens/ProfileScreen";
 
@@ -9,9 +9,10 @@ export default async function ProfilePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const [vs, history] = await Promise.all([
+  const [vs, history, platformLcwat] = await Promise.all([
     prisma.visibilitySubmission.findUnique({ where: { userId: user.id } }),
     user.role === "student" ? getVisibilityHistory(user.id) : Promise.resolve([]),
+    lcwatPlatformEnabled(),
   ]);
 
   // A stored key can be present but undecryptable (e.g. AUTH_SECRET was
@@ -46,7 +47,7 @@ export default async function ProfilePage() {
       openai: keyState(user.openaiApiKeyEnc),
       lcwat: keyState(user.lcwatApiKeyEnc),
     },
-    lcwatPlatformEnabled: lcwatPlatformEnabled(),
+    lcwatPlatformEnabled: platformLcwat,
   };
 
   const visibility: VisibilityInfo = vs

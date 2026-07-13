@@ -9,6 +9,7 @@ import { userAdminSchema, studentTrackSchema, partnerOrgSchema, cohortSchema, le
 import { notify, recomputeUserProgress } from "@/lib/progress";
 import { parseStudentsCsv, importStudents } from "@/lib/students-import";
 import { getAssignableCohort } from "@/lib/queries";
+import { setLcwatConfig, clearLcwatConfig } from "@/lib/settings";
 
 export type ActionState = { ok?: boolean; error?: string; tempPassword?: string };
 
@@ -419,5 +420,28 @@ export async function savePhaseAction(phaseId: string, _prev: ActionState, formD
   });
   revalidatePath("/curriculum");
   revalidatePath("/learning");
+  return { ok: true };
+}
+
+// ---------------- AI Tutor: LCWAT gateway config (admin) ----------------
+
+export async function saveLcwatConfigAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireStaff(true);
+  const url = String(formData.get("gatewayUrl") ?? "").trim();
+  const apiKey = String(formData.get("apiKey") ?? "").trim();
+  if (url && !/^https?:\/\/.+/i.test(url)) return { error: "Gateway URL must start with http:// or https://" };
+  await setLcwatConfig(url, apiKey);
+  revalidatePath("/admin");
+  revalidatePath("/tutor");
+  revalidatePath("/profile");
+  return { ok: true };
+}
+
+export async function clearLcwatConfigAction(): Promise<ActionState> {
+  await requireStaff(true);
+  await clearLcwatConfig();
+  revalidatePath("/admin");
+  revalidatePath("/tutor");
+  revalidatePath("/profile");
   return { ok: true };
 }

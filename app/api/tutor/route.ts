@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { streamTutorReply, TutorKeyError, lcwatPlatformEnabled, LCWAT_PLATFORM_KEY, type TutorKey, type TutorTurn } from "@/lib/ai";
+import { streamTutorReply, TutorKeyError, type TutorKey, type TutorTurn } from "@/lib/ai";
+import { getLcwatConfig } from "@/lib/settings";
 import { decryptSecret } from "@/lib/crypto";
 import { tutorMessageSchema } from "@/lib/validation";
 
@@ -39,11 +40,15 @@ export async function POST(req: Request) {
   addKey(user?.geminiApiKeyEnc, "gemini");
   addKey(user?.anthropicApiKeyEnc, "anthropic");
   addKey(user?.openaiApiKeyEnc, "openai");
-  // LCWAT: a student's own gateway key overrides the platform default.
+  // LCWAT: a student's own gateway key overrides the platform default. The
+  // gateway URL is always the platform's (admin-configured in the DB).
+  const lcwatConfig = await getLcwatConfig();
   const personalLcwat = user?.lcwatApiKeyEnc ? decryptSecret(user.lcwatApiKeyEnc) : null;
   if (user?.lcwatApiKeyEnc && personalLcwat === null) hadUnreadable = true;
-  const lcwatKey = personalLcwat ?? (lcwatPlatformEnabled() ? LCWAT_PLATFORM_KEY : null);
-  if (lcwatKey) keys.push({ provider: "lcwat", apiKey: lcwatKey });
+  const lcwatKey = personalLcwat ?? lcwatConfig.apiKey;
+  if (lcwatKey && lcwatConfig.url) {
+    keys.push({ provider: "lcwat", apiKey: lcwatKey, baseUrl: lcwatConfig.url });
+  }
 
   if (keys.length === 0) {
     return Response.json(

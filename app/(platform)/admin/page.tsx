@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, getAdminOverview } from "@/lib/queries";
+import { getLcwatAdminView } from "@/lib/settings";
 import { formatFcfa } from "@/lib/constants";
+import LcwatSettings from "@/components/platform/screens/LcwatSettings";
 
 const eventFmt = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
@@ -16,7 +18,10 @@ export default async function AdminPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { kpis, cohorts, upcomingEvents } = await getAdminOverview();
+  const [{ kpis, cohorts, upcomingEvents }, lcwatView] = await Promise.all([
+    getAdminOverview(),
+    getLcwatAdminView(),
+  ]);
 
   const cards = [
     { label: "Students", value: `${kpis.students}`, href: "/students", sub: "active fellows" },
@@ -85,6 +90,10 @@ export default async function AdminPage() {
             ) : null}
           </div>
         </div>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <LcwatSettings view={lcwatView} />
       </div>
     </div>
   );
