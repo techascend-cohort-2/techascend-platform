@@ -70,7 +70,15 @@ function RevealField({ id, name, placeholder }: { id: string; name: string; plac
   );
 }
 
-function ProviderKeyBlock({ meta, state: keyState }: { meta: AiProviderMeta; state: { masked: string | null; unreadable: boolean } }) {
+function ProviderKeyBlock({
+  meta,
+  state: keyState,
+  platformProvided,
+}: {
+  meta: AiProviderMeta;
+  state: { masked: string | null; unreadable: boolean };
+  platformProvided?: boolean;
+}) {
   const [state, action, pending] = useActionState<ActionState, FormData>(saveAiKeyAction, {});
   const [removing, startRemove] = useTransition();
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -93,17 +101,29 @@ function ProviderKeyBlock({ meta, state: keyState }: { meta: AiProviderMeta; sta
           {meta.free ? "Free" : "Paid"}
         </span>
         {masked ? (
-          <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--pos)" }}>✓ Key saved</span>
+          <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--pos)" }}>✓ Using your key</span>
         ) : unreadable ? (
           <span style={{ fontSize: 11.5, fontWeight: 800, color: "#B3243F" }}>⚠ Needs re-entry</span>
+        ) : platformProvided ? (
+          <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--pos)" }}>✓ Enabled by TechAscend</span>
         ) : null}
       </div>
+      {platformProvided && !masked && !unreadable ? (
+        <div style={{ marginTop: 8, fontSize: 12.5, background: "var(--posbg)", color: "#14543A", borderRadius: 9, padding: "9px 12px", lineHeight: 1.5 }}>
+          The AI Tutor is ready to use — no key needed. Adding your own gateway key below is optional.
+        </div>
+      ) : null}
       <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 5, lineHeight: 1.6 }}>
-        Get your key at{" "}
-        <a href={meta.getKeyUrl} target="_blank" rel="noreferrer" className="pf-link">
-          {meta.getKeyLabel} ↗
-        </a>
-        . {meta.howTo}
+        {meta.getKeyUrl ? (
+          <>
+            Get your key at{" "}
+            <a href={meta.getKeyUrl} target="_blank" rel="noreferrer" className="pf-link">
+              {meta.getKeyLabel} ↗
+            </a>
+            .{" "}
+          </>
+        ) : null}
+        {meta.howTo}
       </div>
 
       {unreadable ? (
@@ -177,6 +197,7 @@ export type ProfileUser = {
   talentVisible: boolean;
   mustChangePassword: boolean;
   aiKeys: Record<AiProviderId, { masked: string | null; unreadable: boolean }>;
+  lcwatPlatformEnabled: boolean;
 };
 
 export type VisibilityInfo = {
@@ -401,7 +422,12 @@ export default function ProfileScreen({
           </div>
 
           {AI_PROVIDERS.map((meta) => (
-            <ProviderKeyBlock key={meta.id} meta={meta} state={user.aiKeys[meta.id]} />
+            <ProviderKeyBlock
+              key={meta.id}
+              meta={meta}
+              state={user.aiKeys[meta.id]}
+              platformProvided={meta.id === "lcwat" && user.lcwatPlatformEnabled}
+            />
           ))}
         </div>
       ) : null}

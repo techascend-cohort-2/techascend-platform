@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, getTutorData } from "@/lib/queries";
+import { lcwatPlatformEnabled } from "@/lib/ai";
 import TutorChat from "@/components/platform/TutorChat";
 
 export default async function TutorPage() {
@@ -14,7 +15,7 @@ export default async function TutorPage() {
       chatHistory={data.chatHistory}
       lessonId={data.currentLessonId}
       lessonTitle={data.currentLessonTitle}
-      hasAiKey={Boolean(user.geminiApiKeyEnc || user.anthropicApiKeyEnc || user.openaiApiKeyEnc)}
+      hasAiKey={Boolean(user.geminiApiKeyEnc || user.anthropicApiKeyEnc || user.openaiApiKeyEnc || user.lcwatApiKeyEnc) || lcwatPlatformEnabled()}
     />
   );
 }

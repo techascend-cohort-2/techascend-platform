@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, getVisibilityHistory } from "@/lib/queries";
+import { lcwatPlatformEnabled } from "@/lib/ai";
 import { decryptSecret, maskSecret } from "@/lib/crypto";
 import ProfileScreen, { type ProfileUser, type VisibilityInfo, type VisibilityEvent } from "@/components/platform/screens/ProfileScreen";
 
@@ -43,7 +44,9 @@ export default async function ProfilePage() {
       gemini: keyState(user.geminiApiKeyEnc),
       anthropic: keyState(user.anthropicApiKeyEnc),
       openai: keyState(user.openaiApiKeyEnc),
+      lcwat: keyState(user.lcwatApiKeyEnc),
     },
+    lcwatPlatformEnabled: lcwatPlatformEnabled(),
   };
 
   const visibility: VisibilityInfo = vs

@@ -7,6 +7,12 @@ import { PROJECT_RUBRIC, PASS_OVERALL, PASS_MIN_PER_CRITERION, overallScore } fr
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+// TechAscend LCWAT gateway (browser-automated chat providers). See GATEWAY_CONTRACT.
+const LCWAT_GATEWAY_URL = (process.env.LCWAT_GATEWAY_URL || "").replace(/\/+$/, "");
+export const LCWAT_PLATFORM_KEY = process.env.LCWAT_API_KEY || "";
+export function lcwatPlatformEnabled(): boolean {
+  return Boolean(LCWAT_GATEWAY_URL && LCWAT_PLATFORM_KEY);
+}
 
 // The core AI Tutor engine prompt (from the TechAscend platform spec §4).
 export const TUTOR_SYSTEM_PROMPT = `You are TechAscend AI Tutor, a world-class software engineering and entrepreneurship mentor focused on African women in technology.
@@ -53,6 +59,7 @@ const PROVIDER_LABEL: Record<AiProviderId, string> = {
   gemini: "Gemini",
   anthropic: "Claude",
   openai: "OpenAI",
+  lcwat: "TechAscend LCWAT",
 };
 
 // A trimmed one-line snippet of a raw provider error, safe to show a student
@@ -214,6 +221,62 @@ async function* streamOpenAI(
   }
 }
 
+async function* streamLcwat(
+  apiKey: string,
+  message: string,
+  history: TutorTurn[],
+  lessonContext?: string,
+): AsyncGenerator<string> {
+  if (!LCWAT_GATEWAY_URL) throw new TutorKeyError("the TechAscend LCWAT gateway isn't configured");
+
+  // LCWAT /v1/messages is stateless request/response with a single `prompt`,
+  // so fold the system prompt + recent history into one prompt string.
+  const convo = history
+    .slice(-10)
+    .map((t) => `${t.role === "assistant" ? "Assistant" : "Student"}: ${t.content}`)
+    .join("\n");
+  const prompt = [
+    buildSystemPrompt(lessonContext),
+    convo ? `Conversation so far:\n${convo}` : "",
+    `Student: ${message}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  let res: Response;
+  try {
+    res = await fetch(`${LCWAT_GATEWAY_URL}/v1/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+      body: JSON.stringify({ prompt, timeout_seconds: 180 }),
+      signal: AbortSignal.timeout(200_000),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[tutor] LCWAT fetch error:", msg);
+    throw new TutorKeyError("the TechAscend LCWAT gateway couldn't be reached — try again shortly");
+  }
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
+    const code = body?.error?.code;
+    console.error("[tutor] LCWAT error:", res.status, code, body?.error?.message);
+    if (res.status === 401) throw new TutorKeyError("your TechAscend LCWAT key was rejected — check it in your profile");
+    if (res.status === 429) throw new TutorKeyError("the TechAscend LCWAT gateway is busy — try again in a moment");
+    if (res.status === 503) throw new TutorKeyError("the TechAscend LCWAT providers are temporarily unavailable — try again shortly");
+    if (res.status === 504) throw new TutorKeyError("the TechAscend LCWAT gateway took too long — try a shorter question");
+    throw new TutorKeyError(`the TechAscend LCWAT gateway couldn't answer (${code ?? res.status})`);
+  }
+
+  const data = (await res.json().catch(() => null)) as { response?: string } | null;
+  const text = data?.response;
+  if (typeof text === "string" && text.trim()) {
+    yield text;
+    return;
+  }
+  throw new TutorKeyError("the TechAscend LCWAT gateway returned an empty reply — try again");
+}
+
 const PROVIDER_STREAMS: Record<
   AiProviderId,
   (apiKey: string, message: string, history: TutorTurn[], lessonContext?: string) => AsyncGenerator<string>
@@ -221,6 +284,7 @@ const PROVIDER_STREAMS: Record<
   gemini: streamGemini,
   anthropic: streamAnthropic,
   openai: streamOpenAI,
+  lcwat: streamLcwat,
 };
 
 /**

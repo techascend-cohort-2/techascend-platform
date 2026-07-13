@@ -257,10 +257,11 @@ export async function updateProfileAction(_prev: ActionState, formData: FormData
 
 // ---------------- AI Tutor: personal API keys (BYOK) ----------------
 
-const AI_KEY_FIELD: Record<AiProviderId, "geminiApiKeyEnc" | "anthropicApiKeyEnc" | "openaiApiKeyEnc"> = {
+const AI_KEY_FIELD: Record<AiProviderId, "geminiApiKeyEnc" | "anthropicApiKeyEnc" | "openaiApiKeyEnc" | "lcwatApiKeyEnc"> = {
   gemini: "geminiApiKeyEnc",
   anthropic: "anthropicApiKeyEnc",
   openai: "openaiApiKeyEnc",
+  lcwat: "lcwatApiKeyEnc",
 };
 
 export async function saveAiKeyAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

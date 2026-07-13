@@ -2,21 +2,23 @@
 // Pure data — safe to import from client components. The streaming logic that
 // actually uses these keys lives in lib/ai.ts (server-only).
 
-export type AiProviderId = "gemini" | "anthropic" | "openai";
+export type AiProviderId = "gemini" | "anthropic" | "openai" | "lcwat";
 
 export type AiProviderMeta = {
   id: AiProviderId;
   label: string;
   free: boolean;
   placeholder: string;
-  getKeyUrl: string;
-  getKeyLabel: string;
+  // getKeyUrl/getKeyLabel omitted for providers with no public signup (LCWAT).
+  getKeyUrl?: string;
+  getKeyLabel?: string;
   howTo: string;
 };
 
 // Order matters: the tutor tries the student's keys in this order and falls
 // back to the next provider when one is exhausted or rejected. Gemini first
-// because it's the only free one.
+// because it's the only free public one; the TechAscend LCWAT gateway is the
+// final fallback (and works with no student key when the program enables it).
 export const AI_PROVIDERS: AiProviderMeta[] = [
   {
     id: "gemini",
@@ -47,6 +49,14 @@ export const AI_PROVIDERS: AiProviderMeta[] = [
     getKeyLabel: "platform.openai.com",
     howTo:
       "Create an account, open the API keys page, and click “Create new secret key”. Paid — add a small credit in Billing; each message costs a fraction of a cent.",
+  },
+  {
+    id: "lcwat",
+    label: "TechAscend LCWAT",
+    free: true,
+    placeholder: "lcwat_…",
+    howTo:
+      "TechAscend's own AI gateway. If the program has enabled it, you can use the AI Tutor with no key at all. To use your own gateway key instead, paste it here — the TechAscend team issues these.",
   },
 ];
 

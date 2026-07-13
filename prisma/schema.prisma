@@ -65,11 +65,14 @@ model User {
   // Student's own AI API keys for the AI Tutor (encrypted at rest — see
   // lib/crypto.ts). The platform's own AI key is reserved for project
   // evaluation only; each student brings their own key(s) for tutor chat.
-  // The tutor tries them in order (Gemini → Claude → OpenAI) and falls back
-  // to the next provider when one is exhausted or rejected.
+  // The tutor tries them in order (Gemini → Claude → OpenAI → LCWAT) and falls
+  // back to the next provider when one is exhausted or rejected. LCWAT is the
+  // TechAscend gateway; a student's own gateway key (below) overrides the
+  // platform default configured via LCWAT_API_KEY.
   geminiApiKeyEnc    String?
   anthropicApiKeyEnc String?
   openaiApiKeyEnc    String?
+  lcwatApiKeyEnc     String?
 
   cohortId String?
   cohort   Cohort? @relation(fields: [cohortId], references: [id])
