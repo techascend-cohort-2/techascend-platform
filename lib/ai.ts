@@ -55,10 +55,16 @@ const PROVIDER_LABEL: Record<AiProviderId, string> = {
   openai: "OpenAI",
 };
 
-// A trimmed one-line snippet of a raw provider error, safe to show a student.
+// A trimmed one-line snippet of a raw provider error, safe to show a student
+// (strips any key/token material that might appear in a URL or message).
 function shortReason(msg: string): string {
-  const clean = msg.replace(/\s+/g, " ").trim();
-  return clean.length > 140 ? `${clean.slice(0, 137)}…` : clean;
+  const clean = msg
+    .replace(/(key|api[_-]?key|token)=[^&\s]+/gi, "$1=•••")
+    .replace(/AIza[0-9A-Za-z_-]{10,}/g, "•••")
+    .replace(/sk-[0-9A-Za-z_-]{10,}/g, "•••")
+    .replace(/\s+/g, " ")
+    .trim();
+  return clean.length > 160 ? `${clean.slice(0, 157)}…` : clean;
 }
 
 async function* streamGemini(
@@ -84,11 +90,39 @@ async function* streamGemini(
   try {
     const chat = model.startChat({ history: geminiHistory });
     const result = await chat.sendMessageStream(message);
+    let produced = false;
     for await (const chunk of result.stream) {
-      const text = chunk.text();
-      if (text) yield text;
+      // Extract text defensively: chunk.text() can throw on a chunk that has a
+      // finishReason but no text parts even when the overall call succeeded,
+      // so fall back to reading the raw parts instead of failing the reply.
+      let text = "";
+      try {
+        text = chunk.text();
+      } catch {
+        text = (chunk.candidates?.[0]?.content?.parts ?? [])
+          .map((p) => (typeof p.text === "string" ? p.text : ""))
+          .join("");
+      }
+      if (text) {
+        produced = true;
+        yield text;
+      }
+    }
+    if (!produced) {
+      // The call succeeded (HTTP 200) but returned no usable text — usually a
+      // safety block or an empty candidate. Explain that rather than a raw error.
+      const resp = await result.response.catch(() => null);
+      const block = resp?.promptFeedback?.blockReason;
+      const finish = resp?.candidates?.[0]?.finishReason;
+      console.error("[tutor] Gemini empty response:", JSON.stringify({ block, finish }));
+      throw new TutorKeyError(
+        block || (finish && finish !== "STOP")
+          ? `Gemini blocked this reply (${block || finish}) — try rephrasing your question`
+          : "Gemini returned an empty reply — try asking again",
+      );
     }
   } catch (err) {
+    if (err instanceof TutorKeyError) throw err;
     const msg = err instanceof Error ? err.message : String(err);
     // Log the real Google error so it can be diagnosed from server logs — the
     // student-facing message below is a friendly interpretation of it.
@@ -103,7 +137,7 @@ async function* streamGemini(
     }
     if (/quota|RESOURCE_EXHAUSTED|rate limit|429/i.test(msg)) {
       throw new TutorKeyError(
-        "your Gemini key has no available quota. If it has never worked, the free tier likely isn't enabled for your account/region — enable billing on your key, or add a Claude or OpenAI key in My Profile instead",
+        `your Gemini key has no available quota. If it has never worked, the free tier likely isn't enabled for your account/region — enable billing, or add a Claude/OpenAI key in My Profile. (Google: ${shortReason(msg)})`,
       );
     }
     throw new TutorKeyError(`Gemini couldn't be reached (${shortReason(msg)})`);
