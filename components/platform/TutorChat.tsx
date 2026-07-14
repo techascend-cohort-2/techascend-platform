@@ -39,6 +39,8 @@ export default function TutorChat({
       role: m.role === "bot" ? ("assistant" as const) : ("user" as const),
       content: m.text,
     }));
+    // First student message of this conversation → start a fresh sticky session.
+    const newChat = messages.every((m) => m.role !== "user");
 
     setMessages((m) => [...m, { role: "user", text }, { role: "bot", text: "" }]);
 
@@ -46,7 +48,7 @@ export default function TutorChat({
       const res = await fetch("/api/tutor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, lessonId, history }),
+        body: JSON.stringify({ message: text, lessonId, history, newChat }),
       });
       if (res.status === 412) {
         const body = await res.json().catch(() => null);

@@ -18,12 +18,18 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return new Response(parsed.error.issues[0]?.message ?? "Invalid request", { status: 400 });
   }
-  const { message, lessonId, history } = parsed.data;
+  const { message, lessonId, history, newChat } = parsed.data;
 
   const userId = session.user.id;
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { geminiApiKeyEnc: true, anthropicApiKeyEnc: true, openaiApiKeyEnc: true, lcwatApiKeyEnc: true },
+    select: {
+      geminiApiKeyEnc: true,
+      anthropicApiKeyEnc: true,
+      openaiApiKeyEnc: true,
+      lcwatApiKeyEnc: true,
+      lcwatTutorSession: true,
+    },
   });
 
   // Fallback order: Gemini (free) first, then Claude, then OpenAI. A stored
@@ -46,8 +52,18 @@ export async function POST(req: Request) {
   const personalLcwat = user?.lcwatApiKeyEnc ? decryptSecret(user.lcwatApiKeyEnc) : null;
   if (user?.lcwatApiKeyEnc && personalLcwat === null) hadUnreadable = true;
   const lcwatKey = personalLcwat ?? lcwatConfig.apiKey;
+  // Sticky session: continue the stored session unless the client signalled a
+  // fresh conversation. onNewId captures the id the gateway assigns so we can
+  // persist it after streaming.
+  const storedSession = newChat ? null : user?.lcwatTutorSession ?? null;
+  let capturedSession: string | null = null;
   if (lcwatKey && lcwatConfig.url) {
-    keys.push({ provider: "lcwat", apiKey: lcwatKey, baseUrl: lcwatConfig.url });
+    keys.push({
+      provider: "lcwat",
+      apiKey: lcwatKey,
+      baseUrl: lcwatConfig.url,
+      session: { id: storedSession, onNewId: (id) => { capturedSession = id; } },
+    });
   }
 
   if (keys.length === 0) {
@@ -111,6 +127,13 @@ export async function POST(req: Request) {
         prisma.aiTutorLog
           .create({ data: { userId, lessonId: lessonId ?? null, prompt: message, response: full } })
           .catch(() => {});
+        // Persist the sticky LCWAT session so the next turn continues it. Also
+        // clear a stale session when a new chat produced no LCWAT reply.
+        if (capturedSession && capturedSession !== user?.lcwatTutorSession) {
+          prisma.user.update({ where: { id: userId }, data: { lcwatTutorSession: capturedSession } }).catch(() => {});
+        } else if (newChat && !capturedSession && user?.lcwatTutorSession) {
+          prisma.user.update({ where: { id: userId }, data: { lcwatTutorSession: null } }).catch(() => {});
+        }
       }
     },
   });

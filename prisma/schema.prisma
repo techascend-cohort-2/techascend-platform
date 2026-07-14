@@ -73,6 +73,9 @@ model User {
   anthropicApiKeyEnc String?
   openaiApiKeyEnc    String?
   lcwatApiKeyEnc     String?
+  // Current sticky LCWAT tutor session, so multi-turn chat continues on the
+  // provider that holds the history instead of re-sending the whole transcript.
+  lcwatTutorSession  String?
 
   cohortId String?
   cohort   Cohort? @relation(fields: [cohortId], references: [id])

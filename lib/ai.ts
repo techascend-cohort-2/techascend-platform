@@ -45,8 +45,11 @@ function buildSystemPrompt(lessonContext?: string): string {
 // ---------------------------------------------------------------------------
 
 export type TutorTurn = { role: "user" | "assistant"; content: string };
-// baseUrl is only used by the LCWAT provider (its gateway URL).
-export type TutorKey = { provider: AiProviderId; apiKey: string; baseUrl?: string };
+// baseUrl + session are only used by the LCWAT provider. session carries the
+// sticky conversation id (so we send just the new message, not the transcript)
+// and a callback to report the id the gateway assigns.
+export type LcwatSession = { id: string | null; onNewId?: (id: string) => void };
+export type TutorKey = { provider: AiProviderId; apiKey: string; baseUrl?: string; session?: LcwatSession };
 
 export class TutorKeyError extends Error {}
 
@@ -222,32 +225,34 @@ async function* streamLcwat(
   history: TutorTurn[],
   lessonContext?: string,
   baseUrl?: string,
+  session?: LcwatSession,
 ): AsyncGenerator<string> {
   const gateway = (baseUrl || "").replace(/\/+$/, "");
   if (!gateway) throw new TutorKeyError("the TechAscend LCWAT gateway isn't configured");
 
-  // LCWAT /v1/messages is stateless request/response with a single `prompt`,
-  // so fold the system prompt + recent history into one prompt string.
-  const convo = history
-    .slice(-10)
-    .map((t) => `${t.role === "assistant" ? "Assistant" : "Student"}: ${t.content}`)
-    .join("\n");
-  const prompt = [
-    buildSystemPrompt(lessonContext),
-    convo ? `Conversation so far:\n${convo}` : "",
-    `Student: ${message}`,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  // Sticky sessions: the gateway holds the transcript, so we only ever send the
+  // NEW message. On the FIRST message of a conversation (no session id) we send
+  // the tutor persona + lesson context to frame the thread; after that, just the
+  // student's message with the session id — never the whole history.
+  const post = async (sessionId: string | null): Promise<Response> => {
+    const prompt = sessionId
+      ? message
+      : [buildSystemPrompt(lessonContext), `Student: ${message}`].join("\n\n");
+    return fetch(`${gateway}/v1/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+      body: JSON.stringify({ prompt, timeout_seconds: 180, ...(sessionId ? { session_id: sessionId } : {}) }),
+      signal: AbortSignal.timeout(200_000),
+    });
+  };
 
   let res: Response;
   try {
-    res = await fetch(`${gateway}/v1/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
-      body: JSON.stringify({ prompt, timeout_seconds: 180 }),
-      signal: AbortSignal.timeout(200_000),
-    });
+    res = await post(session?.id ?? null);
+    // If the sticky session was lost/expired upstream, start a fresh one.
+    if ((res.status === 404 || res.status === 410) && session?.id) {
+      res = await post(null);
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[tutor] LCWAT fetch error:", msg);
@@ -265,7 +270,10 @@ async function* streamLcwat(
     throw new TutorKeyError(`the TechAscend LCWAT gateway couldn't answer (${code ?? res.status})`);
   }
 
-  const data = (await res.json().catch(() => null)) as { response?: string } | null;
+  const data = (await res.json().catch(() => null)) as { response?: string; session_id?: string } | null;
+  if (typeof data?.session_id === "string" && data.session_id && session?.onNewId) {
+    session.onNewId(data.session_id);
+  }
   const text = data?.response;
   if (typeof text === "string" && text.trim()) {
     yield text;
@@ -276,7 +284,14 @@ async function* streamLcwat(
 
 const PROVIDER_STREAMS: Record<
   AiProviderId,
-  (apiKey: string, message: string, history: TutorTurn[], lessonContext?: string, baseUrl?: string) => AsyncGenerator<string>
+  (
+    apiKey: string,
+    message: string,
+    history: TutorTurn[],
+    lessonContext?: string,
+    baseUrl?: string,
+    session?: LcwatSession,
+  ) => AsyncGenerator<string>
 > = {
   gemini: streamGemini,
   anthropic: streamAnthropic,
@@ -298,10 +313,10 @@ export async function* streamTutorReply(
 ): AsyncGenerator<string> {
   const failures: string[] = [];
 
-  for (const { provider, apiKey, baseUrl } of keys) {
+  for (const { provider, apiKey, baseUrl, session } of keys) {
     let yielded = false;
     try {
-      for await (const chunk of PROVIDER_STREAMS[provider](apiKey, message, history, lessonContext, baseUrl)) {
+      for await (const chunk of PROVIDER_STREAMS[provider](apiKey, message, history, lessonContext, baseUrl, session)) {
         yielded = true;
         yield chunk;
       }

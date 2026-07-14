@@ -56,6 +56,9 @@ export const tutorMessageSchema = z.object({
   history: z
     .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
     .optional(),
+  // true for the first message of a fresh conversation — starts a new sticky
+  // LCWAT session instead of continuing the previous one.
+  newChat: z.boolean().optional(),
 });
 
 export const submissionSchema = z.object({
