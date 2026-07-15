@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { reviewApplicationAction, createAccountForApplicationAction } from "@/lib/actions/staff";
+import FormattedNote from "@/components/platform/FormattedNote";
 
 type App = {
   id: string;
@@ -134,7 +135,10 @@ export default function ApplicationsScreen({ applications }: { applications: App
                   </div>
                 ) : null}
                 {a.reviewNote ? (
-                  <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>Note: {a.reviewNote}{a.reviewedByName ? ` — ${a.reviewedByName}` : ""}</div>
+                  <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8, lineHeight: 1.5 }}>
+                    <FormattedNote text={a.reviewNote} />
+                    {a.reviewedByName ? <div style={{ marginTop: 2 }}>— {a.reviewedByName}</div> : null}
+                  </div>
                 ) : null}
 
                 {a.status === "new" || a.status === "reviewing" ? (

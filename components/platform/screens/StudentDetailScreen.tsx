@@ -2,6 +2,7 @@ import Link from "next/link";
 import Icon from "@/components/Icon";
 import { ICON } from "@/lib/platformData";
 import { TRACK_LABELS } from "@/lib/constants";
+import FormattedNote from "@/components/platform/FormattedNote";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
@@ -181,8 +182,9 @@ export default function StudentDetailScreen({ student, backHref }: { student: St
             </span>
           </div>
           {student.visibility.reviewNote ? (
-            <div style={{ fontSize: 12.5, background: noteColors(student.visibility.status).bg, color: noteColors(student.visibility.status).fg, borderRadius: 9, padding: "9px 12px", marginBottom: 10 }}>
-              Reviewer note: {student.visibility.reviewNote}
+            <div style={{ fontSize: 12.5, background: noteColors(student.visibility.status).bg, color: noteColors(student.visibility.status).fg, borderRadius: 9, padding: "9px 12px", marginBottom: 10, lineHeight: 1.5 }}>
+              <div style={{ fontWeight: 800, marginBottom: 4 }}>Reviewer note</div>
+              <FormattedNote text={student.visibility.reviewNote} />
             </div>
           ) : null}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -211,7 +213,7 @@ export default function StudentDetailScreen({ student, backHref }: { student: St
                       </div>
                       {ev.note ? (
                         <div style={{ background: noteColors(ev.decision).bg, color: noteColors(ev.decision).fg, borderRadius: 8, padding: "7px 10px", marginTop: 5, lineHeight: 1.5 }}>
-                          {ev.note}
+                          <FormattedNote text={ev.note} />
                         </div>
                       ) : null}
                     </div>

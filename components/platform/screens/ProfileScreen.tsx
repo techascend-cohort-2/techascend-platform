@@ -10,6 +10,7 @@ import {
 import { submitVisibilityAction } from "@/lib/actions/program";
 import { changePasswordAction, type FormState } from "@/lib/actions/auth";
 import { AI_PROVIDERS, type AiProviderId, type AiProviderMeta } from "@/lib/aiProviderMeta";
+import FormattedNote from "@/components/platform/FormattedNote";
 
 const input: React.CSSProperties = {
   width: "100%",
@@ -295,8 +296,9 @@ export default function ProfileScreen({
             Submit all six profile links. The community team reviews them — approval (plus completing the Phase 1 lessons) earns your Visibility Badge and certificate automatically.
           </div>
           {visibility?.reviewNote ? (
-            <div style={{ marginTop: 10, fontSize: 12.5, background: noteColors(visibility.status).bg, color: noteColors(visibility.status).fg, borderRadius: 9, padding: "9px 12px" }}>
-              Reviewer note: {visibility.reviewNote}
+            <div style={{ marginTop: 10, fontSize: 12.5, background: noteColors(visibility.status).bg, color: noteColors(visibility.status).fg, borderRadius: 9, padding: "9px 12px", lineHeight: 1.5 }}>
+              <div style={{ fontWeight: 800, marginBottom: 4 }}>Reviewer note</div>
+              <FormattedNote text={visibility.reviewNote} />
             </div>
           ) : null}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", columnGap: 16 }}>
@@ -347,7 +349,7 @@ export default function ProfileScreen({
                   </div>
                   {ev.note ? (
                     <div style={{ fontSize: 12.5, background: noteColors(ev.decision).bg, color: noteColors(ev.decision).fg, borderRadius: 8, padding: "8px 11px", marginTop: 8, lineHeight: 1.5 }}>
-                      {ev.note}
+                      <FormattedNote text={ev.note} />
                     </div>
                   ) : null}
                 </div>
