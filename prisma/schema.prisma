@@ -104,9 +104,26 @@ model User {
   ledgerEntries        LedgerEntry[]        @relation("LedgerSubject")
   ledgerCreated        LedgerEntry[]        @relation("LedgerCreator")
   applicationsReviewed Application[]        @relation("ApplicationReviewer")
+  passwordResets       PasswordResetToken[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Self-service + staff-issued password resets. We store only a SHA-256 hash of
+// the token; the raw token lives solely in the emailed/copyable link. Tokens
+// are single-use (usedAt) and short-lived (expiresAt).
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Account {

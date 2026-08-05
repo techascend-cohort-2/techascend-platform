@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition, useActionState } from "react";
 import Link from "next/link";
 import { ROLES, TRACKS, TRACK_LABELS } from "@/lib/constants";
-import { updateUserAction, updateStudentTrackAction, resetPasswordAction, type ActionState } from "@/lib/actions/staff";
+import { updateUserAction, updateStudentTrackAction, resetPasswordAction, sendResetLinkAction, type ActionState } from "@/lib/actions/staff";
 
 export type MemberRow = {
   id: string;
@@ -133,11 +133,53 @@ function TempPasswordCard({ password }: { password: string }) {
   );
 }
 
+function ResetLinkCard({ url, emailed, email }: { url: string; emailed: boolean; email: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="pf-card" style={{ background: "#f1eafc", border: "1px solid #dbc9f5", padding: "14px 16px", marginTop: 12 }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color: "var(--brand1)", marginBottom: 6 }}>
+        Password reset link
+      </div>
+      <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
+        {emailed
+          ? `Emailed to ${email}. You can also copy the link below to share it directly.`
+          : "Copy this link and send it to the member (WhatsApp, SMS, etc.). It expires in 24 hours, and their current password keeps working until they use it."}
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <input
+          readOnly
+          value={url}
+          onFocus={(e) => e.currentTarget.select()}
+          style={{ ...inp, flex: 1, minWidth: 220, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }}
+        />
+        <button
+          type="button"
+          className="pf-btn-grad"
+          style={{ fontSize: 12.5 }}
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(url);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1800);
+            } catch {
+              setCopied(false);
+            }
+          }}
+        >
+          {copied ? "Copied ✓" : "Copy link"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ManageForm({ member, cohorts }: { member: MemberRow; cohorts: CohortOption[] }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(updateUserAction, {});
   const [resetting, startReset] = useTransition();
   const [temp, setTemp] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
+  const [linking, startLink] = useTransition();
+  const [link, setLink] = useState<{ url: string; emailed: boolean } | null>(null);
 
   return (
     <div style={{ padding: "14px 16px", borderTop: "1px dashed var(--line)", background: "var(--bg)", borderRadius: "0 0 12px 12px" }}>
@@ -193,10 +235,28 @@ function ManageForm({ member, cohorts }: { member: MemberRow; cohorts: CohortOpt
           <button
             type="button"
             className="pf-btn-soft"
+            disabled={linking}
+            style={{ fontSize: 12.5 }}
+            onClick={() => {
+              setResetError(null);
+              setTemp(null);
+              startLink(async () => {
+                const res = await sendResetLinkAction(member.id);
+                if (res.ok && res.resetLink) setLink({ url: res.resetLink, emailed: Boolean(res.emailed) });
+                else setResetError(res.error ?? "Could not create a reset link.");
+              });
+            }}
+          >
+            {linking ? "Creating…" : link ? "Resend reset link" : "Send reset link"}
+          </button>
+          <button
+            type="button"
+            className="pf-btn-soft"
             disabled={resetting}
             style={{ fontSize: 12.5 }}
             onClick={() => {
               setResetError(null);
+              setLink(null);
               startReset(async () => {
                 const res = await resetPasswordAction(member.id);
                 if (res.ok && res.tempPassword) setTemp(res.tempPassword);
@@ -204,13 +264,14 @@ function ManageForm({ member, cohorts }: { member: MemberRow; cohorts: CohortOpt
               });
             }}
           >
-            {resetting ? "Resetting…" : "Reset password"}
+            {resetting ? "Resetting…" : "Set temp password"}
           </button>
           {state.ok && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--pos)" }}>Saved ✓</span>}
           {state.error && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--danger)" }}>{state.error}</span>}
           {resetError && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--danger)" }}>{resetError}</span>}
         </div>
       </form>
+      {link && <ResetLinkCard url={link.url} emailed={link.emailed} email={member.email} />}
       {temp && <TempPasswordCard password={temp} />}
     </div>
   );

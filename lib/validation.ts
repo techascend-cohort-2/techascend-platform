@@ -61,6 +61,11 @@ export const tutorMessageSchema = z.object({
   newChat: z.boolean().optional(),
 });
 
+export const resetPasswordTokenSchema = z.object({
+  token: z.string().min(10, "This reset link is invalid or has expired."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+});
+
 export const submissionSchema = z.object({
   projectId: z.string().min(1),
   submissionLink: z.string().url("Enter a valid URL").optional().or(z.literal("")),

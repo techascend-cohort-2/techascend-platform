@@ -10,8 +10,16 @@ import { notify, recomputeUserProgress } from "@/lib/progress";
 import { parseStudentsCsv, importStudents } from "@/lib/students-import";
 import { getAssignableCohort } from "@/lib/queries";
 import { setLcwatConfig, clearLcwatConfig } from "@/lib/settings";
+import { createResetToken, sendResetEmail, STAFF_RESET_TTL_MIN } from "@/lib/reset";
+import { emailConfigured } from "@/lib/mailer";
 
-export type ActionState = { ok?: boolean; error?: string; tempPassword?: string };
+export type ActionState = {
+  ok?: boolean;
+  error?: string;
+  tempPassword?: string;
+  resetLink?: string;
+  emailed?: boolean;
+};
 
 async function requireStaff(adminOnly = false) {
   const session = await auth();
@@ -189,6 +197,25 @@ export async function resetPasswordAction(userId: string): Promise<ActionState> 
     data: { passwordHash: await bcrypt.hash(pwd, 10), mustChangePassword: true },
   });
   return { ok: true, tempPassword: pwd };
+}
+
+/**
+ * Issue (or re-issue) a self-service reset link for a member. Unlike the temp
+ * password above, the member's current password stays valid until they use the
+ * link. The link is emailed when an email provider is configured, and is always
+ * returned so staff can copy and share it directly. Calling again cuts a fresh
+ * link and invalidates the previous one.
+ */
+export async function sendResetLinkAction(userId: string): Promise<ActionState> {
+  await requireStaff(true);
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } });
+  if (!user) return { error: "Member not found." };
+  const { link } = await createResetToken(userId, STAFF_RESET_TTL_MIN);
+  let emailed = false;
+  if (user.email && emailConfigured()) {
+    emailed = await sendResetEmail(user.email, user.name, link, STAFF_RESET_TTL_MIN);
+  }
+  return { ok: true, resetLink: link, emailed };
 }
 
 // ---------------- Cohorts ----------------

@@ -4,10 +4,17 @@ import { AuthError } from "next-auth";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { auth, signIn, signOut } from "@/auth";
-import { signupSchema } from "@/lib/validation";
+import { signupSchema, resetPasswordTokenSchema } from "@/lib/validation";
 import { ROLE_HOME, isRole, initialsOf, avatarBgFor } from "@/lib/constants";
 import { notify } from "@/lib/progress";
 import { normalizeEmailOrPhone } from "@/lib/contact";
+import {
+  createResetToken,
+  sendResetEmail,
+  findValidReset,
+  consumeReset,
+  SELF_RESET_TTL_MIN,
+} from "@/lib/reset";
 
 export type FormState = { error?: string; ok?: boolean };
 
@@ -111,6 +118,52 @@ export async function signupAction(_prev: FormState, formData: FormData): Promis
 
 export async function logoutAction() {
   await signOut({ redirectTo: "/login" });
+}
+
+/**
+ * Self-service "forgot password". Deliberately returns the SAME response
+ * whether or not an account matched, so the form can't be used to discover
+ * which emails are registered. When an account exists and has an email, a
+ * time-limited reset link is emailed (requires an email provider configured —
+ * otherwise staff can still issue a link from the admin panel).
+ */
+export async function requestPasswordResetAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const raw = String(formData.get("email") ?? "");
+  const contact = normalizeEmailOrPhone(raw);
+  if (!contact) return { error: "Enter the email or phone on your account." };
+
+  const user = await prisma.user.findFirst({ where: { OR: [{ email: contact }, { phone: contact }] } });
+  if (user?.email) {
+    try {
+      const { link } = await createResetToken(user.id, SELF_RESET_TTL_MIN);
+      await sendResetEmail(user.email, user.name, link, SELF_RESET_TTL_MIN);
+    } catch (err) {
+      // Never surface internal failure to the requester (no enumeration); log
+      // it so staff can fall back to issuing a link manually.
+      console.error("[reset] request failed:", err instanceof Error ? err.message : err);
+    }
+  }
+  return { ok: true };
+}
+
+/** Complete a reset from an emailed/issued link. Token is single-use. */
+export async function resetPasswordWithTokenAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = resetPasswordTokenSchema.safeParse({
+    token: formData.get("token"),
+    password: formData.get("password"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid request." };
+
+  const match = await findValidReset(parsed.data.token);
+  if (!match) {
+    return { error: "This reset link is invalid or has expired. Request a new one." };
+  }
+  await prisma.user.update({
+    where: { id: match.userId },
+    data: { passwordHash: await bcrypt.hash(parsed.data.password, 10), mustChangePassword: false },
+  });
+  await consumeReset(match.id);
+  return { ok: true };
 }
 
 export async function changePasswordAction(_prev: FormState, formData: FormData): Promise<FormState> {
