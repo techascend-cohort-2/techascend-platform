@@ -29,6 +29,26 @@ async function requireStaff(adminOnly = false) {
   return session.user;
 }
 
+/**
+ * Staff-only password operations (reset / issue link). Admins may act on any
+ * account; managers may act on students only — they can't reset another
+ * manager's, an admin's, or a partner's password. Returns the target user's
+ * fields needed by the callers.
+ */
+async function authorizePasswordAction(userId: string) {
+  const actor = await requireStaff(false); // admin or manager
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, name: true, role: true },
+  });
+  if (!target) return { target: null as null, error: "Member not found." as const };
+  if (actor.role !== "admin" && target.role !== "student") {
+    // Managers are limited to student accounts.
+    return { target: null as null, error: "You can only reset student passwords." as const };
+  }
+  return { target, error: null };
+}
+
 function tempPassword(): string {
   const alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
   return Array.from({ length: 12 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
@@ -190,10 +210,11 @@ export async function importStudentsAction(_prev: ImportState, formData: FormDat
 }
 
 export async function resetPasswordAction(userId: string): Promise<ActionState> {
-  await requireStaff(true);
+  const { target, error } = await authorizePasswordAction(userId);
+  if (error) return { error };
   const pwd = tempPassword();
   await prisma.user.update({
-    where: { id: userId },
+    where: { id: target.id },
     data: { passwordHash: await bcrypt.hash(pwd, 10), mustChangePassword: true },
   });
   return { ok: true, tempPassword: pwd };
@@ -207,13 +228,12 @@ export async function resetPasswordAction(userId: string): Promise<ActionState> 
  * link and invalidates the previous one.
  */
 export async function sendResetLinkAction(userId: string): Promise<ActionState> {
-  await requireStaff(true);
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } });
-  if (!user) return { error: "Member not found." };
-  const { link } = await createResetToken(userId, STAFF_RESET_TTL_MIN);
+  const { target, error } = await authorizePasswordAction(userId);
+  if (error) return { error };
+  const { link } = await createResetToken(target.id, STAFF_RESET_TTL_MIN);
   let emailed = false;
-  if (user.email && emailConfigured()) {
-    emailed = await sendResetEmail(user.email, user.name, link, STAFF_RESET_TTL_MIN);
+  if (target.email && emailConfigured()) {
+    emailed = await sendResetEmail(target.email, target.name, link, STAFF_RESET_TTL_MIN);
   }
   return { ok: true, resetLink: link, emailed };
 }

@@ -173,13 +173,63 @@ function ResetLinkCard({ url, emailed, email }: { url: string; emailed: boolean;
   );
 }
 
-function ManageForm({ member, cohorts }: { member: MemberRow; cohorts: CohortOption[] }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(updateUserAction, {});
+// Password actions available to any staff who can manage this member. Rendered
+// both in the admin's full ManageForm and in the manager's student-only view,
+// so a community manager can reset a student's password just like an admin.
+function PasswordControls({ member }: { member: MemberRow }) {
   const [resetting, startReset] = useTransition();
   const [temp, setTemp] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
   const [linking, startLink] = useTransition();
   const [link, setLink] = useState<{ url: string; emailed: boolean } | null>(null);
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <button
+          type="button"
+          className="pf-btn-soft"
+          disabled={linking}
+          style={{ fontSize: 12.5 }}
+          onClick={() => {
+            setResetError(null);
+            setTemp(null);
+            startLink(async () => {
+              const res = await sendResetLinkAction(member.id);
+              if (res.ok && res.resetLink) setLink({ url: res.resetLink, emailed: Boolean(res.emailed) });
+              else setResetError(res.error ?? "Could not create a reset link.");
+            });
+          }}
+        >
+          {linking ? "Creating…" : link ? "Resend reset link" : "Send reset link"}
+        </button>
+        <button
+          type="button"
+          className="pf-btn-soft"
+          disabled={resetting}
+          style={{ fontSize: 12.5 }}
+          onClick={() => {
+            setResetError(null);
+            setLink(null);
+            startReset(async () => {
+              const res = await resetPasswordAction(member.id);
+              if (res.ok && res.tempPassword) setTemp(res.tempPassword);
+              else setResetError(res.error ?? "Could not reset the password.");
+            });
+          }}
+        >
+          {resetting ? "Resetting…" : "Set temp password"}
+        </button>
+        {resetError && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--danger)" }}>{resetError}</span>}
+      </div>
+      {link && <ResetLinkCard url={link.url} emailed={link.emailed} email={member.email} />}
+      {temp && <TempPasswordCard password={temp} />}
+    </div>
+  );
+}
+
+function ManageForm({ member, cohorts }: { member: MemberRow; cohorts: CohortOption[] }) {
+  const [state, action, pending] = useActionState<ActionState, FormData>(updateUserAction, {});
 
   return (
     <div style={{ padding: "14px 16px", borderTop: "1px dashed var(--line)", background: "var(--bg)", borderRadius: "0 0 12px 12px" }}>
@@ -232,47 +282,13 @@ function ManageForm({ member, cohorts }: { member: MemberRow; cohorts: CohortOpt
           <button type="submit" className="pf-btn-grad" disabled={pending} style={{ fontSize: 12.5 }}>
             {pending ? "Saving…" : "Save changes"}
           </button>
-          <button
-            type="button"
-            className="pf-btn-soft"
-            disabled={linking}
-            style={{ fontSize: 12.5 }}
-            onClick={() => {
-              setResetError(null);
-              setTemp(null);
-              startLink(async () => {
-                const res = await sendResetLinkAction(member.id);
-                if (res.ok && res.resetLink) setLink({ url: res.resetLink, emailed: Boolean(res.emailed) });
-                else setResetError(res.error ?? "Could not create a reset link.");
-              });
-            }}
-          >
-            {linking ? "Creating…" : link ? "Resend reset link" : "Send reset link"}
-          </button>
-          <button
-            type="button"
-            className="pf-btn-soft"
-            disabled={resetting}
-            style={{ fontSize: 12.5 }}
-            onClick={() => {
-              setResetError(null);
-              setLink(null);
-              startReset(async () => {
-                const res = await resetPasswordAction(member.id);
-                if (res.ok && res.tempPassword) setTemp(res.tempPassword);
-                else setResetError(res.error ?? "Could not reset the password.");
-              });
-            }}
-          >
-            {resetting ? "Resetting…" : "Set temp password"}
-          </button>
           {state.ok && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--pos)" }}>Saved ✓</span>}
           {state.error && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--danger)" }}>{state.error}</span>}
-          {resetError && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--danger)" }}>{resetError}</span>}
         </div>
       </form>
-      {link && <ResetLinkCard url={link.url} emailed={link.emailed} email={member.email} />}
-      {temp && <TempPasswordCard password={temp} />}
+      <div style={{ marginTop: 12 }}>
+        <PasswordControls member={member} />
+      </div>
     </div>
   );
 }
@@ -299,6 +315,10 @@ function TrackForm({ member }: { member: MemberRow }) {
         {state.ok && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--pos)" }}>Saved ✓</span>}
         {state.error && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--danger)" }}>{state.error}</span>}
       </form>
+      <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px dashed var(--line)" }}>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--muted)", marginBottom: 8 }}>Password</div>
+        <PasswordControls member={member} />
+      </div>
     </div>
   );
 }
@@ -361,7 +381,7 @@ export default function MembersScreen({
           <div style={{ fontFamily: "var(--font-sora)", fontWeight: 800, fontSize: 22, letterSpacing: -0.4 }}>Members</div>
           <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
             {members.length} accounts across students, applicants, partners and staff.
-            {!isAdmin && " Only admins can change roles or cohorts — you can still update a student's track."}
+            {!isAdmin && " Only admins can change roles or cohorts — you can still update a student's track and reset their password."}
           </div>
         </div>
         <input
