@@ -28,6 +28,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!ok) return null;
 
+        // Suspended accounts can't authenticate (defense-in-depth alongside the
+        // friendly message in loginAction and the live check in the layout).
+        if (user.suspendedAt) return null;
+
         return {
           id: user.id,
           name: user.name,

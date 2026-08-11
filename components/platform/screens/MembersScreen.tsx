@@ -3,7 +3,8 @@
 import { useMemo, useState, useTransition, useActionState } from "react";
 import Link from "next/link";
 import { ROLES, TRACKS, TRACK_LABELS } from "@/lib/constants";
-import { updateUserAction, updateStudentTrackAction, resetPasswordAction, sendResetLinkAction, type ActionState } from "@/lib/actions/staff";
+import { updateUserAction, updateStudentTrackAction, resetPasswordAction, sendResetLinkAction, setSuspensionAction, type ActionState } from "@/lib/actions/staff";
+import { useRouter } from "next/navigation";
 
 export type MemberRow = {
   id: string;
@@ -19,6 +20,7 @@ export type MemberRow = {
   partnerName: string | null;
   progress: number;
   badges: number;
+  suspendedAt: string | null;
 };
 
 export type CohortOption = { id: string; name: string };
@@ -173,15 +175,20 @@ function ResetLinkCard({ url, emailed, email }: { url: string; emailed: boolean;
   );
 }
 
-// Password actions available to any staff who can manage this member. Rendered
-// both in the admin's full ManageForm and in the manager's student-only view,
-// so a community manager can reset a student's password just like an admin.
-function PasswordControls({ member }: { member: MemberRow }) {
+// Account actions available to any staff who can manage this member (password
+// reset + suspension). Rendered both in the admin's full ManageForm and in the
+// manager's student-only view, so a community manager can reset a student's
+// password or suspend them just like an admin.
+function AccountControls({ member }: { member: MemberRow }) {
+  const router = useRouter();
   const [resetting, startReset] = useTransition();
   const [temp, setTemp] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
   const [linking, startLink] = useTransition();
   const [link, setLink] = useState<{ url: string; emailed: boolean } | null>(null);
+  const [suspending, startSuspend] = useTransition();
+  const [suspendError, setSuspendError] = useState<string | null>(null);
+  const isSuspended = Boolean(member.suspendedAt);
 
   return (
     <div>
@@ -220,8 +227,42 @@ function PasswordControls({ member }: { member: MemberRow }) {
         >
           {resetting ? "Resetting…" : "Set temp password"}
         </button>
+        <button
+          type="button"
+          className="pf-btn-soft"
+          disabled={suspending}
+          style={{ fontSize: 12.5, ...(isSuspended ? {} : { color: "var(--danger)", borderColor: "var(--danger)" }) }}
+          onClick={() => {
+            setSuspendError(null);
+            if (isSuspended) {
+              startSuspend(async () => {
+                const res = await setSuspensionAction(member.id, false);
+                if (res.ok) router.refresh();
+                else setSuspendError(res.error ?? "Could not reactivate the account.");
+              });
+              return;
+            }
+            const reason = window.prompt(
+              `Suspend ${member.name}? They won't be able to sign in until reactivated.\n\nOptional reason (shown to them):`,
+            );
+            if (reason === null) return; // cancelled
+            startSuspend(async () => {
+              const res = await setSuspensionAction(member.id, true, reason || undefined);
+              if (res.ok) router.refresh();
+              else setSuspendError(res.error ?? "Could not suspend the account.");
+            });
+          }}
+        >
+          {suspending ? "Saving…" : isSuspended ? "Reactivate account" : "Suspend account"}
+        </button>
         {resetError && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--danger)" }}>{resetError}</span>}
+        {suspendError && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--danger)" }}>{suspendError}</span>}
       </div>
+      {isSuspended && (
+        <div style={{ fontSize: 12, color: "var(--danger)", marginTop: 8, fontWeight: 600 }}>
+          This account is suspended — the member can&apos;t sign in.
+        </div>
+      )}
       {link && <ResetLinkCard url={link.url} emailed={link.emailed} email={member.email} />}
       {temp && <TempPasswordCard password={temp} />}
     </div>
@@ -287,7 +328,7 @@ function ManageForm({ member, cohorts }: { member: MemberRow; cohorts: CohortOpt
         </div>
       </form>
       <div style={{ marginTop: 12 }}>
-        <PasswordControls member={member} />
+        <AccountControls member={member} />
       </div>
     </div>
   );
@@ -316,8 +357,8 @@ function TrackForm({ member }: { member: MemberRow }) {
         {state.error && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--danger)" }}>{state.error}</span>}
       </form>
       <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px dashed var(--line)" }}>
-        <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--muted)", marginBottom: 8 }}>Password</div>
-        <PasswordControls member={member} />
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--muted)", marginBottom: 8 }}>Account</div>
+        <AccountControls member={member} />
       </div>
     </div>
   );
@@ -502,6 +543,11 @@ export default function MembersScreen({
                       )}
                       <RoleChip role={m.role} />
                       {m.role === "student" ? <StatusChip insight={insightsByUserId[m.id]} /> : null}
+                      {m.suspendedAt ? (
+                        <span style={{ fontSize: 10.5, fontWeight: 800, color: "var(--danger)", background: "var(--dangerbg)", padding: "2px 8px", borderRadius: 20 }}>
+                          Suspended
+                        </span>
+                      ) : null}
                     </div>
                     <div style={{ fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {m.email}

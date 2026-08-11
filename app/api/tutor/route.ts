@@ -29,8 +29,13 @@ export async function POST(req: Request) {
       openaiApiKeyEnc: true,
       lcwatApiKeyEnc: true,
       lcwatTutorSession: true,
+      suspendedAt: true,
     },
   });
+
+  if (user?.suspendedAt) {
+    return new Response("Account suspended", { status: 403 });
+  }
 
   // Fallback order: Gemini (free) first, then Claude, then OpenAI. A stored
   // key that fails to decrypt (e.g. AUTH_SECRET was rotated) is tracked

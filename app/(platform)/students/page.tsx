@@ -46,6 +46,7 @@ export default async function StudentsPage() {
           partnerName: u.partner?.name ?? null,
           progress: u.progressPercentage,
           badges: u._count.userBadges,
+          suspendedAt: u.suspendedAt ? u.suspendedAt.toISOString() : null,
         }))}
       />
     </>

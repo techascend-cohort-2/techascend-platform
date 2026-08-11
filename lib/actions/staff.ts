@@ -19,6 +19,7 @@ export type ActionState = {
   tempPassword?: string;
   resetLink?: string;
   emailed?: boolean;
+  suspended?: boolean;
 };
 
 async function requireStaff(adminOnly = false) {
@@ -30,23 +31,23 @@ async function requireStaff(adminOnly = false) {
 }
 
 /**
- * Staff-only password operations (reset / issue link). Admins may act on any
- * account; managers may act on students only — they can't reset another
- * manager's, an admin's, or a partner's password. Returns the target user's
- * fields needed by the callers.
+ * Guard for staff actions that manage another member's account (password
+ * reset, suspension). Admins may act on any account; managers may act on
+ * students only — never another manager, an admin, or a partner. Returns the
+ * target user's fields the callers need, plus the acting staff member.
  */
-async function authorizePasswordAction(userId: string) {
+async function authorizeMemberAction(userId: string) {
   const actor = await requireStaff(false); // admin or manager
   const target = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, name: true, role: true },
+    select: { id: true, email: true, name: true, role: true, suspendedAt: true },
   });
-  if (!target) return { target: null as null, error: "Member not found." as const };
+  if (!target) return { actor, target: null as null, error: "Member not found." as const };
   if (actor.role !== "admin" && target.role !== "student") {
     // Managers are limited to student accounts.
-    return { target: null as null, error: "You can only reset student passwords." as const };
+    return { actor, target: null as null, error: "You can only manage student accounts." as const };
   }
-  return { target, error: null };
+  return { actor, target, error: null };
 }
 
 function tempPassword(): string {
@@ -210,7 +211,7 @@ export async function importStudentsAction(_prev: ImportState, formData: FormDat
 }
 
 export async function resetPasswordAction(userId: string): Promise<ActionState> {
-  const { target, error } = await authorizePasswordAction(userId);
+  const { target, error } = await authorizeMemberAction(userId);
   if (error) return { error };
   const pwd = tempPassword();
   await prisma.user.update({
@@ -228,7 +229,7 @@ export async function resetPasswordAction(userId: string): Promise<ActionState> 
  * link and invalidates the previous one.
  */
 export async function sendResetLinkAction(userId: string): Promise<ActionState> {
-  const { target, error } = await authorizePasswordAction(userId);
+  const { target, error } = await authorizeMemberAction(userId);
   if (error) return { error };
   const { link } = await createResetToken(target.id, STAFF_RESET_TTL_MIN);
   let emailed = false;
@@ -236,6 +237,34 @@ export async function sendResetLinkAction(userId: string): Promise<ActionState> 
     emailed = await sendResetEmail(target.email, target.name, link, STAFF_RESET_TTL_MIN);
   }
   return { ok: true, resetLink: link, emailed };
+}
+
+/**
+ * Suspend or reactivate a member's account. Same access scope as password
+ * resets (admins any account, managers students only). A suspended user can't
+ * sign in and is bounced out of any active session. Staff can't suspend their
+ * own account.
+ */
+export async function setSuspensionAction(userId: string, suspend: boolean, reason?: string): Promise<ActionState> {
+  const { actor, target, error } = await authorizeMemberAction(userId);
+  if (error) return { error };
+  if (actor.id === target.id) return { error: "You can't suspend your own account." };
+
+  await prisma.user.update({
+    where: { id: target.id },
+    data: suspend
+      ? { suspendedAt: new Date(), suspendedById: actor.id, suspendReason: reason?.trim() || null }
+      : { suspendedAt: null, suspendedById: null, suspendReason: null },
+  });
+
+  if (!suspend) {
+    // Let a reactivated member know they're back in.
+    await notify(target.id, "Your TechAscend account has been reactivated", "/dashboard",
+      "Welcome back — you can sign in and pick up where you left off.");
+  }
+
+  revalidatePath("/students");
+  return { ok: true, suspended: suspend };
 }
 
 // ---------------- Cohorts ----------------

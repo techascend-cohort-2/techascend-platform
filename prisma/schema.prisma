@@ -62,6 +62,13 @@ model User {
   // set when an account is created by staff with a temporary password
   mustChangePassword Boolean @default(false)
 
+  // Account suspension. When suspendedAt is set the user can't sign in and is
+  // bounced out of any active session. suspendedById is the staff member who
+  // suspended them (plain id, no relation to keep User light).
+  suspendedAt   DateTime?
+  suspendedById String?
+  suspendReason String?
+
   // Student's own AI API keys for the AI Tutor (encrypted at rest — see
   // lib/crypto.ts). The platform's own AI key is reserved for project
   // evaluation only; each student brings their own key(s) for tutor chat.

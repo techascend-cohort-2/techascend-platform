@@ -23,6 +23,9 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   const password = String(formData.get("password") ?? "");
   try {
     const user = await prisma.user.findFirst({ where: { OR: [{ email }, { phone: email }] } });
+    if (user?.suspendedAt) {
+      return { error: "This account has been suspended. Please contact the TechAscend team." };
+    }
     const dest = user?.mustChangePassword
       ? "/change-password"
       : user && isRole(user.role)

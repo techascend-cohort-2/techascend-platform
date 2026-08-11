@@ -19,6 +19,11 @@ export default async function PlatformLayout({
   // slip past the edge check before the next hard navigation.
   if (user.mustChangePassword) redirect("/change-password");
 
+  // Suspended mid-session: the JWT is still valid, but this live DB read bounces
+  // them out of the app on the next navigation. The /suspended page lets them
+  // sign out (and explains why they can't get in).
+  if (user.suspendedAt) redirect("/suspended");
+
   const persona = (isRole(user.role) ? user.role : "applicant") as Persona;
   const { items, unread } = await getNotifications(user.id);
 
