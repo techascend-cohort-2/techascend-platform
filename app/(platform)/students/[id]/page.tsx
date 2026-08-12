@@ -37,6 +37,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     cohortName: user.cohort?.name ?? null,
     portfolioUrl: user.portfolioUrl,
     createdAt: user.createdAt.toISOString(),
+    suspendedAt: user.suspendedAt ? user.suspendedAt.toISOString() : null,
     visibility: user.visibilitySubmission
       ? { status: user.visibilitySubmission.status, reviewNote: user.visibilitySubmission.reviewNote, links }
       : null,

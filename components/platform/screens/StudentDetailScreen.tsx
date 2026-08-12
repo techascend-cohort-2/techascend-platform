@@ -3,6 +3,7 @@ import Icon from "@/components/Icon";
 import { ICON } from "@/lib/platformData";
 import { TRACK_LABELS } from "@/lib/constants";
 import FormattedNote from "@/components/platform/FormattedNote";
+import AccountControls from "@/components/platform/AccountControls";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
@@ -52,6 +53,7 @@ export type StudentDetailUser = {
   cohortName: string | null;
   portfolioUrl: string | null;
   createdAt: string;
+  suspendedAt: string | null;
   visibility: {
     status: string;
     reviewNote: string | null;
@@ -129,12 +131,23 @@ export default function StudentDetailScreen({ student, backHref }: { student: St
             <span className="pf-badge pf-badge-brand">{trackLabel}</span>
             <span className="pf-badge pf-badge-neutral">{student.cohortName ?? "No cohort"}</span>
             <span className="pf-badge pf-badge-neutral">Joined {dateFmt.format(new Date(student.createdAt))}</span>
+            {student.suspendedAt ? <span className="pf-badge pf-badge-danger">Suspended</span> : null}
           </div>
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontFamily: "var(--font-sora)", fontWeight: 800, fontSize: 26 }}>{student.progressPercentage}%</div>
           <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700 }}>PROGRAM COMPLETE</div>
         </div>
+      </div>
+
+      <div className="pf-card" style={{ padding: 22, marginBottom: 16 }}>
+        <div className="pf-h" style={{ marginBottom: 4 }}>Account actions</div>
+        <div style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 14 }}>
+          Send a password reset link (or set a temporary password), and suspend or reactivate this student&apos;s account.
+        </div>
+        <AccountControls
+          member={{ id: student.id, name: student.name, email: student.email, suspendedAt: student.suspendedAt }}
+        />
       </div>
 
       <div className="pf-stats" style={{ marginBottom: 16 }}>
