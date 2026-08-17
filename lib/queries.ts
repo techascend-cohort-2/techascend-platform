@@ -45,7 +45,20 @@ export async function getLearningTree(userId: string, userTrack: string | null) 
         modules: {
           where: { track: trackFilter(userTrack) },
           orderBy: { orderIndex: "asc" },
-          include: { lessons: { orderBy: { orderIndex: "asc" } }, projects: true },
+          // The tree view only needs lesson metadata (title/type/duration). Do
+          // NOT pull `content`/`aiPrompt`/`objectives` here — that's the full
+          // markdown body of every lesson, loaded on each learning-page hit and
+          // a major source of DB egress. The lesson page fetches content itself.
+          select: {
+            id: true,
+            title: true,
+            track: true,
+            orderIndex: true,
+            lessons: {
+              orderBy: { orderIndex: "asc" },
+              select: { id: true, title: true, type: true, duration: true, orderIndex: true },
+            },
+          },
         },
       },
     }),
@@ -623,7 +636,26 @@ export async function getApplicationsAdmin() {
 export async function getStudentsAdmin() {
   const [users, cohorts] = await Promise.all([
     prisma.user.findMany({
-      include: { cohort: true, partner: true, _count: { select: { userBadges: true, lessonProgress: true } } },
+      // Select only what the Members list renders. `include` here pulled every
+      // user column — including the encrypted AI keys, tutor session, bio and
+      // password hash — for every account on each load; wasteful egress (and no
+      // reason to move secrets around).
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        track: true,
+        title: true,
+        initials: true,
+        avatarBg: true,
+        cohortId: true,
+        progressPercentage: true,
+        suspendedAt: true,
+        cohort: { select: { name: true } },
+        partner: { select: { name: true } },
+        _count: { select: { userBadges: true } },
+      },
       orderBy: [{ role: "asc" }, { createdAt: "desc" }],
     }),
     prisma.cohort.findMany({ orderBy: { createdAt: "asc" } }),
