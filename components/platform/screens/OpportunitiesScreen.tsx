@@ -400,6 +400,18 @@ export default function OpportunitiesScreen({ opportunities, me }: Opportunities
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const canPost = isStaff(me.role) || me.role === "partner";
 
+  const runImport = () => {
+    setImportMsg(null);
+    startImport(async () => {
+      const res = await importOpenSourceProgramsAction();
+      if (res.error) setImportMsg(res.error);
+      else {
+        setImportMsg(`Imported — ${res.created ?? 0} new, ${res.updated ?? 0} updated`);
+        router.refresh();
+      }
+    });
+  };
+
   return (
     <div className="pf-screen pf-w1180">
       <div style={{ maxWidth: 820, margin: "0 auto" }}>
@@ -410,17 +422,7 @@ export default function OpportunitiesScreen({ opportunities, me }: Opportunities
               <button
                 className="pf-btn-soft"
                 disabled={importing}
-                onClick={() => {
-                  setImportMsg(null);
-                  startImport(async () => {
-                    const res = await importOpenSourceProgramsAction();
-                    if (res.error) setImportMsg(res.error);
-                    else {
-                      setImportMsg(`Imported — ${res.created ?? 0} new, ${res.updated ?? 0} updated`);
-                      router.refresh();
-                    }
-                  });
-                }}
+                onClick={runImport}
                 style={{ fontSize: 13, padding: "10px 16px", borderRadius: 10 }}
                 title="Add/update the curated list of real paid open-source programs (Outreachy, GSoC, LFX…). Safe to click again — it updates in place."
               >
@@ -466,8 +468,20 @@ export default function OpportunitiesScreen({ opportunities, me }: Opportunities
               <div style={{ fontSize: 30, marginBottom: 8 }}>💼</div>
               <div className="pf-h" style={{ fontSize: 16, marginBottom: 4 }}>No opportunities posted yet</div>
               <div style={{ fontSize: 13, color: "var(--muted)", maxWidth: 400, margin: "0 auto", lineHeight: 1.55 }}>
-                No opportunities posted yet — partners and staff post real paid work here.
+                {me.role === "admin"
+                  ? "Start with the curated list of real paid open-source programs — Outreachy, GSoC, LFX Mentorship and more — or post your own."
+                  : "No opportunities posted yet — partners and staff post real paid work here."}
               </div>
+              {me.role === "admin" ? (
+                <button
+                  className="pf-btn-grad"
+                  disabled={importing}
+                  onClick={runImport}
+                  style={{ fontSize: 13, padding: "10px 18px", borderRadius: 10, marginTop: 16 }}
+                >
+                  {importing ? "Importing…" : "Import open-source programs"}
+                </button>
+              ) : null}
             </div>
           ) : null}
         </div>
