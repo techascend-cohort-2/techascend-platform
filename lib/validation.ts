@@ -6,6 +6,7 @@ import {
   EVENT_KINDS,
   EVENT_AUDIENCES,
   OPPORTUNITY_TYPES,
+  INTEREST_STATUSES,
   PIPELINE_STAGES,
   LEDGER_KINDS,
   ROLES,
@@ -129,7 +130,10 @@ export const opportunitySchema = z.object({
   pay: z.string().optional(),
   skills: z.string().optional(), // comma-separated in forms
   location: z.string().optional(),
+  link: z.string().url("Enter a valid link (https://…)").optional().or(z.literal("")),
 });
+
+export const interestStatusSchema = z.enum(INTEREST_STATUSES);
 
 export const pipelineStageSchema = z.enum(PIPELINE_STAGES);
 

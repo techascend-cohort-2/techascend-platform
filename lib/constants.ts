@@ -32,6 +32,12 @@ export const EVENT_AUDIENCES = ["all", "students", "applicants", "partners", "st
 
 export const OPPORTUNITY_TYPES = ["freelance", "job", "internship", "studio", "sme"] as const;
 
+// Application funnel for an OpportunityInterest. Students self-report
+// "applied" (external programs are applied to off-platform); staff/posters
+// advance to accepted/hired/declined.
+export const INTEREST_STATUSES = ["interested", "applied", "accepted", "hired", "declined"] as const;
+export type InterestStatus = (typeof INTEREST_STATUSES)[number];
+
 export const PIPELINE_STAGES = ["Shortlisted", "Interview", "Offer", "Hired"] as const;
 
 export const LEDGER_KINDS = ["sponsorship", "revenue", "payout", "expense"] as const;

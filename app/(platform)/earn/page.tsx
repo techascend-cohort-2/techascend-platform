@@ -21,12 +21,16 @@ export default async function EarnPage() {
         title: opp.title,
         type: opp.type,
         pay: opp.pay,
+        link: opp.link,
         posterName: opp.partner?.name ?? "TechAscend",
         myInterest: opp.interests.length > 0,
+        myInterestStatus: opp.interests[0]?.status ?? null,
       }))}
       interests={interests.map((it) => ({
         id: it.id,
+        opportunityId: it.opportunityId,
         title: it.opportunity.title,
+        link: it.opportunity.link,
         status: it.status,
       }))}
       totalLabel={totalLabel}

@@ -12,6 +12,7 @@ import { getAssignableCohort } from "@/lib/queries";
 import { setLcwatConfig, clearLcwatConfig } from "@/lib/settings";
 import { createResetToken, sendResetEmail, STAFF_RESET_TTL_MIN } from "@/lib/reset";
 import { emailConfigured } from "@/lib/mailer";
+import { OPEN_SOURCE_PROGRAMS } from "@/lib/openSourcePrograms";
 
 export type ActionState = {
   ok?: boolean;
@@ -520,4 +521,41 @@ export async function clearLcwatConfigAction(): Promise<ActionState> {
   revalidatePath("/tutor");
   revalidatePath("/profile");
   return { ok: true };
+}
+
+// ---------------- Curated open-source programs (admin) ----------------
+
+/**
+ * Idempotently import the curated real open-source internship/bounty programs
+ * from lib/openSourcePrograms.ts onto the Opportunities board. Matching is by
+ * exact title (the data module treats titles as immutable keys): new titles
+ * are created, existing ones get their content fields refreshed — while
+ * `status` and the original poster are preserved, so a manually closed
+ * listing stays closed on re-import. Safe to click repeatedly.
+ */
+export async function importOpenSourceProgramsAction(): Promise<ActionState & { created?: number; updated?: number }> {
+  const admin = await requireStaff(true);
+  let created = 0;
+  let updated = 0;
+  for (const p of OPEN_SOURCE_PROGRAMS) {
+    const existing = await prisma.opportunity.findFirst({ where: { title: p.title } });
+    const content = {
+      description: p.description,
+      type: p.type,
+      pay: p.pay,
+      skills: p.skills,
+      location: p.location,
+      link: p.link,
+    };
+    if (existing) {
+      await prisma.opportunity.update({ where: { id: existing.id }, data: content });
+      updated++;
+    } else {
+      await prisma.opportunity.create({ data: { title: p.title, ...content, postedById: admin.id } });
+      created++;
+    }
+  }
+  revalidatePath("/opportunities");
+  revalidatePath("/earn");
+  return { ok: true, created, updated };
 }

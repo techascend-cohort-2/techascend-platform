@@ -471,6 +471,7 @@ model Opportunity {
   pay         String? // e.g. "45,000 F" or "Negotiable"
   skills      Json? // string[]
   location    String?
+  link        String? // external apply URL (e.g. an open-source program's site)
   // status: "open" | "closed"
   status      String   @default("open")
   postedById  String
@@ -489,8 +490,11 @@ model OpportunityInterest {
   userId        String
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   note          String?
-  // status: "interested" | "contacted" | "hired" | "declined"
+  // status: "interested" | "applied" | "accepted" | "hired" | "declined"
   status        String      @default("interested")
+  // expected stipend/payout in FCFA (staff-set) — pipeline value before the
+  // real money is recorded in the ledger
+  expectedAmount Int?
   createdAt     DateTime    @default(now())
 
   @@unique([opportunityId, userId])

@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { expressInterestAction, type ActionState } from "@/lib/actions/community";
+import { expressInterestAction, markAppliedAction, type ActionState } from "@/lib/actions/community";
 import { formatFcfa } from "@/lib/constants";
+import { interestStatusStyle } from "@/components/platform/interestStatus";
 
 export type EarnPayout = {
   id: string;
@@ -17,14 +18,18 @@ export type EarnOpportunity = {
   title: string;
   type: string;
   pay: string | null;
+  link: string | null;
   posterName: string;
   myInterest: boolean;
+  myInterestStatus: string | null;
 };
 
 export type EarnInterest = {
   id: string;
+  opportunityId: string;
   title: string;
-  status: string; // "interested" | "contacted" | "hired" | "declined"
+  link: string | null;
+  status: string; // "interested" | "applied" | "accepted" | "hired" | "declined"
 };
 
 type EarnHubProps = {
@@ -43,13 +48,6 @@ const TYPE_LABELS: Record<string, string> = {
   sme: "SME",
 };
 
-const INTEREST_STATUS_STYLES: Record<string, { fg: string; bg: string; label: string }> = {
-  interested: { fg: "#2D6FD9", bg: "#E6F0FC", label: "Interested" },
-  contacted: { fg: "#C97A0E", bg: "#FCF1DE", label: "Contacted" },
-  hired: { fg: "#1F9D6B", bg: "#E6F6EF", label: "Hired" },
-  declined: { fg: "var(--muted)", bg: "var(--bg)", label: "Declined" },
-};
-
 function payoutDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-GB", {
     day: "numeric",
@@ -65,7 +63,12 @@ function InterestButton({ opp }: { opp: EarnOpportunity }) {
   const [error, setError] = useState<string | null>(null);
 
   if (opp.myInterest) {
-    return <span className="pf-badge-sm pf-badge-pos">✓ Interested</span>;
+    const st = interestStatusStyle(opp.myInterestStatus ?? "interested");
+    return (
+      <span className="pf-badge-sm" style={{ color: st.fg, background: st.bg }}>
+        ✓ {st.label}
+      </span>
+    );
   }
 
   return (
@@ -87,6 +90,64 @@ function InterestButton({ opp }: { opp: EarnOpportunity }) {
         I&apos;m interested
       </button>
     </span>
+  );
+}
+
+// One row in "My interests": title + status badge, an "Apply ↗" link out to
+// the program site, and — while still just "interested" — an "I've applied →"
+// self-report button (external programs are applied to off-platform).
+function InterestRow({ interest, first }: { interest: EarnInterest; first: boolean }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const st = interestStatusStyle(interest.status);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "10px 0",
+        borderTop: first ? "none" : "1px solid var(--line)",
+        flexWrap: "wrap",
+      }}
+    >
+      <div style={{ flex: "1 1 140px", minWidth: 0, fontSize: 13, fontWeight: 700 }}>{interest.title}</div>
+      {error ? <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--danger)" }}>{error}</span> : null}
+      {interest.link ? (
+        <a
+          href={interest.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pf-link"
+          style={{ fontSize: 12, fontWeight: 700, flexShrink: 0 }}
+        >
+          Apply ↗
+        </a>
+      ) : null}
+      {interest.status === "interested" ? (
+        <button
+          className="pf-btn-soft"
+          disabled={isPending}
+          onClick={() => {
+            setError(null);
+            startTransition(async () => {
+              const res: ActionState = await markAppliedAction(interest.opportunityId);
+              if (res.error) setError(res.error);
+              else router.refresh();
+            });
+          }}
+          style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, opacity: isPending ? 0.7 : 1 }}
+          title="Applied on the program's site? Let the team know."
+        >
+          I&apos;ve applied →
+        </button>
+      ) : null}
+      <span className="pf-badge-sm" style={{ color: st.fg, background: st.bg, flexShrink: 0 }}>
+        {st.label}
+      </span>
+    </div>
   );
 }
 
@@ -143,6 +204,17 @@ export default function EarnHub({ payouts, opportunities, interests, totalLabel 
                       ) : null}
                     </div>
                   </div>
+                  {opp.link ? (
+                    <a
+                      href={opp.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="pf-link"
+                      style={{ fontSize: 12, fontWeight: 700, flexShrink: 0 }}
+                    >
+                      Apply ↗
+                    </a>
+                  ) : null}
                   <InterestButton opp={opp} />
                 </div>
               ))}
@@ -194,26 +266,9 @@ export default function EarnHub({ payouts, opportunities, interests, totalLabel 
             <div className="pf-h" style={{ marginBottom: 12 }}>My interests</div>
             {interests.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column" }}>
-                {interests.map((it, i) => {
-                  const st = INTEREST_STATUS_STYLES[it.status] ?? INTEREST_STATUS_STYLES.interested;
-                  return (
-                    <div
-                      key={it.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "10px 0",
-                        borderTop: i > 0 ? "1px solid var(--line)" : "none",
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700 }}>{it.title}</div>
-                      <span className="pf-badge-sm" style={{ color: st.fg, background: st.bg, flexShrink: 0 }}>
-                        {st.label}
-                      </span>
-                    </div>
-                  );
-                })}
+                {interests.map((it, i) => (
+                  <InterestRow key={it.id} interest={it} first={i === 0} />
+                ))}
               </div>
             ) : (
               <div style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.55 }}>

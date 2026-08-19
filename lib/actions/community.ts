@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { isStaff } from "@/lib/constants";
-import { postSchema, eventSchema, opportunitySchema, profileSchema } from "@/lib/validation";
+import { postSchema, eventSchema, opportunitySchema, profileSchema, interestStatusSchema } from "@/lib/validation";
 import { notify } from "@/lib/progress";
 import { encryptSecret } from "@/lib/crypto";
 import { isAiProviderId, type AiProviderId } from "@/lib/aiProviderMeta";
@@ -106,6 +106,7 @@ export async function createOpportunityAction(_prev: ActionState, formData: Form
     pay: formData.get("pay") || undefined,
     skills: formData.get("skills") || undefined,
     location: formData.get("location") || undefined,
+    link: formData.get("link") || "",
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the details." };
   const d = parsed.data;
@@ -119,6 +120,7 @@ export async function createOpportunityAction(_prev: ActionState, formData: Form
       pay: d.pay ?? null,
       skills: d.skills ? d.skills.split(",").map((s) => s.trim()).filter(Boolean) : [],
       location: d.location ?? null,
+      link: d.link || null,
       postedById: user.id,
       partnerId: dbUser?.partnerId ?? null,
     },
@@ -147,6 +149,71 @@ export async function expressInterestAction(opportunityId: string, note?: string
   });
   const opp = await prisma.opportunity.findUnique({ where: { id: opportunityId } });
   if (opp) await notify(opp.postedById, `${user.name ?? "A student"} is interested in “${opp.title}”`, "/opportunities");
+  revalidatePath("/opportunities");
+  revalidatePath("/earn");
+  return { ok: true };
+}
+
+/**
+ * Staff/poster application tracking: set the funnel status on a student's
+ * interest (interested → applied → accepted/hired/declined) and optionally
+ * the expected stipend/payout in FCFA — pipeline value visible before the
+ * real money is recorded in the ledger (/revenue).
+ */
+export async function setInterestStatusAction(
+  interestId: string,
+  status: string,
+  expectedAmount?: number | null,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = interestStatusSchema.safeParse(status);
+  if (!parsed.success) return { error: "Invalid status." };
+  const amount =
+    expectedAmount === undefined || expectedAmount === null
+      ? undefined // leave stored value untouched
+      : Number.isInteger(expectedAmount) && expectedAmount > 0
+        ? expectedAmount
+        : expectedAmount === 0
+          ? null // explicit clear
+          : undefined;
+
+  const interest = await prisma.opportunityInterest.findUnique({
+    where: { id: interestId },
+    include: { opportunity: true },
+  });
+  if (!interest) return { error: "Application not found." };
+  if (!isStaff(user.role) && interest.opportunity.postedById !== user.id) return { error: "Not allowed." };
+
+  await prisma.opportunityInterest.update({
+    where: { id: interestId },
+    data: { status: parsed.data, ...(amount !== undefined ? { expectedAmount: amount } : {}) },
+  });
+  if (parsed.data === "accepted" || parsed.data === "hired") {
+    await notify(interest.userId, `🎉 You've been marked ${parsed.data} for “${interest.opportunity.title}”`, "/earn");
+  }
+  revalidatePath("/opportunities");
+  revalidatePath("/earn");
+  return { ok: true };
+}
+
+/**
+ * Student self-report for external programs: "I've applied". Only transitions
+ * the caller's OWN interest from interested → applied — never touches other
+ * users' rows and never downgrades a staff-set outcome (idempotent no-op
+ * once the status has moved past "interested").
+ */
+export async function markAppliedAction(opportunityId: string): Promise<ActionState> {
+  const user = await requireUser();
+  if (user.role !== "student") return { error: "Students only." };
+  const interest = await prisma.opportunityInterest.findUnique({
+    where: { opportunityId_userId: { opportunityId, userId: user.id } },
+    include: { opportunity: true },
+  });
+  if (!interest) return { error: "Mark yourself as interested first." };
+  if (interest.status !== "interested") return { ok: true }; // already advanced
+
+  await prisma.opportunityInterest.update({ where: { id: interest.id }, data: { status: "applied" } });
+  await notify(interest.opportunity.postedById, `${user.name ?? "A student"} applied to “${interest.opportunity.title}”`, "/opportunities");
   revalidatePath("/opportunities");
   revalidatePath("/earn");
   return { ok: true };
