@@ -19,6 +19,9 @@ export type ProjectItem = {
   phaseOrder: number | null;
   status: string | null; // submitted | ai_reviewed | mentor_reviewed | approved | changes_requested
   aiScore: number | null;
+  // staff catalog view only
+  track?: string; // "ALL" | "A" | "B"
+  submissionCount?: number;
 };
 
 const STATUS: Record<string, { label: string; badgeClass: string }> = {
@@ -61,7 +64,14 @@ function weeksRank(estimatedWeeks: string | null): number {
   return match ? Number(match[0]) : 99;
 }
 
-export default function ProjectsScreen({ projects }: { projects: ProjectItem[] }) {
+export default function ProjectsScreen({
+  projects,
+  viewer = "student",
+}: {
+  projects: ProjectItem[];
+  viewer?: "student" | "staff";
+}) {
+  const staff = viewer === "staff";
   const [bannerOpen, setBannerOpen] = useState(true);
   const [category, setCategory] = useState("all");
   const [sortOpen, setSortOpen] = useState(false);
@@ -104,12 +114,12 @@ export default function ProjectsScreen({ projects }: { projects: ProjectItem[] }
             Projects
           </div>
           <div style={{ fontSize: 13.5, color: "var(--muted)", marginTop: 2 }}>
-            Capstone projects with instant AI evaluation
+            {staff ? "All capstone briefs across both tracks — what students are asked to build" : "Capstone projects with instant AI evaluation"}
           </div>
         </div>
       </div>
 
-      {bannerOpen ? (
+      {bannerOpen && !staff ? (
         <div className="pf-proj-banner">
           <div className="pf-proj-banner-icon">
             <Icon path={ICON.zap} size={16} />
@@ -188,7 +198,10 @@ export default function ProjectsScreen({ projects }: { projects: ProjectItem[] }
                 {p.phaseName?.toUpperCase() ?? "CAPSTONE"}
               </div>
               <div style={{ fontFamily: "var(--font-sora)", fontWeight: 800, fontSize: 16, lineHeight: 1.3 }}>{p.title}</div>
-              <div className="pf-proj-desc">{p.description}</div>
+              {/* students get the 4-line clamp; staff read the whole brief */}
+              <div className="pf-proj-desc" style={staff ? { WebkitLineClamp: "unset", display: "block", overflow: "visible" } : undefined}>
+                {p.description}
+              </div>
               {p.monetizationPotential ? (
                 <div className="pf-proj-value" style={{ background: style.valueBg, color: style.valueFg }}>
                   <Icon path={style.valueIcon} size={15} />
@@ -211,21 +224,44 @@ export default function ProjectsScreen({ projects }: { projects: ProjectItem[] }
                     {p.difficulty}
                   </span>
                 ) : null}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                <Link
-                  href={`/projects/${p.id}`}
-                  className={st ? "pf-btn-soft" : "pf-btn-grad"}
-                  style={{ padding: "10px 16px", borderRadius: 10, fontSize: 12.5, textAlign: "center", flex: 1 }}
-                >
-                  {st ? "View / resubmit" : "View brief & start →"}
-                </Link>
-                {st ? (
-                  <span className={`pf-badge ${st.badgeClass}`} style={{ whiteSpace: "nowrap" }}>
-                    {p.aiScore ? `${st.label} · ${p.aiScore}` : st.label}
+                {staff && p.track ? (
+                  <span className="pf-proj-meta">
+                    {p.track === "ALL" ? "All tracks" : `Track ${p.track}`}
                   </span>
                 ) : null}
               </div>
+              {staff ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  {(p.submissionCount ?? 0) > 0 ? (
+                    <Link
+                      href="/reviews"
+                      className="pf-btn-soft"
+                      style={{ padding: "10px 16px", borderRadius: 10, fontSize: 12.5, textAlign: "center", flex: 1 }}
+                    >
+                      View submissions ({p.submissionCount}) →
+                    </Link>
+                  ) : (
+                    <span className="pf-badge pf-badge-neutral" style={{ whiteSpace: "nowrap" }}>
+                      No submissions yet
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <Link
+                    href={`/projects/${p.id}`}
+                    className={st ? "pf-btn-soft" : "pf-btn-grad"}
+                    style={{ padding: "10px 16px", borderRadius: 10, fontSize: 12.5, textAlign: "center", flex: 1 }}
+                  >
+                    {st ? "View / resubmit" : "View brief & start →"}
+                  </Link>
+                  {st ? (
+                    <span className={`pf-badge ${st.badgeClass}`} style={{ whiteSpace: "nowrap" }}>
+                      {p.aiScore ? `${st.label} · ${p.aiScore}` : st.label}
+                    </span>
+                  ) : null}
+                </div>
+              )}
             </div>
           );
         })}

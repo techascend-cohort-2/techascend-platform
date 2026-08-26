@@ -331,6 +331,18 @@ export async function getProjectsForUser(userId: string, userTrack: string | nul
   return projects;
 }
 
+// Staff view: every project brief across all tracks, with program context and
+// how many submissions each has received.
+export async function getProjectsCatalog() {
+  return prisma.project.findMany({
+    include: {
+      module: { include: { phase: true } },
+      _count: { select: { submissions: true } },
+    },
+    orderBy: { title: "asc" },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Earn hub (real: payouts from ledger + open opportunities + my interests)
 // ---------------------------------------------------------------------------
