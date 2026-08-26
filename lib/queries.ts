@@ -557,7 +557,8 @@ export async function getReviewQueues() {
         where: { status: { in: ["submitted", "ai_reviewed"] } },
         include: {
           user: { select: { id: true, name: true, email: true, track: true, initials: true, avatarBg: true } },
-          project: true,
+          // module → phase gives reviewers the brief's program context
+          project: { include: { module: { include: { phase: true } } } },
         },
         orderBy: { createdAt: "asc" },
       }),

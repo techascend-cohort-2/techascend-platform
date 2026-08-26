@@ -32,7 +32,16 @@ export default async function ReviewsPage() {
         aiRubric: (s.rubric as { key?: string; label?: string; score?: number }[] | null) ?? null,
         status: s.status,
         user: s.user,
-        project: { title: s.project.title },
+        project: {
+          title: s.project.title,
+          description: s.project.description,
+          deliverables: (s.project.deliverables as { title?: string; ext?: string }[] | null) ?? [],
+          category: s.project.category,
+          difficulty: s.project.difficulty,
+          estimatedWeeks: s.project.estimatedWeeks,
+          monetizationPotential: s.project.monetizationPotential,
+          phaseModule: s.project.module ? `${s.project.module.phase.name} · ${s.project.module.title}` : null,
+        },
       }))}
       recentlyDecidedVisibility={recentlyDecidedVisibility.map((v) => ({
         id: v.id,

@@ -12,6 +12,7 @@ import {
   reopenVisibilityAction,
 } from "@/lib/actions/program";
 import { PROJECT_RUBRIC, PASS_OVERALL, PASS_MIN_PER_CRITERION, overallScore, evaluateRubric } from "@/lib/rubric";
+import FormattedNote from "@/components/platform/FormattedNote";
 
 type VisItem = {
   id: string;
@@ -35,7 +36,16 @@ type SubItem = {
   aiRubric: { key?: string; label?: string; score?: number }[] | null;
   status: string;
   user: { name: string; email: string; track: string | null; initials: string | null; avatarBg: string | null };
-  project: { title: string };
+  project: {
+    title: string;
+    description: string | null;
+    deliverables: { title?: string; ext?: string }[];
+    category: string;
+    difficulty: string | null;
+    estimatedWeeks: string | null;
+    monetizationPotential: string | null;
+    phaseModule: string | null; // "Phase name · Module title"
+  };
 };
 
 type DecidedItem = {
@@ -99,6 +109,74 @@ function Avatar({ initials, bg }: { initials: string | null; bg: string | null }
       }}
     >
       {initials ?? "?"}
+    </div>
+  );
+}
+
+// Collapsible project brief so the reviewer can see what the student was
+// asked to build — description, required deliverables and context — without
+// leaving the review card. Collapsed by default to keep the queue scannable.
+function ProjectBrief({ project }: { project: SubItem["project"] }) {
+  const [open, setOpen] = useState(false);
+  const hasContent =
+    project.description || project.deliverables.length > 0 || project.monetizationPotential || project.phaseModule;
+  if (!hasContent) return null;
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit",
+          fontSize: 12, fontWeight: 800, color: "var(--brand1)",
+        }}
+      >
+        {open ? "Project brief ▾" : "Project brief ▸"}
+      </button>
+      {open ? (
+        <div style={{ marginTop: 8, border: "1px solid var(--line)", borderRadius: 10, padding: "12px 14px", background: "var(--bg)" }}>
+          {project.phaseModule ? (
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.3, color: "var(--faint)", marginBottom: 6 }}>
+              {project.phaseModule.toUpperCase()}
+            </div>
+          ) : null}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: project.description ? 10 : 0 }}>
+            <span className="pf-chip">{project.category}</span>
+            {project.difficulty ? <span className="pf-chip">{project.difficulty}</span> : null}
+            {project.estimatedWeeks ? <span className="pf-chip">Est. {project.estimatedWeeks}</span> : null}
+          </div>
+          {project.description ? (
+            <div style={{ fontSize: 12.5, color: "var(--ink)", lineHeight: 1.6 }}>
+              <FormattedNote text={project.description} />
+            </div>
+          ) : null}
+          {project.deliverables.length > 0 ? (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.3, color: "var(--faint)", marginBottom: 6 }}>
+                REQUIRED DELIVERABLES
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                {project.deliverables.map((d, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5 }}>
+                    {d.ext ? (
+                      <span className="pf-badge-sm" style={{ color: "var(--brand1)", background: "#F1EAFC", flexShrink: 0 }}>
+                        {d.ext}
+                      </span>
+                    ) : null}
+                    <span>{d.title ?? ""}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {project.monetizationPotential ? (
+            <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 10 }}>
+              <b style={{ color: "var(--pos)" }}>Value if built:</b> {project.monetizationPotential}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -427,6 +505,7 @@ export default function ReviewsScreen({
                     <a href={s.submissionLink} target="_blank" rel="noreferrer" style={linkChip}>Open submission ↗</a>
                   ) : null}
                 </div>
+                <ProjectBrief project={s.project} />
                 {s.notes ? (
                   <div style={{ fontSize: 12.5, color: "var(--muted)", margin: "10px 0 0", fontStyle: "italic" }}>“{s.notes}”</div>
                 ) : null}
