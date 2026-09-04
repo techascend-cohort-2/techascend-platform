@@ -21,6 +21,7 @@ export default async function OpportunitiesPage() {
           skills: asStringArray(opp.skills),
           location: opp.location,
           link: opp.link,
+          deadline: opp.deadline ? opp.deadline.toISOString() : null,
           status: opp.status,
           createdAt: opp.createdAt.toISOString(),
           postedById: opp.postedById,

@@ -13,6 +13,7 @@ import { setLcwatConfig, clearLcwatConfig } from "@/lib/settings";
 import { createResetToken, sendResetEmail, STAFF_RESET_TTL_MIN } from "@/lib/reset";
 import { emailConfigured } from "@/lib/mailer";
 import { OPEN_SOURCE_PROGRAMS } from "@/lib/openSourcePrograms";
+import { GLOBAL_PROGRAMS } from "@/lib/globalPrograms";
 
 export type ActionState = {
   ok?: boolean;
@@ -526,8 +527,10 @@ export async function clearLcwatConfigAction(): Promise<ActionState> {
 // ---------------- Curated open-source programs (admin) ----------------
 
 /**
- * Idempotently import the curated real open-source internship/bounty programs
- * from lib/openSourcePrograms.ts onto the Opportunities board. Matching is by
+ * Idempotently import the curated real programs — open-source internships and
+ * bounty platforms (lib/openSourcePrograms.ts) plus hand-filtered global
+ * internships/fellowships (lib/globalPrograms.ts) — onto the Opportunities
+ * board. Matching is by
  * exact title (the data module treats titles as immutable keys): new titles
  * are created, existing ones get their content fields refreshed — while
  * `status` and the original poster are preserved, so a manually closed
@@ -537,7 +540,7 @@ export async function importOpenSourceProgramsAction(): Promise<ActionState & { 
   const admin = await requireStaff(true);
   let created = 0;
   let updated = 0;
-  for (const p of OPEN_SOURCE_PROGRAMS) {
+  for (const p of [...OPEN_SOURCE_PROGRAMS, ...GLOBAL_PROGRAMS]) {
     const existing = await prisma.opportunity.findFirst({ where: { title: p.title } });
     const content = {
       description: p.description,
@@ -546,6 +549,7 @@ export async function importOpenSourceProgramsAction(): Promise<ActionState & { 
       skills: p.skills,
       location: p.location,
       link: p.link,
+      deadline: p.deadline ? new Date(p.deadline) : null,
     };
     if (existing) {
       await prisma.opportunity.update({ where: { id: existing.id }, data: content });

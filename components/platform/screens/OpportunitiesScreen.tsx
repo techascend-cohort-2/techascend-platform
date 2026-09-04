@@ -24,6 +24,7 @@ export type OpportunityItem = {
   skills: string[];
   location: string | null;
   link: string | null; // external apply URL
+  deadline: string | null; // ISO — application deadline for external programs
   status: string; // "open" | "closed"
   createdAt: string; // ISO
   postedById: string;
@@ -50,6 +51,21 @@ const TYPE_STYLES: Record<string, { fg: string; bg: string; label: string }> = {
 
 function typeStyle(type: string) {
   return TYPE_STYLES[type] ?? { fg: "var(--brand1)", bg: "#F1EAFC", label: type };
+}
+
+// Deadline urgency for externally-run programs: muted → amber (≤14 days) →
+// red (≤5 days) → "passed". The deadline day itself still counts as open.
+function deadlineInfo(iso: string | null): { label: string; color: string; passed: boolean } | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const end = new Date(d);
+  end.setHours(23, 59, 59, 999);
+  const daysLeft = Math.ceil((end.getTime() - Date.now()) / 86_400_000);
+  const dateLabel = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  if (daysLeft < 0) return { label: `Deadline passed (${dateLabel})`, color: "var(--danger)", passed: true };
+  const color = daysLeft <= 5 ? "var(--danger)" : daysLeft <= 14 ? "#C97A0E" : "var(--muted)";
+  const left = daysLeft <= 0 ? "closes today!" : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`;
+  return { label: `Deadline ${dateLabel} · ${left}`, color, passed: false };
 }
 
 const inputStyle: React.CSSProperties = {
@@ -116,9 +132,15 @@ function OpportunityForm({ onDone, onCancel }: { onDone: () => void; onCancel: (
         </div>
       </div>
 
-      <div>
-        <label style={labelStyle}>Apply link (optional)</label>
-        <input name="link" type="url" style={inputStyle} placeholder="https://… (external application page)" />
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Apply link (optional)</label>
+          <input name="link" type="url" style={inputStyle} placeholder="https://… (external application page)" />
+        </div>
+        <div>
+          <label style={labelStyle}>Application deadline (optional)</label>
+          <input name="deadline" type="date" style={inputStyle} />
+        </div>
       </div>
 
       <div>
@@ -263,6 +285,8 @@ function OpportunityCard({ opp, me }: { opp: OpportunityItem; me: OpportunitiesS
   const canManage = isStaff(me.role) || opp.postedById === me.id;
   const closed = opp.status === "closed";
   const ts = typeStyle(opp.type);
+  const dl = deadlineInfo(opp.deadline);
+  const applyOpen = !closed && !dl?.passed;
 
   function run(action: () => Promise<ActionState>) {
     setError(null);
@@ -298,6 +322,7 @@ function OpportunityCard({ opp, me }: { opp: OpportunityItem; me: OpportunitiesS
               <span style={{ fontWeight: 800, color: "var(--pos, #1F9D6B)" }}>{opp.pay}</span>
             ) : null}
             {opp.location ? <span>· {opp.location}</span> : null}
+            {dl ? <span style={{ fontWeight: 800, color: dl.color }}>· {dl.label}</span> : null}
           </div>
 
           {opp.description ? (
@@ -330,7 +355,7 @@ function OpportunityCard({ opp, me }: { opp: OpportunityItem; me: OpportunitiesS
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
-          {opp.link && !closed ? (
+          {opp.link && applyOpen ? (
             <a
               href={opp.link}
               target="_blank"
@@ -341,7 +366,20 @@ function OpportunityCard({ opp, me }: { opp: OpportunityItem; me: OpportunitiesS
               Apply ↗
             </a>
           ) : null}
-          {student && !closed ? (
+          {student && !applyOpen && opp.myInterest ? (
+            // Deadline passed / closed: keep showing the student their status.
+            <span
+              className="pf-badge-sm"
+              style={{
+                padding: "8px 14px",
+                color: interestStatusStyle(opp.myInterestStatus ?? "interested").fg,
+                background: interestStatusStyle(opp.myInterestStatus ?? "interested").bg,
+              }}
+            >
+              ✓ {interestStatusStyle(opp.myInterestStatus ?? "interested").label}
+            </span>
+          ) : null}
+          {student && applyOpen ? (
             opp.myInterest ? (
               <>
                 <span
@@ -424,9 +462,9 @@ export default function OpportunitiesScreen({ opportunities, me }: Opportunities
                 disabled={importing}
                 onClick={runImport}
                 style={{ fontSize: 13, padding: "10px 16px", borderRadius: 10 }}
-                title="Add/update the curated list of real paid open-source programs (Outreachy, GSoC, LFX…). Safe to click again — it updates in place."
+                title="Add/update the curated lists: open-source programs (Outreachy, GSoC, LFX…) and global internships/fellowships (UNDP, ERA, OIST…). Safe to click again — it updates in place."
               >
-                {importing ? "Importing…" : "Import open-source programs"}
+                {importing ? "Importing…" : "Import curated programs"}
               </button>
             ) : null}
             {canPost ? (
@@ -469,7 +507,7 @@ export default function OpportunitiesScreen({ opportunities, me }: Opportunities
               <div className="pf-h" style={{ fontSize: 16, marginBottom: 4 }}>No opportunities posted yet</div>
               <div style={{ fontSize: 13, color: "var(--muted)", maxWidth: 400, margin: "0 auto", lineHeight: 1.55 }}>
                 {me.role === "admin"
-                  ? "Start with the curated list of real paid open-source programs — Outreachy, GSoC, LFX Mentorship and more — or post your own."
+                  ? "Start with the curated list of real paid programs — open-source (Outreachy, GSoC, LFX…) and global internships/fellowships (UNDP, ERA Cambridge, OIST…) — or post your own."
                   : "No opportunities posted yet — partners and staff post real paid work here."}
               </div>
               {me.role === "admin" ? (
@@ -479,7 +517,7 @@ export default function OpportunitiesScreen({ opportunities, me }: Opportunities
                   onClick={runImport}
                   style={{ fontSize: 13, padding: "10px 18px", borderRadius: 10, marginTop: 16 }}
                 >
-                  {importing ? "Importing…" : "Import open-source programs"}
+                  {importing ? "Importing…" : "Import curated programs"}
                 </button>
               ) : null}
             </div>

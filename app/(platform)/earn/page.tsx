@@ -22,6 +22,7 @@ export default async function EarnPage() {
         type: opp.type,
         pay: opp.pay,
         link: opp.link,
+        deadline: opp.deadline ? opp.deadline.toISOString() : null,
         posterName: opp.partner?.name ?? "TechAscend",
         myInterest: opp.interests.length > 0,
         myInterestStatus: opp.interests[0]?.status ?? null,

@@ -19,10 +19,22 @@ export type EarnOpportunity = {
   type: string;
   pay: string | null;
   link: string | null;
+  deadline: string | null; // ISO
   posterName: string;
   myInterest: boolean;
   myInterestStatus: string | null;
 };
+
+// Compact deadline hint (full urgency styling lives on the Opportunities board).
+function deadlineHint(iso: string | null): { label: string; color: string } | null {
+  if (!iso) return null;
+  const end = new Date(iso);
+  end.setHours(23, 59, 59, 999);
+  const daysLeft = Math.ceil((end.getTime() - Date.now()) / 86_400_000);
+  if (daysLeft < 0) return { label: "deadline passed", color: "var(--danger)" };
+  if (daysLeft <= 0) return { label: "closes today!", color: "var(--danger)" };
+  return { label: `${daysLeft}d left`, color: daysLeft <= 5 ? "var(--danger)" : daysLeft <= 14 ? "#C97A0E" : "var(--faint)" };
+}
 
 export type EarnInterest = {
   id: string;
@@ -202,6 +214,15 @@ export default function EarnHub({ payouts, opportunities, interests, totalLabel 
                           <span style={{ fontWeight: 700, color: "var(--pos)" }}>{opp.pay}</span>
                         </>
                       ) : null}
+                      {(() => {
+                        const dl = deadlineHint(opp.deadline);
+                        return dl ? (
+                          <>
+                            {" · "}
+                            <span style={{ fontWeight: 800, color: dl.color }}>{dl.label}</span>
+                          </>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                   {opp.link ? (

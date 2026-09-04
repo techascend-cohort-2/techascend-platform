@@ -107,6 +107,7 @@ export async function createOpportunityAction(_prev: ActionState, formData: Form
     skills: formData.get("skills") || undefined,
     location: formData.get("location") || undefined,
     link: formData.get("link") || "",
+    deadline: formData.get("deadline") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the details." };
   const d = parsed.data;
@@ -121,6 +122,7 @@ export async function createOpportunityAction(_prev: ActionState, formData: Form
       skills: d.skills ? d.skills.split(",").map((s) => s.trim()).filter(Boolean) : [],
       location: d.location ?? null,
       link: d.link || null,
+      deadline: d.deadline ?? null,
       postedById: user.id,
       partnerId: dbUser?.partnerId ?? null,
     },

@@ -19,6 +19,9 @@ export type CuratedProgram = {
   skills: string[];
   location: string;
   description: string;
+  // ISO date — application deadline for externally-run, cycle-based programs
+  // (open-source programs with rolling/annual cycles leave this unset).
+  deadline?: string;
 };
 
 export const OPEN_SOURCE_PROGRAMS: CuratedProgram[] = [

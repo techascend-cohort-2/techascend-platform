@@ -131,6 +131,7 @@ export const opportunitySchema = z.object({
   skills: z.string().optional(), // comma-separated in forms
   location: z.string().optional(),
   link: z.string().url("Enter a valid link (https://…)").optional().or(z.literal("")),
+  deadline: z.coerce.date().optional(),
 });
 
 export const interestStatusSchema = z.enum(INTEREST_STATUSES);

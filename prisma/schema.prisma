@@ -472,6 +472,7 @@ model Opportunity {
   skills      Json? // string[]
   location    String?
   link        String? // external apply URL (e.g. an open-source program's site)
+  deadline    DateTime? // application deadline for externally-run programs
   // status: "open" | "closed"
   status      String   @default("open")
   postedById  String
