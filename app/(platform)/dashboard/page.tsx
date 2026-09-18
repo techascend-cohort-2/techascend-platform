@@ -59,6 +59,7 @@ export default async function DashboardPage() {
     stats,
     reviewStatus,
     celebrations,
+    impact,
     currentPhase,
     currentPhaseLessons,
     currentLesson,
@@ -80,6 +81,12 @@ export default async function DashboardPage() {
   }
   if (reviewStatus.projectsNeedingChanges > 0) {
     notices.push({ kind: "action", text: `Changes were requested on ${reviewStatus.projectsNeedingChanges} project submission${reviewStatus.projectsNeedingChanges === 1 ? "" : "s"}. Read the feedback and resubmit.`, href: "/projects", cta: "View projects" });
+  }
+  if (impact.changesRequested > 0) {
+    notices.push({ kind: "action", text: `The team needs more information on ${impact.changesRequested} item${impact.changesRequested === 1 ? "" : "s"} in your Impact Profile.`, href: "/my-impact", cta: "Update my impact" });
+  }
+  if (impact.completionPct < 100) {
+    notices.push({ kind: "review", text: `Your Impact Profile is ${impact.completionPct}% complete — add your latest project or win so TechAscend can back you for opportunities.`, href: "/my-impact", cta: "Update my impact" });
   }
   if (reviewStatus.visibility === "pending") {
     notices.push({ kind: "review", text: "Your visibility submission is under review. We'll notify you the moment it's decided.", href: "/profile", cta: "View submission" });

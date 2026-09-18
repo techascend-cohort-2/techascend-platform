@@ -7,8 +7,8 @@ const ADMIN_ONLY = ["/admin", "/applications", "/curriculum", "/cohorts", "/part
 // /badges and /projects are dual-purpose: students see their own badges and
 // their submit flow, staff see every recipient / the full brief catalog — so
 // they're allowed for both groups below.
-const STAFF_PATHS = ["/reviews", "/students", "/badges", "/projects"]; // admin + manager
-const STUDENT_ONLY = ["/dashboard", "/learning", "/tutor", "/projects", "/earn", "/badges"];
+const STAFF_PATHS = ["/reviews", "/students", "/badges", "/projects", "/impact-review"]; // admin + manager
+const STUDENT_ONLY = ["/dashboard", "/learning", "/tutor", "/projects", "/earn", "/badges", "/my-impact"];
 const PARTNER_ONLY = ["/partner", "/talent-pool", "/hiring-pipeline", "/impact"];
 const APPLICANT_ONLY = ["/welcome"];
 // Any signed-in member except applicants:

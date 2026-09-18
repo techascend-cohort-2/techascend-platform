@@ -4,10 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { markProjectsCelebratedAction, markVisibilityCelebratedAction } from "@/lib/actions/program";
+import { markImpactCelebratedAction } from "@/lib/actions/impact";
 
 export type Celebration =
   | { kind: "visibility"; id: string }
-  | { kind: "project"; id: string; title: string; score: number | null };
+  | { kind: "project"; id: string; title: string; score: number | null }
+  | { kind: "impact_project"; id: string; title: string }
+  | { kind: "achievement"; id: string; title: string };
 
 const COLORS = ["#7C3AED", "#1F9D6B", "#F59E0B", "#2D6FD9", "#D6336C", "#22C55E"];
 
@@ -94,6 +97,9 @@ export default function ProjectCelebration({ celebrations }: { celebrations: Cel
     const projectIds = celebrations.filter((c) => c.kind === "project").map((c) => c.id);
     if (projectIds.length) void markProjectsCelebratedAction(projectIds);
     for (const c of celebrations) if (c.kind === "visibility") void markVisibilityCelebratedAction(c.id);
+    const impactProjectIds = celebrations.filter((c) => c.kind === "impact_project").map((c) => c.id);
+    const achievementIds = celebrations.filter((c) => c.kind === "achievement").map((c) => c.id);
+    if (impactProjectIds.length || achievementIds.length) void markImpactCelebratedAction(impactProjectIds, achievementIds);
     const cleanup = canvasRef.current ? launchConfetti(canvasRef.current) : undefined;
     return cleanup;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,15 +108,19 @@ export default function ProjectCelebration({ celebrations }: { celebrations: Cel
   if (!mounted || !open || celebrations.length === 0) return null;
 
   const hasVisibility = celebrations.some((c) => c.kind === "visibility");
-  const wins = celebrations.map((c) =>
-    c.kind === "visibility"
-      ? { emoji: "🏅", title: "Visibility phase approved", sub: "You've earned your Visibility Badge and certificate." }
-      : {
-          emoji: "🚀",
-          title: `“${c.title}” passed review`,
-          sub: c.score != null ? `Approved with a mentor score of ${c.score}/100.` : "Approved by a mentor.",
-        },
-  );
+  const wins = celebrations.map((c) => {
+    if (c.kind === "visibility")
+      return { emoji: "🏅", title: "Visibility phase approved", sub: "You've earned your Visibility Badge and certificate." };
+    if (c.kind === "project")
+      return {
+        emoji: "🚀",
+        title: `“${c.title}” passed review`,
+        sub: c.score != null ? `Approved with a mentor score of ${c.score}/100.` : "Approved by a mentor.",
+      };
+    if (c.kind === "impact_project")
+      return { emoji: "🛠️", title: `“${c.title}” verified`, sub: "✓ Verified by TechAscend — now part of your evidence portfolio." };
+    return { emoji: "🏆", title: `“${c.title}” verified`, sub: "✓ Verified by TechAscend — congratulations on the outcome!" };
+  });
   const cta = hasVisibility
     ? { href: "/badges", label: "See my badges →" }
     : { href: "/projects", label: "See feedback →" };

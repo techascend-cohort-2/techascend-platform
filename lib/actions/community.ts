@@ -300,6 +300,7 @@ export async function updateProfileAction(_prev: ActionState, formData: FormData
     huggingfaceUrl: formData.get("huggingfaceUrl") || "",
     kaggleUrl: formData.get("kaggleUrl") || "",
     talentVisible: formData.get("talentVisible") === "on",
+    gender: formData.get("gender") || "",
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check your details." };
   const d = parsed.data;
@@ -307,6 +308,7 @@ export async function updateProfileAction(_prev: ActionState, formData: FormData
     where: { id: user.id },
     data: {
       name: d.name,
+      gender: d.gender || null,
       bio: d.bio ?? null,
       city: d.city ?? null,
       phone: d.phone ?? null,

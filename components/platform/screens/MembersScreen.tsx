@@ -21,6 +21,7 @@ export type MemberRow = {
   progress: number;
   badges: number;
   suspendedAt: string | null;
+  gender: string | null;
 };
 
 export type CohortOption = { id: string; name: string };
@@ -156,6 +157,15 @@ function ManageForm({ member, cohorts }: { member: MemberRow; cohorts: CohortOpt
               placeholder="e.g. Fellow · Track A"
               style={{ ...inp, marginTop: 4 }}
             />
+          </label>
+          <label style={{ fontSize: 11.5, fontWeight: 700, color: "var(--muted)" }}>
+            Gender (optional, for impact reporting)
+            <select name="gender" defaultValue={member.gender ?? ""} style={{ ...inp, marginTop: 4 }}>
+              <option value="">Not set</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+              <option value="prefer_not_to_say">Prefer not to say</option>
+            </select>
           </label>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" }}>

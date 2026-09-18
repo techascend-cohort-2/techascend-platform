@@ -12,6 +12,17 @@ import {
   ROLES,
   LESSON_TYPES,
   PARTNER_TYPES,
+  PROJECT_TYPES,
+  PROJECT_CONTEXTS,
+  PROJECT_MATURITIES,
+  TESTER_KINDS,
+  ACHIEVEMENT_KINDS,
+  MONEY_KINDS,
+  EMPLOYMENT_TYPES,
+  CONTRIBUTION_LEVELS,
+  BARRIER_ANSWERS,
+  GENDERS,
+  maturityAtLeastTesting,
 } from "@/lib/constants";
 
 // Optional phone field: blank passes through as undefined; anything else must
@@ -108,6 +119,8 @@ export const profileSchema = z.object({
   huggingfaceUrl: z.string().url().optional().or(z.literal("")),
   kaggleUrl: z.string().url().optional().or(z.literal("")),
   talentVisible: z.boolean().optional(),
+  // optional self-declared; "" = leave unset
+  gender: z.enum(GENDERS).optional().or(z.literal("")),
 });
 
 export const eventSchema = z.object({
@@ -153,6 +166,7 @@ export const userAdminSchema = z.object({
   track: z.enum(TRACKS).optional().or(z.literal("")),
   cohortId: z.string().optional(),
   title: z.string().optional(),
+  gender: z.enum(GENDERS).optional().or(z.literal("")), // staff backfill
 });
 
 // Lighter-weight than userAdminSchema: track-only, for staff who can move a
@@ -190,3 +204,127 @@ export const lessonEditSchema = z.object({
   objectives: z.string().optional(), // one per line in forms
   orderIndex: z.coerce.number().int().min(0).optional(),
 });
+
+// ---------------- Student Impact & Outcomes ----------------
+
+// Textarea "one URL per line" → validated string[] (https-only, max 10).
+const linkLines = z
+  .string()
+  .optional()
+  .transform((value, ctx) => {
+    const lines = (value ?? "")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    if (lines.length > 10) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "At most 10 links." });
+      return z.NEVER;
+    }
+    for (const l of lines) {
+      if (!/^https:\/\/.+/.test(l) || !z.string().url().safeParse(l).success) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Not a valid https link: ${l.slice(0, 60)}` });
+        return z.NEVER;
+      }
+    }
+    return lines;
+  });
+
+const httpsOrEmpty = z.string().url("Enter a valid link (https://…)").startsWith("https://", "Links must be https").optional().or(z.literal(""));
+
+export const impactBaselineSchema = z.object({
+  previousTechTraining: z.coerce.boolean().default(false),
+  previousProfessionalTechExperience: z.coerce.boolean().default(false),
+  employedAtEntry: z.coerce.boolean().default(false),
+  techEmploymentAtEntry: z.coerce.boolean().default(false),
+  freelancingAtEntry: z.coerce.boolean().default(false),
+  techIncomeAtEntry: z.coerce.boolean().default(false),
+  hasReliableComputerAccess: z.coerce.boolean().default(false),
+  hasReliableInternetAccess: z.coerce.boolean().default(false),
+  highestEducationLevel: z.string().max(80).optional(),
+  opportunityBarrierDeclared: z.enum(BARRIER_ANSWERS),
+  opportunityBarrierSummary: z.string().max(2000).optional(),
+  consentToAggregatedImpactReporting: z.coerce.boolean().default(false),
+});
+
+// Staff-only selection signals (admissions judgment, 1-10 each).
+export const selectionBaselineSchema = z.object({
+  userId: z.string().min(1),
+  selectionPotentialScore: z.coerce.number().int().min(1).max(10).optional(),
+  selectionMotivationScore: z.coerce.number().int().min(1).max(10).optional(),
+  selectionChallengeScore: z.coerce.number().int().min(1).max(10).optional(),
+  selectionNotes: z.string().max(2000).optional(),
+});
+
+export const studentProjectSchema = z
+  .object({
+    id: z.string().optional(), // present ⇒ edit/resubmit
+    title: z.string().min(3, "Give the project a name"),
+    description: z.string().min(10, "Describe what you built").max(4000),
+    problem: z.string().max(2000).optional(),
+    projectType: z.enum(PROJECT_TYPES),
+    projectContext: z.enum(PROJECT_CONTEXTS),
+    techStack: z.string().max(400).optional(), // comma-separated in form
+    aiTools: z.string().max(400).optional(),
+    githubUrl: httpsOrEmpty,
+    liveUrl: httpsOrEmpty,
+    demoVideoUrl: httpsOrEmpty,
+    screenshotUrls: linkLines,
+    evidenceLinks: linkLines,
+    maturity: z.enum(PROJECT_MATURITIES),
+    externalTested: z.coerce.boolean().default(false),
+    testerKind: z.enum(TESTER_KINDS).optional(),
+    orgName: z.string().max(200).optional(),
+    userCount: z.coerce.number().int().min(0).optional(),
+    feedback: z.string().max(2000).optional(),
+    changesMade: z.string().max(2000).optional(),
+    teamUserIds: z.array(z.string()).max(10).optional(),
+  })
+  .superRefine((d, ctx) => {
+    if (d.externalTested && !maturityAtLeastTesting(d.maturity)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "External testing only applies once the project is at least in testing." });
+    }
+    if (d.externalTested && !d.testerKind) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Tell us who tested it (individual, SME, NGO…)." });
+    }
+  });
+
+export const achievementSchema = z
+  .object({
+    id: z.string().optional(),
+    kind: z.enum(ACHIEVEMENT_KINDS),
+    title: z.string().min(3, "Give this outcome a short title"),
+    organizationName: z.string().max(200).optional(),
+    roleTitle: z.string().max(200).optional(),
+    employmentType: z.enum(EMPLOYMENT_TYPES).optional(),
+    amount: z.coerce.number().int().positive().optional(),
+    currency: z.string().max(10).default("FCFA"),
+    occurredAt: z.coerce.date().optional(),
+    startedAt: z.coerce.date().optional(),
+    techascendContribution: z.enum(CONTRIBUTION_LEVELS).default("unknown"),
+    contributionNote: z.string().max(1000).optional(),
+    evidenceLinks: linkLines,
+    details: z.record(z.string(), z.string().max(500)).optional(),
+  })
+  .superRefine((d, ctx) => {
+    if ((MONEY_KINDS as string[]).includes(d.kind) && !d.amount) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter the amount earned (FCFA)." });
+    }
+    if ((d.kind === "job" || d.kind === "internship") && (!d.organizationName || !d.roleTitle)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Company and role are required for jobs/internships." });
+    }
+  });
+
+export const impactDecisionSchema = z
+  .object({
+    subjectType: z.enum(["project", "achievement"]),
+    id: z.string().min(1),
+    decision: z.enum(["under_review", "verified", "changes_requested", "rejected"]),
+    note: z.string().max(2000).optional(),
+  })
+  .superRefine((d, ctx) => {
+    if ((d.decision === "changes_requested" || d.decision === "rejected") && !d.note?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A note is required when requesting changes or rejecting." });
+    }
+  });
+
+export const genderSchema = z.enum(GENDERS);

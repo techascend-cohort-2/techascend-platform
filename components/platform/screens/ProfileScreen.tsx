@@ -187,6 +187,7 @@ export type ProfileUser = {
   role: string;
   bio: string | null;
   city: string | null;
+  gender: string | null;
   phone: string | null;
   portfolioUrl: string | null;
   githubUrl: string | null;
@@ -374,6 +375,15 @@ export default function ProfileScreen({
           <div>
             <label style={label} htmlFor="phone">Phone / WhatsApp</label>
             <input style={input} id="phone" name="phone" defaultValue={user.phone ?? ""} placeholder="677123456" />
+          </div>
+          <div>
+            <label style={label} htmlFor="gender">Gender (optional)</label>
+            <select style={input} id="gender" name="gender" defaultValue={user.gender ?? ""}>
+              <option value="">Not set</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+              <option value="prefer_not_to_say">Prefer not to say</option>
+            </select>
           </div>
           <div>
             <label style={label} htmlFor="portfolioUrl">Portfolio URL</label>

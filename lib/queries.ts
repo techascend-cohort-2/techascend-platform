@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
-import { formatFcfa, TRACK_LABELS } from "@/lib/constants";
+import { formatFcfa, TRACK_LABELS, REAL_WORLD_CONTEXTS } from "@/lib/constants";
 
 // ---------------------------------------------------------------------------
 // Session helpers
@@ -163,6 +163,9 @@ export async function getStudentDashboard(userId: string) {
     projectsAwaitingReview,
     projectsNeedingChanges,
     uncelebratedApprovals,
+    impactProjects,
+    impactOutcomes,
+    impactBaseline,
   ] = await Promise.all([
     getLearningTree(userId, user.track),
     prisma.userBadge.count({ where: { userId } }),
@@ -198,6 +201,16 @@ export async function getStudentDashboard(userId: string) {
       include: { project: { select: { title: true } } },
       orderBy: { updatedAt: "desc" },
     }),
+    // Impact profile: light rows only — heavy lists live in getMyImpact.
+    prisma.studentProject.findMany({
+      where: { userId },
+      select: { id: true, title: true, status: true, evidenceLinks: true, externalTested: true, updatedAt: true, celebratedAt: true },
+    }),
+    prisma.achievement.findMany({
+      where: { userId },
+      select: { id: true, title: true, kind: true, status: true, updatedAt: true, celebratedAt: true },
+    }),
+    prisma.impactBaseline.findUnique({ where: { userId }, select: { studentCompletedAt: true } }),
   ]);
 
   const totalLessons = tree.reduce((s, t) => s + t.totalLessons, 0);
@@ -241,10 +254,13 @@ export async function getStudentDashboard(userId: string) {
   };
 
   // Milestones to celebrate on this visit — an approved visibility phase and/or
-  // approved projects the student hasn't been congratulated for yet.
+  // approved projects the student hasn't been congratulated for yet, plus
+  // impact items newly verified by staff.
   const celebrations: (
     | { kind: "visibility"; id: string }
     | { kind: "project"; id: string; title: string; score: number | null }
+    | { kind: "impact_project"; id: string; title: string }
+    | { kind: "achievement"; id: string; title: string }
   )[] = [];
   if (visibility && visibility.status === "approved" && !visibility.celebratedAt) {
     celebrations.push({ kind: "visibility", id: visibility.id });
@@ -252,12 +268,47 @@ export async function getStudentDashboard(userId: string) {
   for (const s of uncelebratedApprovals) {
     celebrations.push({ kind: "project", id: s.id, title: s.project.title, score: s.mentorScore });
   }
+  for (const p of impactProjects.filter((p) => p.status === "verified" && !p.celebratedAt)) {
+    celebrations.push({ kind: "impact_project", id: p.id, title: p.title });
+  }
+  for (const a of impactOutcomes.filter((a) => a.status === "verified" && !a.celebratedAt)) {
+    celebrations.push({ kind: "achievement", id: a.id, title: a.title });
+  }
+
+  // Impact profile completeness (5 checks — outcomes deliberately excluded so
+  // students never feel pressured to invent wins; see /my-impact).
+  const impactActivity = [
+    ...impactProjects.map((p) => p.updatedAt.getTime()),
+    ...impactOutcomes.map((a) => a.updatedAt.getTime()),
+    user.lastOutcomeCheckInAt?.getTime() ?? 0,
+  ];
+  const lastImpactActivity = impactActivity.length ? Math.max(...impactActivity) : 0;
+  const THIRTY_DAYS = 30 * 86_400_000;
+  const impactChecks = {
+    profiles: Boolean(user.githubUrl && user.linkedinUrl),
+    baseline: Boolean(impactBaseline?.studentCompletedAt),
+    project: impactProjects.length > 0,
+    evidence: impactProjects.some((p) => Array.isArray(p.evidenceLinks) && (p.evidenceLinks as unknown[]).length > 0),
+    fresh: lastImpactActivity > Date.now() - THIRTY_DAYS,
+  };
+  const impactCompletionPct = Math.round(
+    (100 * Object.values(impactChecks).filter(Boolean).length) / Object.keys(impactChecks).length,
+  );
+  const impact = {
+    completionPct: impactCompletionPct,
+    projectCount: impactProjects.length,
+    outcomeCount: impactOutcomes.length,
+    changesRequested:
+      impactProjects.filter((p) => p.status === "changes_requested").length +
+      impactOutcomes.filter((a) => a.status === "changes_requested").length,
+  };
 
   return {
     user,
     progressPct: user.progressPercentage,
     reviewStatus,
     celebrations,
+    impact,
     stats: {
       lessonsDone: doneLessons,
       lessonsTotal: totalLessons,
@@ -535,6 +586,10 @@ export async function getAdminOverview() {
   const ledgerByKind = Object.fromEntries(ledger.map((l) => [l.kind, l._sum.amount ?? 0]));
   const badgesAwarded = await prisma.userBadge.count();
   const certsIssued = await prisma.certificate.count();
+  const [pendingImpactProjects, pendingImpactOutcomes] = await Promise.all([
+    prisma.studentProject.count({ where: { status: { in: ["submitted", "under_review"] } } }),
+    prisma.achievement.count({ where: { status: { in: ["submitted", "under_review"] } } }),
+  ]);
 
   return {
     kpis: {
@@ -542,6 +597,7 @@ export async function getAdminOverview() {
       applicants,
       pendingApps,
       pendingReviews: pendingVis + pendingSubs,
+      pendingImpact: pendingImpactProjects + pendingImpactOutcomes,
       avgProgress: Math.round(avg._avg.progressPercentage ?? 0),
       partners,
       badgesAwarded,
@@ -665,6 +721,7 @@ export async function getStudentsAdmin() {
         cohortId: true,
         progressPercentage: true,
         suspendedAt: true,
+        gender: true,
         cohort: { select: { name: true } },
         partner: { select: { name: true } },
         _count: { select: { userBadges: true } },
@@ -790,13 +847,24 @@ export async function getStudentDetail(userId: string) {
   });
   if (!user) return null;
 
-  const [tutorCount, lastTutor, visibilityHistory] = await Promise.all([
+  const [tutorCount, lastTutor, visibilityHistory, impactBaseline, impactProjects, impactOutcomes] = await Promise.all([
     prisma.aiTutorLog.count({ where: { userId } }),
     prisma.aiTutorLog.findFirst({ where: { userId }, orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
     prisma.visibilityReview.findMany({
       where: { userId },
       include: { reviewer: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
+    }),
+    prisma.impactBaseline.findUnique({ where: { userId } }),
+    prisma.studentProject.findMany({
+      where: { userId },
+      include: { reviewer: { select: { name: true } } },
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.achievement.findMany({
+      where: { userId },
+      include: { reviewer: { select: { name: true } } },
+      orderBy: { updatedAt: "desc" },
     }),
   ]);
 
@@ -822,7 +890,17 @@ export async function getStudentDetail(userId: string) {
     null,
   );
 
-  return { user, phaseBreakdown, tutorCount, lastTutorAt: lastTutor?.createdAt ?? null, lastLessonAt, visibilityHistory };
+  return {
+    user,
+    phaseBreakdown,
+    tutorCount,
+    lastTutorAt: lastTutor?.createdAt ?? null,
+    lastLessonAt,
+    visibilityHistory,
+    impactBaseline,
+    impactProjects,
+    impactOutcomes,
+  };
 }
 
 // A student's own visibility review history (for their profile page).
@@ -953,4 +1031,202 @@ export async function getPartnerOverview(partnerId: string | null) {
   ]);
   const talentCount = await prisma.user.count({ where: { role: "student", talentVisible: true } });
   return { org, impact, talentCount };
+}
+
+// ---------------------------------------------------------------------------
+// Student Impact & Outcomes
+// ---------------------------------------------------------------------------
+
+const THIRTY_DAYS_MS = 30 * 86_400_000;
+
+/** Student view: own impact profile — items, auto-pulled signals, completion. */
+export async function getMyImpact(userId: string) {
+  const [user, baseline, projects, outcomes, approvedCapstones, payouts, wonInterests, cohortMates] =
+    await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true, name: true, githubUrl: true, linkedinUrl: true, portfolioUrl: true,
+          lastOutcomeCheckInAt: true, cohortId: true,
+          visibilitySubmission: { select: { status: true } },
+          cohort: { select: { status: true } },
+        },
+      }),
+      prisma.impactBaseline.findUnique({ where: { userId } }),
+      prisma.studentProject.findMany({ where: { userId }, orderBy: { updatedAt: "desc" } }),
+      prisma.achievement.findMany({ where: { userId }, orderBy: { updatedAt: "desc" } }),
+      prisma.submission.findMany({
+        where: { userId, status: "approved" },
+        include: { project: { select: { title: true } } },
+        orderBy: { updatedAt: "desc" },
+      }),
+      prisma.ledgerEntry.findMany({ where: { userId, kind: "payout" }, orderBy: { occurredAt: "desc" } }),
+      prisma.opportunityInterest.findMany({
+        where: { userId, status: { in: ["accepted", "hired"] } },
+        include: { opportunity: { select: { title: true } } },
+      }),
+      prisma.user.findMany({
+        where: { role: "student", id: { not: userId } },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+    ]);
+  if (!user) throw new Error("User not found");
+
+  const lastActivity = Math.max(
+    0,
+    ...projects.map((p) => p.updatedAt.getTime()),
+    ...outcomes.map((a) => a.updatedAt.getTime()),
+    user.lastOutcomeCheckInAt?.getTime() ?? 0,
+  );
+  // Profile completeness — 5 checks; outcomes deliberately excluded so nobody
+  // feels pressured to invent wins to reach 100%.
+  const checks = {
+    profiles: Boolean(user.githubUrl && user.linkedinUrl),
+    baseline: Boolean(baseline?.studentCompletedAt),
+    project: projects.length > 0,
+    evidence: projects.some((p) => Array.isArray(p.evidenceLinks) && (p.evidenceLinks as unknown[]).length > 0),
+    fresh: lastActivity > Date.now() - THIRTY_DAYS_MS,
+  };
+  const completionPct = Math.round((100 * Object.values(checks).filter(Boolean).length) / 5);
+
+  // Outcome status board (separate from completeness — states, not scores).
+  const has = (pred: (a: (typeof outcomes)[number]) => boolean) => outcomes.some(pred);
+  const outcomeBoard = {
+    validation: projects.some((p) => p.externalTested && p.testerKind),
+    client: has((a) => a.kind === "client"),
+    employment: has((a) => a.kind === "job"),
+    internship: has((a) => a.kind === "internship"),
+    income: has((a) => ["freelance", "client", "earning", "business"].includes(a.kind) && (a.amount ?? 0) > 0) || payouts.length > 0,
+    business: has((a) => a.kind === "business"),
+  };
+
+  return { user, baseline, projects, outcomes, approvedCapstones, payouts, wonInterests, cohortMates, checks, completionPct, outcomeBoard };
+}
+
+/** Staff verification queue: pending impact items across both types. */
+export async function getImpactQueue() {
+  const userSelect = { select: { id: true, name: true, email: true, track: true, initials: true, avatarBg: true } };
+  const [pendingProjects, pendingOutcomes, decidedProjects, decidedOutcomes] = await Promise.all([
+    prisma.studentProject.findMany({
+      where: { status: { in: ["submitted", "under_review"] } },
+      include: { user: userSelect },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.achievement.findMany({
+      where: { status: { in: ["submitted", "under_review"] } },
+      include: { user: userSelect },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.studentProject.findMany({
+      where: { status: { in: ["verified", "changes_requested", "rejected"] } },
+      include: { user: userSelect, reviewer: { select: { name: true } } },
+      orderBy: { reviewedAt: "desc" },
+      take: 8,
+    }),
+    prisma.achievement.findMany({
+      where: { status: { in: ["verified", "changes_requested", "rejected"] } },
+      include: { user: userSelect, reviewer: { select: { name: true } } },
+      orderBy: { reviewedAt: "desc" },
+      take: 8,
+    }),
+  ]);
+  return { pendingProjects, pendingOutcomes, decidedProjects, decidedOutcomes };
+}
+
+/**
+ * Staff impact dashboard: the conversion funnel (distinct students per stage),
+ * the inclusion & access panel (consented baseline aggregates only) and
+ * verified-first outcome tiles. Funnel rules are deliberately strict:
+ * externally tested requires externalTested AND testerKind; "used by real
+ * users" requires maturity used_by_real_users|paid — orgName is context, not
+ * proof of adoption.
+ */
+export async function getImpactDashboard() {
+  const [students, baselines, projects, outcomes, badgeHolders, payoutAgg] = await Promise.all([
+    prisma.user.findMany({ where: { role: "student" }, select: { id: true, gender: true } }),
+    prisma.impactBaseline.findMany(),
+    prisma.studentProject.findMany({
+      select: {
+        id: true, userId: true, title: true, status: true, projectContext: true, maturity: true,
+        externalTested: true, testerKind: true, orgName: true, evidenceLinks: true,
+      },
+    }),
+    prisma.achievement.findMany({
+      select: { id: true, userId: true, title: true, kind: true, status: true, amount: true, evidenceLinks: true, techascendContribution: true },
+    }),
+    prisma.userBadge.findMany({ select: { userId: true }, distinct: ["userId"] }),
+    prisma.ledgerEntry.aggregate({ where: { kind: "payout" }, _sum: { amount: true } }),
+  ]);
+
+  const studentIds = new Set(students.map((s) => s.id));
+  const distinct = (ids: string[]) => new Set(ids.filter((id) => studentIds.has(id))).size;
+  const realWorld = projects.filter((p) => REAL_WORLD_CONTEXTS.includes(p.projectContext));
+  const tested = projects.filter((p) => p.externalTested && p.testerKind);
+  const usedByReal = projects.filter((p) => p.maturity === "used_by_real_users" || p.maturity === "paid");
+  const moneyOutcomes = outcomes.filter((a) => ["freelance", "client", "earning", "business"].includes(a.kind));
+  const paidStudents = new Set([
+    ...projects.filter((p) => p.maturity === "paid").map((p) => p.userId),
+    ...moneyOutcomes.map((a) => a.userId),
+  ]);
+  const economicVerified = outcomes.filter(
+    (a) => a.status === "verified" && ["job", "internship", "freelance", "client", "business"].includes(a.kind),
+  );
+
+  const funnel = [
+    { key: "participants", label: "Participants", students: students.length },
+    { key: "milestones", label: "Completed capability milestones", students: distinct(badgeHolders.map((b) => b.userId)) },
+    { key: "projects", label: "Built projects", students: distinct(projects.map((p) => p.userId)) },
+    { key: "realworld", label: "Built real-world solutions", students: distinct(realWorld.map((p) => p.userId)) },
+    { key: "tested", label: "Externally tested", students: distinct(tested.map((p) => p.userId)) },
+    { key: "used", label: "Used by real users", students: distinct(usedByReal.map((p) => p.userId)) },
+    { key: "paid", label: "Paid opportunities", students: distinct([...paidStudents]) },
+    { key: "economic", label: "Employment / Freelance / Business (verified)", students: distinct(economicVerified.map((a) => a.userId)) },
+  ];
+
+  // Inclusion & access — consented aggregates only; barrier text NEVER leaves
+  // the student-detail page.
+  const consented = baselines.filter((b) => b.consentToAggregatedImpactReporting);
+  const inclusion = {
+    participants: students.length,
+    baselinesCompleted: baselines.filter((b) => b.studentCompletedAt).length,
+    consented: consented.length,
+    barriersDeclared: consented.filter((b) => b.opportunityBarrierDeclared === "yes").length,
+    firstStructuredTraining: consented.filter((b) => !b.previousTechTraining).length,
+    noPriorTechEmployment: consented.filter((b) => !b.techEmploymentAtEntry).length,
+    women: students.filter((s) => s.gender === "female").length,
+    men: students.filter((s) => s.gender === "male").length,
+    genderNotSet: students.filter((s) => !s.gender || s.gender === "prefer_not_to_say").length,
+  };
+
+  const tierOf = (links: unknown, status: string) =>
+    status === "verified" ? "verified" : Array.isArray(links) && links.length > 0 ? "evidenced" : "self_reported";
+  const countTiers = <T extends { evidenceLinks: unknown; status: string }>(rows: T[]) => ({
+    total: rows.length,
+    verified: rows.filter((r) => r.status === "verified").length,
+    evidenced: rows.filter((r) => tierOf(r.evidenceLinks, r.status) === "evidenced").length,
+    selfReported: rows.filter((r) => tierOf(r.evidenceLinks, r.status) === "self_reported").length,
+  });
+
+  const orgNames = new Set(
+    tested.filter((p) => p.orgName).map((p) => (p.orgName as string).trim().toLowerCase()),
+  );
+  const verifiedEarnings = moneyOutcomes
+    .filter((a) => a.status === "verified")
+    .reduce((s, a) => s + (a.amount ?? 0), 0);
+
+  const tiles = {
+    projects: countTiers(projects),
+    realWorldProjects: countTiers(realWorld),
+    outcomes: countTiers(outcomes),
+    jobs: countTiers(outcomes.filter((a) => a.kind === "job")),
+    internships: countTiers(outcomes.filter((a) => a.kind === "internship")),
+    orgsEngaged: orgNames.size,
+    verifiedEarnings,
+    verifiedEarningsLabel: formatFcfa(verifiedEarnings),
+    ledgerPayouts: payoutAgg._sum.amount ?? 0,
+    ledgerPayoutsLabel: formatFcfa(payoutAgg._sum.amount ?? 0),
+  };
+
+  return { funnel, inclusion, tiles };
 }

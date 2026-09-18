@@ -12,7 +12,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const detail = await getStudentDetail(id);
   if (!detail || detail.user.role !== "student") notFound();
 
-  const { user, phaseBreakdown, tutorCount, lastTutorAt, lastLessonAt, visibilityHistory } = detail;
+  const { user, phaseBreakdown, tutorCount, lastTutorAt, lastLessonAt, visibilityHistory, impactBaseline, impactProjects, impactOutcomes } = detail;
 
   const links: Record<string, string> = {};
   if (user.visibilitySubmission) {
@@ -76,6 +76,47 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     tutorCount,
     lastTutorAt: lastTutorAt ? lastTutorAt.toISOString() : null,
     lastLessonAt: lastLessonAt ? lastLessonAt.toISOString() : null,
+    impactBaseline: impactBaseline
+      ? {
+          studentCompleted: Boolean(impactBaseline.studentCompletedAt),
+          opportunityBarrierDeclared: impactBaseline.opportunityBarrierDeclared,
+          opportunityBarrierSummary: impactBaseline.opportunityBarrierSummary,
+          consentToAggregatedImpactReporting: impactBaseline.consentToAggregatedImpactReporting,
+          previousTechTraining: impactBaseline.previousTechTraining,
+          techEmploymentAtEntry: impactBaseline.techEmploymentAtEntry,
+          hasReliableComputerAccess: impactBaseline.hasReliableComputerAccess,
+          hasReliableInternetAccess: impactBaseline.hasReliableInternetAccess,
+          highestEducationLevel: impactBaseline.highestEducationLevel,
+          selectionPotentialScore: impactBaseline.selectionPotentialScore,
+          selectionMotivationScore: impactBaseline.selectionMotivationScore,
+          selectionChallengeScore: impactBaseline.selectionChallengeScore,
+          selectionNotes: impactBaseline.selectionNotes,
+        }
+      : null,
+    impactItems: [
+      ...impactProjects.map((p) => ({
+        id: p.id,
+        type: "project" as const,
+        title: p.title,
+        sub: p.projectContext,
+        status: p.status,
+        evidenceCount: Array.isArray(p.evidenceLinks) ? (p.evidenceLinks as unknown[]).length : 0,
+        reviewerName: p.reviewer?.name ?? null,
+        reviewedAt: p.reviewedAt ? p.reviewedAt.toISOString() : null,
+        updatedAt: p.updatedAt.toISOString(),
+      })),
+      ...impactOutcomes.map((a) => ({
+        id: a.id,
+        type: "outcome" as const,
+        title: a.title,
+        sub: a.kind,
+        status: a.status,
+        evidenceCount: Array.isArray(a.evidenceLinks) ? (a.evidenceLinks as unknown[]).length : 0,
+        reviewerName: a.reviewer?.name ?? null,
+        reviewedAt: a.reviewedAt ? a.reviewedAt.toISOString() : null,
+        updatedAt: a.updatedAt.toISOString(),
+      })),
+    ].sort((x, y) => new Date(y.updatedAt).getTime() - new Date(x.updatedAt).getTime()),
   };
 
   return <StudentDetailScreen student={student} backHref={viewer.role === "admin" ? "/students" : "/reviews"} />;

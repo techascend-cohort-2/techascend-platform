@@ -32,6 +32,57 @@ export const EVENT_AUDIENCES = ["all", "students", "applicants", "partners", "st
 
 export const OPPORTUNITY_TYPES = ["freelance", "job", "internship", "studio", "sme"] as const;
 
+// ---------------- Student Impact & Outcomes ----------------
+
+export const PROJECT_TYPES = ["ai", "software", "automation", "data", "web", "mobile", "other"] as const;
+// What kind of work a student project really is — keeps classroom exercises
+// out of "real-world impact" metrics.
+export const PROJECT_CONTEXTS = [
+  "learning_exercise",
+  "portfolio_project",
+  "real_world_problem",
+  "real_client",
+  "student_business",
+  "techascend_client",
+] as const;
+export const REAL_WORLD_CONTEXTS: string[] = ["real_world_problem", "real_client", "student_business", "techascend_client"];
+export const PROJECT_MATURITIES = ["prototype", "working", "testing", "deployed", "used_by_real_users", "paid"] as const;
+export const TESTER_KINDS = ["individual", "sme", "ngo", "school", "company", "other"] as const;
+export const ACHIEVEMENT_KINDS = [
+  "job",
+  "internship",
+  "freelance",
+  "client",
+  "earning",
+  "fellowship",
+  "competition",
+  "business",
+  "other",
+] as const;
+export type AchievementKind = (typeof ACHIEVEMENT_KINDS)[number];
+// Kinds where an amount (FCFA) is expected.
+export const MONEY_KINDS: AchievementKind[] = ["freelance", "client", "earning", "business"];
+export const EMPLOYMENT_TYPES = ["full_time", "part_time", "contract", "remote", "hybrid"] as const;
+export const IMPACT_STATUSES = ["submitted", "under_review", "verified", "changes_requested", "rejected"] as const;
+export type ImpactStatus = (typeof IMPACT_STATUSES)[number];
+// Attribution strength: an outcome after TechAscend is not automatically an
+// outcome BECAUSE of TechAscend.
+export const CONTRIBUTION_LEVELS = ["direct", "partial", "indirect", "none", "unknown"] as const;
+export const BARRIER_ANSWERS = ["yes", "no", "prefer_not_to_say"] as const;
+export const GENDERS = ["female", "male", "prefer_not_to_say"] as const;
+
+// Evidence tier is derived, never stored: display labels are exactly
+// "SELF-REPORTED" → "EVIDENCE PROVIDED" → "VERIFIED BY TECHASCEND".
+export function impactTier(evidenceLinks: unknown, status: string): "verified" | "evidenced" | "self_reported" {
+  if (status === "verified") return "verified";
+  return Array.isArray(evidenceLinks) && evidenceLinks.length > 0 ? "evidenced" : "self_reported";
+}
+
+export function maturityAtLeastTesting(maturity: string): boolean {
+  const i = (PROJECT_MATURITIES as readonly string[]).indexOf(maturity);
+  return i >= (PROJECT_MATURITIES as readonly string[]).indexOf("testing");
+}
+
 // Application funnel for an OpportunityInterest. Students self-report
 // "applied" (external programs are applied to off-platform); staff/posters
 // advance to accepted/hired/declined.

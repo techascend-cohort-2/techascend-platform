@@ -140,6 +140,7 @@ export async function updateUserAction(_prev: ActionState, formData: FormData): 
     track: formData.get("track") ?? "",
     cohortId: formData.get("cohortId") || undefined,
     title: formData.get("title") || undefined,
+    gender: formData.get("gender") || "",
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid." };
   const d = parsed.data;
@@ -150,6 +151,7 @@ export async function updateUserAction(_prev: ActionState, formData: FormData): 
       track: d.track === "" ? null : d.track,
       ...(d.cohortId ? { cohortId: d.cohortId } : {}),
       ...(d.title ? { title: d.title } : {}),
+      ...(d.gender ? { gender: d.gender } : {}),
     },
   });
   revalidatePath("/students");

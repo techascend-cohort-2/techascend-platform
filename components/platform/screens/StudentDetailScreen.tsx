@@ -4,6 +4,8 @@ import { ICON } from "@/lib/platformData";
 import { TRACK_LABELS } from "@/lib/constants";
 import FormattedNote from "@/components/platform/FormattedNote";
 import AccountControls from "@/components/platform/AccountControls";
+import SelectionBaselineForm from "@/components/platform/SelectionBaselineForm";
+import { impactStatusStyle, PROJECT_CONTEXT_LABELS, ACHIEVEMENT_KIND_LABELS } from "@/components/platform/impactStatus";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
@@ -54,6 +56,32 @@ export type StudentDetailUser = {
   portfolioUrl: string | null;
   createdAt: string;
   suspendedAt: string | null;
+  impactBaseline: {
+    studentCompleted: boolean;
+    opportunityBarrierDeclared: string;
+    opportunityBarrierSummary: string | null;
+    consentToAggregatedImpactReporting: boolean;
+    previousTechTraining: boolean;
+    techEmploymentAtEntry: boolean;
+    hasReliableComputerAccess: boolean;
+    hasReliableInternetAccess: boolean;
+    highestEducationLevel: string | null;
+    selectionPotentialScore: number | null;
+    selectionMotivationScore: number | null;
+    selectionChallengeScore: number | null;
+    selectionNotes: string | null;
+  } | null;
+  impactItems: {
+    id: string;
+    type: "project" | "outcome";
+    title: string;
+    sub: string;
+    status: string;
+    evidenceCount: number;
+    reviewerName: string | null;
+    reviewedAt: string | null;
+    updatedAt: string;
+  }[];
   visibility: {
     status: string;
     reviewNote: string | null;
@@ -148,6 +176,86 @@ export default function StudentDetailScreen({ student, backHref }: { student: St
         <AccountControls
           member={{ id: student.id, name: student.name, email: student.email, suspendedAt: student.suspendedAt }}
         />
+      </div>
+
+      <div className="pf-card" style={{ padding: 22, marginBottom: 16 }}>
+        <div className="pf-h" style={{ marginBottom: 4 }}>Impact &amp; baseline</div>
+        <div style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 14 }}>
+          Entry circumstances, staff selection signals and this student&apos;s reported projects and outcomes.
+        </div>
+        {student.impactBaseline ? (
+          <div style={{ fontSize: 12.5, lineHeight: 1.7, marginBottom: 12 }}>
+            <div>
+              <b>Baseline:</b> {student.impactBaseline.studentCompleted ? "completed by the student" : "not completed by the student yet"}
+              {" · "}barriers declared: <b>{student.impactBaseline.opportunityBarrierDeclared.replace(/_/g, " ")}</b>
+              {" · "}aggregate-reporting consent: {student.impactBaseline.consentToAggregatedImpactReporting ? "yes" : "no"}
+            </div>
+            <div style={{ color: "var(--muted)" }}>
+              {student.impactBaseline.previousTechTraining ? "Had prior tech training" : "First structured tech training"}
+              {" · "}{student.impactBaseline.techEmploymentAtEntry ? "had tech employment at entry" : "no tech employment at entry"}
+              {student.impactBaseline.highestEducationLevel ? ` · ${student.impactBaseline.highestEducationLevel}` : ""}
+              {" · "}computer: {student.impactBaseline.hasReliableComputerAccess ? "reliable" : "limited"}
+              {" · "}internet: {student.impactBaseline.hasReliableInternetAccess ? "reliable" : "limited"}
+            </div>
+            {student.impactBaseline.opportunityBarrierSummary ? (
+              <div style={{ marginTop: 8, background: "var(--bg)", borderRadius: 9, padding: "9px 12px", fontSize: 12.5 }}>
+                <b>In their words (staff-only, never published):</b>
+                <div style={{ marginTop: 4 }}><FormattedNote text={student.impactBaseline.opportunityBarrierSummary} /></div>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <div style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: 12 }}>No baseline recorded yet.</div>
+        )}
+        <div style={{ borderTop: "1px dashed var(--line)", paddingTop: 12, marginBottom: 12 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: "var(--faint)", letterSpacing: 0.3, marginBottom: 8 }}>
+            SELECTION SIGNALS (STAFF-RECORDED, FROM ADMISSIONS)
+          </div>
+          <SelectionBaselineForm
+            userId={student.id}
+            scores={
+              student.impactBaseline
+                ? {
+                    selectionPotentialScore: student.impactBaseline.selectionPotentialScore,
+                    selectionMotivationScore: student.impactBaseline.selectionMotivationScore,
+                    selectionChallengeScore: student.impactBaseline.selectionChallengeScore,
+                    selectionNotes: student.impactBaseline.selectionNotes,
+                  }
+                : null
+            }
+          />
+        </div>
+        <div style={{ borderTop: "1px dashed var(--line)", paddingTop: 12 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: "var(--faint)", letterSpacing: 0.3, marginBottom: 8 }}>
+            IMPACT TIMELINE
+          </div>
+          {student.impactItems.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {student.impactItems.map((it) => (
+                <div key={`${it.type}-${it.id}`} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 12.5 }}>
+                  <span
+                    className="pf-badge-sm"
+                    style={{ color: impactStatusStyle(it.status).fg, background: impactStatusStyle(it.status).bg, flexShrink: 0 }}
+                  >
+                    {impactStatusStyle(it.status).label}
+                  </span>
+                  <b>{it.title}</b>
+                  <span style={{ color: "var(--muted)" }}>
+                    {it.type === "project"
+                      ? PROJECT_CONTEXT_LABELS[it.sub] ?? it.sub
+                      : ACHIEVEMENT_KIND_LABELS[it.sub] ?? it.sub}
+                    {" · "}{it.evidenceCount} evidence link{it.evidenceCount === 1 ? "" : "s"}
+                    {it.reviewerName && it.reviewedAt
+                      ? ` · ${it.status === "verified" ? "verified" : "reviewed"} by ${it.reviewerName} on ${dateFmt.format(new Date(it.reviewedAt))}`
+                      : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: 12.5, color: "var(--muted)" }}>No impact items reported yet.</div>
+          )}
+        </div>
       </div>
 
       <div className="pf-stats" style={{ marginBottom: 16 }}>

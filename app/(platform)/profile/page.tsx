@@ -31,6 +31,7 @@ export default async function ProfilePage() {
     role: user.role,
     bio: user.bio,
     city: user.city,
+    gender: user.gender,
     phone: user.phone,
     portfolioUrl: user.portfolioUrl,
     githubUrl: user.githubUrl,

@@ -112,6 +112,17 @@ model User {
   ledgerCreated        LedgerEntry[]        @relation("LedgerCreator")
   applicationsReviewed Application[]        @relation("ApplicationReviewer")
   passwordResets       PasswordResetToken[]
+  impactBaseline       ImpactBaseline?
+  studentProjects        StudentProject[] @relation("StudentProjectOwner")
+  studentProjectReviews  StudentProject[] @relation("StudentProjectReviewer")
+  achievements           Achievement[]    @relation("AchievementOwner")
+  achievementReviews     Achievement[]    @relation("AchievementReviewer")
+  impactReviewsGiven     ImpactReview[]   @relation("ImpactReviewAuthor")
+
+  // Last time the student confirmed their outcomes are up to date (either by
+  // adding an outcome or clicking "I'm up to date") — drives the dashboard
+  // nudge and, later, alumni check-in cadence.
+  lastOutcomeCheckInAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -130,6 +141,171 @@ model PasswordResetToken {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+}
+
+// ------------------------------------------------------------------
+// Student Impact & Outcomes
+// ------------------------------------------------------------------
+
+// Entry-point circumstances, captured once per student at (or near) admission.
+// The talent side (selection* fields) is STAFF-populated from admissions
+// judgment — never self-reported and never a "talented yes/no" flag. The
+// barrier question is self-declared and optional in substance.
+model ImpactBaseline {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recordedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  // Set when the STUDENT submits their part of the baseline (the row may be
+  // created earlier by staff entering selection scores) — drives the
+  // "baseline completed" check in profile completeness.
+  studentCompletedAt DateTime?
+
+  previousTechTraining               Boolean @default(false)
+  previousProfessionalTechExperience Boolean @default(false)
+  employedAtEntry                    Boolean @default(false)
+  techEmploymentAtEntry              Boolean @default(false)
+  freelancingAtEntry                 Boolean @default(false)
+  techIncomeAtEntry                  Boolean @default(false)
+  hasReliableComputerAccess          Boolean @default(false)
+  hasReliableInternetAccess          Boolean @default(false)
+  highestEducationLevel              String?
+
+  // "Do you believe you have faced under-representation, systemic bias,
+  // discrimination or structural barriers that have made it harder for you to
+  // enter or advance in technology?" — "yes" | "no" | "prefer_not_to_say"
+  opportunityBarrierDeclared String  @default("prefer_not_to_say")
+  // Optional free text. Staff-visible on the student detail page ONLY —
+  // never shown on dashboards; dashboards use aggregate counts only.
+  opportunityBarrierSummary  String?
+
+  // Consent for ANONYMOUS AGGREGATE reporting only. This is NOT permission
+  // for testimonials, storytelling, names, photos or social media — that
+  // consent is a separate, future field.
+  consentToAggregatedImpactReporting Boolean @default(false)
+
+  // Staff-recorded selection signals from admissions (1-10), edited via the
+  // staff member-update path only.
+  selectionPotentialScore  Int?
+  selectionMotivationScore Int?
+  selectionChallengeScore  Int?
+  selectionNotes           String?
+}
+
+// Student-initiated real-world project (distinct from staff-authored
+// curriculum Project/Submission capstones, which are auto-pulled as signals).
+model StudentProject {
+  id          String @id @default(cuid())
+  userId      String
+  user        User   @relation("StudentProjectOwner", fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  problem     String?
+  // "ai" | "software" | "automation" | "data" | "web" | "mobile" | "other"
+  projectType String  @default("other")
+  // What kind of work this really is — prevents classroom exercises being
+  // reported as real-world impact:
+  // "learning_exercise" | "portfolio_project" | "real_world_problem" |
+  // "real_client" | "student_business" | "techascend_client"
+  projectContext String @default("portfolio_project")
+  techStack      Json? // string[]
+  aiTools        String?
+
+  githubUrl      String?
+  liveUrl        String?
+  demoVideoUrl   String?
+  screenshotUrls Json? // string[] — links only (no upload infra)
+  evidenceLinks  Json? // string[]
+
+  // "prototype" | "working" | "testing" | "deployed" | "used_by_real_users" | "paid"
+  maturity String @default("prototype")
+
+  // Real-world validation (wizard step 3 — only when maturity >= testing)
+  externalTested Boolean @default(false)
+  // "individual" | "sme" | "ngo" | "school" | "company" | "other"
+  testerKind  String?
+  orgName     String? // associated org — context, NEVER proof of adoption
+  userCount   Int?
+  feedback    String?
+  changesMade String?
+
+  teamUserIds Json? // string[] of platform user ids (lean — no join table)
+
+  // "submitted" | "under_review" | "verified" | "changes_requested" | "rejected"
+  status       String    @default("submitted")
+  reviewerId   String?
+  reviewer     User?     @relation("StudentProjectReviewer", fields: [reviewerId], references: [id])
+  reviewedAt   DateTime?
+  reviewNote   String?
+  celebratedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+// A career/income/professional outcome ("outcome" in all UI copy — the model
+// name is internal). Reporting fields are first-class columns, not JSON.
+model Achievement {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("AchievementOwner", fields: [userId], references: [id], onDelete: Cascade)
+  // "job" | "internship" | "freelance" | "client" | "earning" | "fellowship" |
+  // "competition" | "business" | "other"
+  kind  String
+  title String
+
+  organizationName String?
+  roleTitle        String?
+  // "full_time" | "part_time" | "contract" | "remote" | "hybrid"
+  employmentType String?
+  amount         Int? // money kinds — integer FCFA (LedgerEntry precedent)
+  currency       String?   @default("FCFA")
+  occurredAt     DateTime?
+  startedAt      DateTime?
+
+  // Attribution strength — a job after TechAscend is not automatically a job
+  // BECAUSE of TechAscend: "none" | "indirect" | "partial" | "direct" | "unknown"
+  techascendContribution String  @default("unknown")
+  contributionNote       String?
+
+  evidenceLinks Json? // string[]
+  details       Json? // kind-specific extras ONLY (core fields are columns)
+
+  // same lifecycle as StudentProject
+  status       String    @default("submitted")
+  reviewerId   String?
+  reviewer     User?     @relation("AchievementReviewer", fields: [reviewerId], references: [id])
+  reviewedAt   DateTime?
+  reviewNote   String?
+  celebratedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, kind])
+}
+
+// Append-only decision log for both impact item types (VisibilityReview
+// precedent). Items are reused across resubmits, so this preserves the audit
+// trail; nothing here is ever deleted.
+model ImpactReview {
+  id String @id @default(cuid())
+  // "project" | "achievement"
+  subjectType String
+  subjectId   String
+  userId      String // the student
+  // "under_review" | "verified" | "changes_requested" | "rejected" | "resubmitted"
+  decision   String
+  note       String?
+  reviewerId String?
+  reviewer   User?    @relation("ImpactReviewAuthor", fields: [reviewerId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([subjectType, subjectId, createdAt])
   @@index([userId])
 }
 
