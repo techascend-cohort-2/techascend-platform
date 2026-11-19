@@ -22,9 +22,7 @@ export default async function Hero() {
             <span className={styles.h1grad}>Women building the future.</span>
           </h1>
           <p className={styles.lede}>
-            TechAscend is the AI-native ecosystem where women in Cameroon learn to
-            build with AI, ship real products, and turn skills into income — through
-            freelancing, jobs, and ventures.
+            We help women in Cameroon develop practical technology skills, build projects they can show, and take their next step towards work, entrepreneurship, and community leadership.
           </p>
           <div className={styles.ctas}>
             <a href="/apply" className={styles.ctaPrimary}>
@@ -35,23 +33,24 @@ export default async function Hero() {
             </a>
           </div>
           <div className={styles.facts}>
-            <span>✦ Free to join</span>
+            <span>✦ Fellowship applications welcome</span>
             <span>✦ Bilingual EN / FR</span>
-            <span>✦ Douala · Yaoundé · Buea</span>
+            <span>✦ Based in Cameroon</span>
           </div>
         </div>
 
         <div className={styles.media}>
           <div className={styles.portrait}>
             <div className={styles.portraitLabel}>
-              <div className={styles.mono}>DROP: learner portrait</div>
-              <div className={styles.sub}>a woman building at her laptop</div>
+              <div className={styles.portraitHeading}>Real skills. Real projects.</div>
+              <div className={styles.portraitSub}>Learn with others, build with confidence, and grow a portfolio you can share.</div>
+              <a className={styles.portraitLink} href="/initiatives/global-talent-pitch-2027">Explore our 2027 initiative →</a>
             </div>
           </div>
 
           <div className={styles.cardIncome}>
-            <div className={styles.cardLabel}>Income earned</div>
-            <div className={styles.cardIncomeVal}>240,000 F</div>
+            <div className={styles.cardLabel}>Our approach</div>
+            <div className={styles.cardIncomeVal}>Learn · Build · Grow</div>
           </div>
 
           <div className={styles.cardTutor}>
@@ -61,12 +60,12 @@ export default async function Hero() {
               </svg>
             </div>
             <div>
-              <div className={styles.cardLabel}>AI Tutor</div>
-              <div className={styles.cardTutorTitle}>Always on, every lesson</div>
+              <div className={styles.cardLabel}>Learning support</div>
+              <div className={styles.cardTutorTitle}>Guidance as you learn</div>
             </div>
           </div>
 
-          <div className={styles.cardBadge}>★ API Integrator badge earned</div>
+          <div className={styles.cardBadge}>Hands-on learning community</div>
         </div>
       </div>
 

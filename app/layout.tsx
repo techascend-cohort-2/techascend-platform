@@ -24,9 +24,9 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TechAscend — Women building the future",
+  title: "TechAscend — Practical technology skills and opportunity in Cameroon",
   description:
-    "TechAscend is the AI-native ecosystem where women in Cameroon learn to build with AI, ship real products, and turn skills into income — through freelancing, jobs, and ventures.",
+    "TechAscend is a Cameroon-based technology empowerment initiative helping women develop practical digital skills, build projects, and explore career opportunities.",
 };
 
 export default function RootLayout({

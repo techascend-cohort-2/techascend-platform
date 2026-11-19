@@ -1,5 +1,7 @@
 import Nav from "@/components/Nav";
 import Hero from "@/components/Hero";
+import About from "@/components/About";
+import InitiativeTeaser from "@/components/InitiativeTeaser";
 import ModelComparison from "@/components/ModelComparison";
 import Engines from "@/components/Engines";
 import Tracks from "@/components/Tracks";
@@ -17,6 +19,8 @@ export default function Home() {
       <Nav />
       <main>
         <Hero />
+        <About />
+        <InitiativeTeaser />
         <ModelComparison />
         <Engines />
         <Tracks />

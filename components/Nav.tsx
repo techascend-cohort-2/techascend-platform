@@ -4,11 +4,11 @@ import { useState } from "react";
 import styles from "./Nav.module.css";
 
 const links = [
-  { href: "#model", label: "The Model" },
-  { href: "#tracks", label: "Tracks" },
-  { href: "#journey", label: "Journey" },
-  { href: "#partners", label: "For Partners" },
-  { href: "#impact", label: "Impact" },
+  { href: "/#model", label: "Our approach" },
+  { href: "/#about", label: "About" },
+  { href: "/initiatives/global-talent-pitch-2027", label: "2027 initiative" },
+  { href: "/#tracks", label: "Tracks" },
+  { href: "/#partners", label: "Partners" },
 ];
 
 export default function Nav() {

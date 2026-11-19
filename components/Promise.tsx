@@ -8,14 +8,12 @@ export default function Promise() {
         <div className={styles.content}>
           <div className={styles.eyebrow}>OUR PROMISE</div>
           <h2 className={styles.title}>
-            Free to learn.
+            Skills should be accessible.
             <br />
-            We earn when you earn.
+            Opportunity should follow.
           </h2>
           <p className={styles.lede}>
-            No upfront fees for learners. TechAscend is funded by partners, employers,
-            and a small share of the income you generate — never by charging women who
-            can&apos;t yet afford it.
+            Our goal is to reduce barriers to practical technology education. Programme costs, eligibility, and any applicable fees or agreements will be explained clearly before participants enrol.
           </p>
           <a href="/apply" className={styles.cta}>
             Start your application

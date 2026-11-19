@@ -1,0 +1,14 @@
+.section { background: #1c1138; color: white; padding: 76px 28px; }
+.inner { max-width: 1160px; margin: auto; display: grid; grid-template-columns: 1.25fr .75fr; align-items: center; gap: 56px; }
+.kicker { font-size: 12px; font-weight: 800; letter-spacing: .13em; color: #e0aaf7; }
+.copy h2 { font: 800 clamp(29px, 4vw, 46px)/1.15 var(--font-sora), sans-serif; letter-spacing: -.04em; margin: 20px 0; max-width: 700px; }
+.copy h2 span { color: #dfb1ff; }
+.copy p { color: #d6cde9; line-height: 1.8; max-width: 610px; }
+.link { display: inline-block; background: white; color: #391a66; border-radius: 12px; padding: 14px 20px; font-weight: 800; margin-top: 15px; }
+.details { border: 1px solid #584276; border-radius: 22px; padding: 28px; background: #291a47; }
+.details > div { display: flex; flex-direction: column; gap: 7px; border-bottom: 1px solid #53406d; padding: 14px 0; }
+.details > div:first-child { padding-top: 0; }
+.details span { color: #d2bce3; font-size: 12px; font-weight: 700; }
+.details strong { font-size: 16px; line-height: 1.5; }
+.disclaimer { color: #c6b8d8; font-size: 12px; line-height: 1.65; margin: 22px 0 0; }
+@media (max-width: 780px) { .inner { grid-template-columns: 1fr; gap: 32px; } }

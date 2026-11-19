@@ -11,8 +11,7 @@ export default function Footer() {
             <div className={styles.brandName}>TechAscend</div>
           </div>
           <p className={styles.blurb}>
-            The AI-native women&apos;s technology empowerment ecosystem for Central
-            Africa.
+            A Cameroon-based initiative helping women learn practical technology skills, build projects, and connect with opportunities.
           </p>
         </div>
         {footerCols.map((c) => (
@@ -35,9 +34,9 @@ export default function Footer() {
       </div>
       <div className={styles.bottom}>
         <div className={styles.tagline}>
-          <span>Built for women.</span>
-          <span>By women.</span>
-          <span>For impact.</span>
+          <span>Rooted in Cameroon.</span>
+          <span>Open to collaboration.</span>
+          <span>Focused on skills.</span>
         </div>
         <div className={styles.copyright}>© 2026 TechAscend · Douala, Cameroon</div>
       </div>
