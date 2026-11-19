@@ -8,7 +8,7 @@ export default function Journey() {
         <div className="eyebrow">FROM APPLICANT TO ALUMNI</div>
         <h2 className={styles.title}>A staged path, not a single sprint.</h2>
         <p className={styles.lede}>
-          We measure success 6–12 months out — by income earned, not graduation day.
+          Our proposed learning pathway connects skills, practical projects and career preparation. Programme schedules are shared with each cohort.
         </p>
       </div>
       <div className={styles.track}>
