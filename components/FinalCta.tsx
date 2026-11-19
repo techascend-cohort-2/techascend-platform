@@ -11,14 +11,13 @@ export default function FinalCta() {
             real income.
           </p>
           <a href="/apply" className={styles.ctaPrimary}>
-            Apply to Cohort 01 →
+            Explore learning opportunities →
           </a>
         </div>
         <div className={styles.cardDark}>
           <div className={styles.title}>I want to partner</div>
           <p className={styles.bodyDark}>
-            For funders, employers, telecoms, universities and development
-            organisations.
+            For mentors, employers, educators and organizations interested in creating practical opportunities.
           </p>
           <a href="/apply?role=partner" className={styles.ctaLight}>
             Talk to our team →

@@ -13,11 +13,10 @@ export default function Impact() {
               Not just stories.
             </h2>
             <p className={styles.lede}>
-              Every cohort is tracked with investor-grade discipline — women trained,
-              projects shipped, income generated, SMEs digitized.
+              We are building a way to track what matters: participation, skills learned, projects completed and career progress. We will publish verified outcomes as programmes are delivered.
             </p>
-            <a href="#partners" className={styles.cta}>
-              See the partner impact report →
+            <a href="/about#transparency" className={styles.cta}>
+              How we will report our impact →
             </a>
           </div>
           <div className={styles.stats}>

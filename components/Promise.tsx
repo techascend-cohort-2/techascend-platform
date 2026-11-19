@@ -13,9 +13,7 @@ export default function Promise() {
             We earn when you earn.
           </h2>
           <p className={styles.lede}>
-            No upfront fees for learners. TechAscend is funded by partners, employers,
-            and a small share of the income you generate — never by charging women who
-            can&apos;t yet afford it.
+            Our goal is to make practical learning more accessible through mentorship, community support and partnerships. Any programme fees or commercial arrangements will be explained clearly before enrolment.
           </p>
           <a href="/apply" className={styles.cta}>
             Start your application

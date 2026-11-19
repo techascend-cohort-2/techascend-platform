@@ -124,28 +124,19 @@
   border-radius: 24px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: repeating-linear-gradient(135deg, #241640, #241640 12px, #2b1a4d 12px, #2b1a4d 24px);
+  background: radial-gradient(circle at 82% 15%, #63379c 0, transparent 48%), linear-gradient(140deg,#29194c,#171130);
   height: 420px;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.6);
 }
-.portraitLabel {
-  text-align: center;
-  color: #7c6ba8;
-}
-.mono {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.5px;
-}
-.sub {
-  font-size: 11px;
-  margin-top: 4px;
-  opacity: 0.7;
-}
-
+.portraitLabel { text-align: left; color: #fff; max-width: 440px; padding: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+.visualEyebrow { color: #d9c5fa; font-size: 12px; font-weight: 700; letter-spacing: .12em; }
+.visualHeadline { font-family: var(--font-sora), sans-serif; font-size: clamp(28px,3vw,40px); font-weight: 700; line-height: 1.2; letter-spacing: -.025em; }
+.visualBody { color: #e0d9ef; font-size: 15px; line-height: 1.7; }
+.visualLink { color: #fff; border-bottom: 1px solid rgba(255,255,255,.5); padding-bottom: 5px; font-size: 14px; font-weight: 700; }
+@media (max-width: 520px) { .portraitLabel { padding: 28px; } .portrait { height: auto; min-height: 350px; } }
 .cardIncome {
   position: absolute;
   top: 30px;

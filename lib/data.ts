@@ -3,19 +3,19 @@
 
 export const logos = [
   "AI-Native Curriculum",
-  "Real Client Projects",
-  "Verified Certificates",
-  "Partner Hiring Network",
-  "Income-First Training",
+  "Hands-on Projects",
+  "Project Portfolios",
+  "Professional Connections",
+  "Career-focused Learning",
   "Women-Led Community",
 ];
 
 export type Shift = { old: string; new: string };
 export const shifts: Shift[] = [
-  { old: "Static teachers", new: "AI tutor on every lesson" },
+  { old: "Static teachers", new: "Guidance alongside learning" },
   { old: "Exams & quizzes", new: "Real projects for real users" },
-  { old: "Certificates", new: "Income you can track" },
-  { old: "Job boards", new: "A live partner pipeline" },
+  { old: "Certificates", new: "Work you can showcase" },
+  { old: "Job boards", new: "Building connections to employers" },
   { old: "Diplomas", new: "A public, shippable portfolio" },
 ];
 
@@ -48,8 +48,8 @@ export const layers: Layer[] = [
     iconBg: "#E6F0FC",
     iconColor: "#2D6FD9",
     iconPath: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
-    body: "Ship real products for local businesses, NGOs and startups — with AI review and mentor feedback.",
-    points: ["Capstone projects", "Live client work", "Deployed, public portfolio"],
+    body: "Build practical portfolio projects, informed by real needs and strengthened through peer and mentor feedback.",
+    points: ["Capstone projects", "Practice with real-world briefs", "Shareable project portfolio"],
   },
   {
     step: "LAYER 03",
@@ -59,8 +59,8 @@ export const layers: Layer[] = [
     iconColor: "#1F9D6B",
     iconPath:
       "M12 2v20M16 6.5c-1-1.2-2.5-1.5-4-1.5-2.2 0-4 1-4 3s1.8 2.5 4 3 4 1 4 3-1.8 3-4 3c-1.5 0-3-.3-4-1.5",
-    body: "AI matches your skills to paid work — freelance gigs, local SMEs, jobs, and ventures.",
-    points: ["AI-matched freelance gigs", "Hiring partner pipeline", "Venture studio support"],
+    body: "Explore potential pathways to freelance work, employment and entrepreneurship, supported by guidance and networks.",
+    points: ["Freelance readiness", "Employer connections", "Entrepreneurship guidance"],
   },
 ];
 
@@ -88,7 +88,7 @@ export const tracks: Track[] = [
     title: "AI Product & Automation",
     gradient: "linear-gradient(155deg,#5A1248,#D6336C)",
     shadow: "0 24px 56px -30px rgba(214,51,108,.55)",
-    body: "Automate business workflows and build SaaS products — the fastest income path for African SMEs.",
+    body: "Automate business workflows and build SaaS products — a practical way to serve African SMEs.",
     tools: ["n8n", "LangChain", "Bubble", "Zapier", "Stripe / MoMo"],
     outcomes: "Automation Engineer · Freelance Consultant · Founder",
   },
@@ -114,7 +114,7 @@ export const journey: JourneyStage[] = [
   {
     stage: "PHASE 1",
     title: "Visibility",
-    dur: "Jul 3 – 12",
+    dur: "Proposed sequence",
     body: "A professional identity across six platforms, reviewed by the team.",
     barColor: "linear-gradient(90deg,#C9B8F0,#7C3AED)",
     numColor: "#9C7AD6",
@@ -122,7 +122,7 @@ export const journey: JourneyStage[] = [
   {
     stage: "PHASE 2",
     title: "AI Foundations",
-    dur: "Jul 13 – Aug 7",
+    dur: "Proposed sequence",
     body: "How models work, prompt craft, Git & the builder toolkit.",
     barColor: "linear-gradient(90deg,#7C3AED,#9C2FC0)",
     numColor: "#7C3AED",
@@ -130,7 +130,7 @@ export const journey: JourneyStage[] = [
   {
     stage: "PHASE 3",
     title: "Core Skills",
-    dur: "Aug 10 – Oct 9",
+    dur: "Proposed sequence",
     body: "Track-specific depth: engineering or automation, with an AI tutor.",
     barColor: "linear-gradient(90deg,#9C2FC0,#C026D3)",
     numColor: "#9C2FC0",
@@ -138,7 +138,7 @@ export const journey: JourneyStage[] = [
   {
     stage: "PHASE 4",
     title: "Build Studio",
-    dur: "Oct 12 – Nov 20",
+    dur: "Proposed sequence",
     body: "From brief to deployed capstone with AI evaluation & mentor review.",
     barColor: "linear-gradient(90deg,#C026D3,#D6336C)",
     numColor: "#C026D3",
@@ -146,7 +146,7 @@ export const journey: JourneyStage[] = [
   {
     stage: "PHASE 5",
     title: "Launch & Earn",
-    dur: "Nov 23 – Dec 18",
+    dur: "Proposed sequence",
     body: "Freelancing, jobs & ventures — closing with Demo Day.",
     barColor: "linear-gradient(90deg,#D6336C,#F2994A)",
     numColor: "#D6336C",
@@ -199,13 +199,13 @@ export type Partner = { title: string; body: string; iconPath: string };
 export const partners: Partner[] = [
   {
     title: "Funding partners",
-    body: "Sponsor branded cohorts and scholarships with verified impact reporting.",
+    body: "Support hands-on learning and scholarships, with clear goals and transparent progress reporting.",
     iconPath:
       "M12 2v20M16 6.5c-1-1.2-2.5-1.5-4-1.5-2.2 0-4 1-4 3s1.8 2.5 4 3 4 1 4 3-1.8 3-4 3c-1.5 0-3-.3-4-1.5",
   },
   {
     title: "Hiring partners",
-    body: "Access a pre-vetted, AI-native, diverse talent pipeline.",
+    body: "Help participants prepare for opportunities through mentoring and career conversations.",
     iconPath: "M6 7V5a2 2 0 012-2h8a2 2 0 012 2v2M3 7h18v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z",
   },
   {
@@ -235,6 +235,8 @@ export const footerCols: FooterCol[] = [
       { label: "Tracks", href: "/#tracks" },
       { label: "Journey", href: "/#journey" },
       { label: "Apply", href: "/apply" },
+      { label: "About TechAscend", href: "/about" },
+      { label: "2027 Pitch Challenge", href: "/initiatives/global-talent-pitch-2027" },
     ],
   },
   {
@@ -242,16 +244,14 @@ export const footerCols: FooterCol[] = [
     links: [
       { label: "Sponsor a cohort", href: "/apply?role=partner" },
       { label: "Hire talent", href: "/apply?role=partner" },
-      { label: "Impact reports", href: "/#impact" },
+      { label: "Our approach", href: "/about#transparency" },
     ],
   },
   {
     head: "CONNECT",
     links: [
-      { label: "LinkedIn", href: "https://www.linkedin.com", external: true },
-      { label: "Instagram", href: "https://www.instagram.com", external: true },
-      { label: "WhatsApp", href: "https://wa.me/237600000000", external: true },
-      { label: "Contact", href: "mailto:hello@techascend.africa" },
+      { label: "Founder on LinkedIn", href: "https://www.linkedin.com/in/ngai-e/", external: true },
+      { label: "Contact", href: "/about#contact" },
     ],
   },
 ];
