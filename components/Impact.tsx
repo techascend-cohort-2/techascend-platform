@@ -8,16 +8,15 @@ export default function Impact() {
         <div className={styles.grid}>
           <div>
             <h2 className={styles.title}>
-              Impact you can measure.
+              How we plan to measure progress.
               <br />
-              Not just stories.
+              Beyond attendance.
             </h2>
             <p className={styles.lede}>
-              Every cohort is tracked with investor-grade discipline — women trained,
-              projects shipped, income generated, SMEs digitized.
+              We aim to track participation, skills developed, projects completed, mentorship provided, and opportunities created. We will publish verified results as our programmes progress.
             </p>
             <a href="#partners" className={styles.cta}>
-              See the partner impact report →
+              Explore partnerships →
             </a>
           </div>
           <div className={styles.stats}>
