@@ -9,6 +9,8 @@ const links = [
   { href: "#journey", label: "Journey" },
   { href: "#partners", label: "For Partners" },
   { href: "#impact", label: "Impact" },
+  { href: "/about", label: "About" },
+  { href: "/initiatives/global-talent-pitch-2027", label: "2027 Initiative" },
 ];
 
 export default function Nav() {
