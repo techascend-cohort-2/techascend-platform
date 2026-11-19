@@ -12,7 +12,7 @@ export const logos = [
 
 export type Shift = { old: string; new: string };
 export const shifts: Shift[] = [
-  { old: "Static teachers", new: "AI tutor on every lesson" },
+  { old: "Static teachers", new: "Guidance alongside learning" },
   { old: "Exams & quizzes", new: "Real projects for real users" },
   { old: "Certificates", new: "Work you can showcase" },
   { old: "Job boards", new: "Building connections to employers" },
@@ -48,8 +48,8 @@ export const layers: Layer[] = [
     iconBg: "#E6F0FC",
     iconColor: "#2D6FD9",
     iconPath: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
-    body: "Ship real products for local businesses, NGOs and startups — with AI review and mentor feedback.",
-    points: ["Capstone projects", "Live client work", "Deployed, public portfolio"],
+    body: "Build practical portfolio projects, informed by real needs and strengthened through peer and mentor feedback.",
+    points: ["Capstone projects", "Practice with real-world briefs", "Shareable project portfolio"],
   },
   {
     step: "LAYER 03",
@@ -88,7 +88,7 @@ export const tracks: Track[] = [
     title: "AI Product & Automation",
     gradient: "linear-gradient(155deg,#5A1248,#D6336C)",
     shadow: "0 24px 56px -30px rgba(214,51,108,.55)",
-    body: "Automate business workflows and build SaaS products — the fastest income path for African SMEs.",
+    body: "Automate business workflows and build SaaS products — a practical way to serve African SMEs.",
     tools: ["n8n", "LangChain", "Bubble", "Zapier", "Stripe / MoMo"],
     outcomes: "Automation Engineer · Freelance Consultant · Founder",
   },
