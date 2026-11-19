@@ -249,6 +249,7 @@ export const footerCols: FooterCol[] = [
     head: "CONNECT",
     links: [
       { label: "About TechAscend", href: "/#about" },
+      { label: "TechAscend on LinkedIn", href: "https://www.linkedin.com/company/techascend", external: true },
       { label: "2027 talent initiative", href: "/initiatives/global-talent-pitch-2027" },
       { label: "Partnership enquiries", href: "/apply?role=partner" },
     ],
