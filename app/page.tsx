@@ -10,6 +10,7 @@ import Partners from "@/components/Partners";
 import Promise from "@/components/Promise";
 import FinalCta from "@/components/FinalCta";
 import Footer from "@/components/Footer";
+import InitiativeTeaser from "@/components/InitiativeTeaser";
 
 export default function Home() {
   return (
@@ -24,6 +25,7 @@ export default function Home() {
         <Impact />
         <Testimonials />
         <Partners />
+        <InitiativeTeaser />
         <Promise />
         <FinalCta />
       </main>
