@@ -22,9 +22,7 @@ export default async function Hero() {
             <span className={styles.h1grad}>Women building the future.</span>
           </h1>
           <p className={styles.lede}>
-            TechAscend is the AI-native ecosystem where women in Cameroon learn to
-            build with AI, ship real products, and turn skills into income — through
-            freelancing, jobs, and ventures.
+            TechAscend helps women in Cameroon learn practical technology skills, build meaningful projects and prepare for professional opportunities. We are growing a community rooted in mentorship and real-world learning.
           </p>
           <div className={styles.ctas}>
             <a href="/apply" className={styles.ctaPrimary}>
@@ -44,29 +42,12 @@ export default async function Hero() {
         <div className={styles.media}>
           <div className={styles.portrait}>
             <div className={styles.portraitLabel}>
-              <div className={styles.mono}>DROP: learner portrait</div>
-              <div className={styles.sub}>a woman building at her laptop</div>
+              <span className={styles.visualEyebrow}>LEARN · BUILD · CONNECT</span>
+              <span className={styles.visualHeadline}>Talent grows when opportunity is shared.</span>
+              <span className={styles.visualBody}>Practical learning, peer support and opportunities to show what you can build.</span>
+              <a className={styles.visualLink} href="/about">Get to know TechAscend →</a>
             </div>
           </div>
-
-          <div className={styles.cardIncome}>
-            <div className={styles.cardLabel}>Income earned</div>
-            <div className={styles.cardIncomeVal}>240,000 F</div>
-          </div>
-
-          <div className={styles.cardTutor}>
-            <div className={styles.cardTutorIcon}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6 7 18.2l1.9-5.8L4 8.8h6.1z" />
-              </svg>
-            </div>
-            <div>
-              <div className={styles.cardLabel}>AI Tutor</div>
-              <div className={styles.cardTutorTitle}>Always on, every lesson</div>
-            </div>
-          </div>
-
-          <div className={styles.cardBadge}>★ API Integrator badge earned</div>
         </div>
       </div>
 
