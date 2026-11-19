@@ -5,8 +5,8 @@ export const logos = [
   "AI-Native Curriculum",
   "Real Client Projects",
   "Verified Certificates",
-  "Partner Hiring Network",
-  "Income-First Training",
+  "Career guidance",
+  "Practical learning",
   "Women-Led Community",
 ];
 
@@ -14,8 +14,8 @@ export type Shift = { old: string; new: string };
 export const shifts: Shift[] = [
   { old: "Static teachers", new: "AI tutor on every lesson" },
   { old: "Exams & quizzes", new: "Real projects for real users" },
-  { old: "Certificates", new: "Income you can track" },
-  { old: "Job boards", new: "A live partner pipeline" },
+  { old: "Certificates", new: "Progress you can show" },
+  { old: "Job boards", new: "Building employer connections" },
   { old: "Diplomas", new: "A public, shippable portfolio" },
 ];
 
@@ -59,8 +59,8 @@ export const layers: Layer[] = [
     iconColor: "#1F9D6B",
     iconPath:
       "M12 2v20M16 6.5c-1-1.2-2.5-1.5-4-1.5-2.2 0-4 1-4 3s1.8 2.5 4 3 4 1 4 3-1.8 3-4 3c-1.5 0-3-.3-4-1.5",
-    body: "AI matches your skills to paid work — freelance gigs, local SMEs, jobs, and ventures.",
-    points: ["AI-matched freelance gigs", "Hiring partner pipeline", "Venture studio support"],
+    body: "Explore pathways to paid work, freelancing, jobs and entrepreneurship with career guidance and mentor support.",
+    points: ["Freelance readiness", "Employer introductions", "Venture studio support"],
   },
 ];
 
@@ -157,8 +157,8 @@ export type Stat = { v: string; l: string };
 export const stats: Stat[] = [
   { v: "2", l: "skill tracks — engineering & automation" },
   { v: "5", l: "phases from visibility to income" },
-  { v: "24", l: "weeks of guided building" },
-  { v: "100%", l: "free for accepted fellows" },
+  { v: "24", l: "weeks in the planned fellowship pathway" },
+  { v: "Free", l: "application to the fellowship" },
 ];
 
 export type Testimonial = {
@@ -199,13 +199,13 @@ export type Partner = { title: string; body: string; iconPath: string };
 export const partners: Partner[] = [
   {
     title: "Funding partners",
-    body: "Sponsor branded cohorts and scholarships with verified impact reporting.",
+    body: "Support learner access to practical technology training and receive updates on activities and outcomes.",
     iconPath:
       "M12 2v20M16 6.5c-1-1.2-2.5-1.5-4-1.5-2.2 0-4 1-4 3s1.8 2.5 4 3 4 1 4 3-1.8 3-4 3c-1.5 0-3-.3-4-1.5",
   },
   {
     title: "Hiring partners",
-    body: "Access a pre-vetted, AI-native, diverse talent pipeline.",
+    body: "Connect with emerging talent through mentoring, project feedback, and future recruitment opportunities.",
     iconPath: "M6 7V5a2 2 0 012-2h8a2 2 0 012 2v2M3 7h18v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z",
   },
   {
@@ -215,12 +215,12 @@ export const partners: Partner[] = [
   },
   {
     title: "Academic partners",
-    body: "Validate curriculum and reach women across campuses.",
+    body: "Help shape relevant learning experiences and reach students across campuses.",
     iconPath: "M22 10L12 5 2 10l10 5 10-5zM6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5",
   },
   {
     title: "Government partners",
-    body: "Advance youth employment and national digital skills goals.",
+    body: "Collaborate on practical digital skills and career-readiness initiatives.",
     iconPath: "M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6",
   },
 ];
@@ -242,16 +242,15 @@ export const footerCols: FooterCol[] = [
     links: [
       { label: "Sponsor a cohort", href: "/apply?role=partner" },
       { label: "Hire talent", href: "/apply?role=partner" },
-      { label: "Impact reports", href: "/#impact" },
+      { label: "Our approach to impact", href: "/#impact" },
     ],
   },
   {
     head: "CONNECT",
     links: [
-      { label: "LinkedIn", href: "https://www.linkedin.com", external: true },
-      { label: "Instagram", href: "https://www.instagram.com", external: true },
-      { label: "WhatsApp", href: "https://wa.me/237600000000", external: true },
-      { label: "Contact", href: "mailto:hello@techascend.africa" },
+      { label: "About TechAscend", href: "/#about" },
+      { label: "2027 talent initiative", href: "/initiatives/global-talent-pitch-2027" },
+      { label: "Partnership enquiries", href: "/apply?role=partner" },
     ],
   },
 ];
