@@ -8,7 +8,7 @@ export default function Engines() {
       <div className={styles.head}>
         <h2 className={styles.title}>One platform. Three engines.</h2>
         <p className={styles.lede}>
-          Every woman moves through the same loop — and it always ends in income.
+          Our programme is designed to connect learning with practical projects and career readiness. Outcomes depend on each participant's progress and opportunities.
         </p>
       </div>
       <div className={styles.grid}>
