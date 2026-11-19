@@ -4,11 +4,11 @@ import { useState } from "react";
 import styles from "./Nav.module.css";
 
 const links = [
-  { href: "#model", label: "The Model" },
-  { href: "#tracks", label: "Tracks" },
-  { href: "#journey", label: "Journey" },
-  { href: "#partners", label: "For Partners" },
-  { href: "#impact", label: "Impact" },
+  { href: "/#model", label: "The Model" },
+  { href: "/#tracks", label: "Tracks" },
+  { href: "/#journey", label: "Journey" },
+  { href: "/#partners", label: "For Partners" },
+  { href: "/#impact", label: "Impact" },
   { href: "/about", label: "About" },
   { href: "/initiatives/global-talent-pitch-2027", label: "2027 Initiative" },
 ];
@@ -19,7 +19,7 @@ export default function Nav() {
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
-        <a href="#top" className={styles.brand}>
+        <a href="/#top" className={styles.brand}>
           <div className={styles.logo}>TA</div>
           <div className={styles.brandName}>TechAscend</div>
         </a>
