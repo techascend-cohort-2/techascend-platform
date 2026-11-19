@@ -5,13 +5,12 @@ export default function FinalCta() {
     <section id="apply" className={styles.section}>
       <div className={styles.grid}>
         <div className={styles.card}>
-          <div className={styles.title}>I want to learn &amp; earn</div>
+          <div className={styles.title}>I want to learn and build</div>
           <p className={styles.body}>
-            For women 18–35 in Cameroon who are ready to build with AI and generate
-            real income.
+            For women in Cameroon looking to grow technical skills and develop practical projects.
           </p>
           <a href="/apply" className={styles.ctaPrimary}>
-            Apply to Cohort 01 →
+            Apply or join the waitlist →
           </a>
         </div>
         <div className={styles.cardDark}>
