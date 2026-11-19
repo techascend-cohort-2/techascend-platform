@@ -9,11 +9,9 @@ export default function Partners() {
         <div className={styles.grid}>
           <div className={styles.intro}>
             <div className="eyebrow">FOR PARTNERS &amp; FUNDERS</div>
-            <h2 className={styles.title}>Sponsor measurable outcomes — not a cause.</h2>
+            <h2 className={styles.title}>Help people build skills that open doors.</h2>
             <p className={styles.lede}>
-              Fund a branded cohort, hire AI-native talent, or supply tools and
-              infrastructure. You get a pipeline, ESG impact, and a report that proves
-              it.
+              We welcome universities, employers, mentors, and supporters who want to help more people gain practical technology skills. Together we can create learning experiences and document what they achieve.
             </p>
             <a href="/apply?role=partner" className={styles.cta}>
               Become a partner
