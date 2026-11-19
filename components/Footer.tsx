@@ -11,8 +11,7 @@ export default function Footer() {
             <div className={styles.brandName}>TechAscend</div>
           </div>
           <p className={styles.blurb}>
-            The AI-native women&apos;s technology empowerment ecosystem for Central
-            Africa.
+            A Cameroon-based initiative helping people grow through practical technology education, mentorship and opportunity.
           </p>
         </div>
         {footerCols.map((c) => (
@@ -39,7 +38,7 @@ export default function Footer() {
           <span>By women.</span>
           <span>For impact.</span>
         </div>
-        <div className={styles.copyright}>© 2026 TechAscend · Douala, Cameroon</div>
+        <div className={styles.copyright}>© 2026 TechAscend · Cameroon</div>
       </div>
     </footer>
   );
