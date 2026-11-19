@@ -33,9 +33,9 @@ export default async function Hero() {
             </a>
           </div>
           <div className={styles.facts}>
-            <span>✦ Free to join</span>
+            <span>✦ Fellowship applications welcome</span>
             <span>✦ Bilingual EN / FR</span>
-            <span>✦ Douala · Yaoundé · Buea</span>
+            <span>✦ Based in Cameroon</span>
           </div>
         </div>
 
@@ -60,7 +60,7 @@ export default async function Hero() {
               </svg>
             </div>
             <div>
-              <div className={styles.cardLabel}>AI Tutor</div>
+              <div className={styles.cardLabel}>Learning support</div>
               <div className={styles.cardTutorTitle}>Guidance as you learn</div>
             </div>
           </div>
