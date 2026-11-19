@@ -114,7 +114,7 @@ export const journey: JourneyStage[] = [
   {
     stage: "PHASE 1",
     title: "Visibility",
-    dur: "Jul 3 – 12",
+    dur: "Planned stage 1",
     body: "A professional identity across six platforms, reviewed by the team.",
     barColor: "linear-gradient(90deg,#C9B8F0,#7C3AED)",
     numColor: "#9C7AD6",
@@ -122,7 +122,7 @@ export const journey: JourneyStage[] = [
   {
     stage: "PHASE 2",
     title: "AI Foundations",
-    dur: "Jul 13 – Aug 7",
+    dur: "Planned stage 2",
     body: "How models work, prompt craft, Git & the builder toolkit.",
     barColor: "linear-gradient(90deg,#7C3AED,#9C2FC0)",
     numColor: "#7C3AED",
@@ -130,7 +130,7 @@ export const journey: JourneyStage[] = [
   {
     stage: "PHASE 3",
     title: "Core Skills",
-    dur: "Aug 10 – Oct 9",
+    dur: "Planned stage 3",
     body: "Track-specific depth: engineering or automation, with an AI tutor.",
     barColor: "linear-gradient(90deg,#9C2FC0,#C026D3)",
     numColor: "#9C2FC0",
@@ -138,7 +138,7 @@ export const journey: JourneyStage[] = [
   {
     stage: "PHASE 4",
     title: "Build Studio",
-    dur: "Oct 12 – Nov 20",
+    dur: "Planned stage 4",
     body: "From brief to deployed capstone with AI evaluation & mentor review.",
     barColor: "linear-gradient(90deg,#C026D3,#D6336C)",
     numColor: "#C026D3",
@@ -146,7 +146,7 @@ export const journey: JourneyStage[] = [
   {
     stage: "PHASE 5",
     title: "Launch & Earn",
-    dur: "Nov 23 – Dec 18",
+    dur: "Planned stage 5",
     body: "Freelancing, jobs & ventures — closing with Demo Day.",
     barColor: "linear-gradient(90deg,#D6336C,#F2994A)",
     numColor: "#D6336C",
