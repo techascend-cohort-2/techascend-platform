@@ -28,14 +28,14 @@ export default async function Hero() {
             <a href="/apply" className={styles.ctaPrimary}>
               {openCohort ? "Apply to the next cohort →" : "Join the waitlist →"}
             </a>
-            <a href="#partners" className={styles.ctaGhost}>
+            <a href="/#partners" className={styles.ctaGhost}>
               Partner with us
             </a>
           </div>
           <div className={styles.facts}>
-            <span>✦ Free to join</span>
+            <span>✦ Community-led learning</span>
             <span>✦ Bilingual EN / FR</span>
-            <span>✦ Douala · Yaoundé · Buea</span>
+            <span>✦ Based in Cameroon</span>
           </div>
         </div>
 
