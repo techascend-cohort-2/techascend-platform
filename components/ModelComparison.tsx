@@ -5,12 +5,10 @@ export default function ModelComparison() {
   return (
     <section id="model" className={styles.section}>
       <div className={styles.head}>
-        <div className="eyebrow">THE OLD MODEL IS BREAKING</div>
-        <h2 className={styles.title}>This is not a coding bootcamp.</h2>
+        <div className="eyebrow">OUR APPROACH TO LEARNING</div>
+        <h2 className={styles.title}>Learn by making things that matter.</h2>
         <p className={styles.lede}>
-          &quot;Learn to code → get a certificate → apply for a junior job&quot; no
-          longer works. AI changed the rules. TechAscend is built for the economy
-          that&apos;s actually arriving.
+          Courses are a starting point. We also emphasize practical projects, supportive feedback, and ways to demonstrate what you can do.
         </p>
       </div>
       <div className={styles.table}>
