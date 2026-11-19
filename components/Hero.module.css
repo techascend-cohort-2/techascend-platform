@@ -124,27 +124,17 @@
   border-radius: 24px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: repeating-linear-gradient(135deg, #241640, #241640 12px, #2b1a4d 12px, #2b1a4d 24px);
+  background: radial-gradient(circle at 76% 18%, rgba(192,38,211,.35), transparent 45%), linear-gradient(145deg, #35205d, #241640 75%);
   height: 420px;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.6);
 }
-.portraitLabel {
-  text-align: center;
-  color: #7c6ba8;
-}
-.mono {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.5px;
-}
-.sub {
-  font-size: 11px;
-  margin-top: 4px;
-  opacity: 0.7;
-}
+.portraitLabel { text-align: left; color: #fff; padding: clamp(24px, 5vw, 50px); max-width: 420px; }
+.portraitHeading { font-family: var(--font-sora); font-size: clamp(26px, 3vw, 38px); font-weight: 800; line-height: 1.14; letter-spacing: -1px; }
+.portraitSub { margin-top: 18px; color: #e0d7f4; font-size: 16px; line-height: 1.6; }
+.portraitLink { display: inline-block; margin-top: 26px; padding-bottom: 5px; border-bottom: 1px solid #f0c6ff; color: #fff; font-weight: 700; font-size: 14px; }
 
 .cardIncome {
   position: absolute;
@@ -165,8 +155,8 @@
 .cardIncomeVal {
   font-family: var(--font-sora);
   font-weight: 800;
-  font-size: 22px;
-  color: var(--pos);
+  font-size: 15px;
+  color: var(--brand1);
 }
 
 .cardTutor {
